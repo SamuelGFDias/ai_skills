@@ -41,6 +41,7 @@ Todos os subcomandos recebem o `<alias>` salvo no setup.
 
 ### Consulta
 
+- `kc list-aliases` — lista os aliases cadastrados (alias, base URL, realm, client ID — sem secret). Use para descobrir quais ambientes já têm credencial salva antes de pedir para o usuário rodar `setup-credentials`.
 - `kc token <alias>` — obtém um access_token (uso interno, imprime só o token; evite mostrar isso diretamente ao usuário).
 - `kc realm-roles <alias>` — lista as roles de nível de realm (JSON).
 - `kc list-clients <alias>` — lista os clients do realm (id interno, clientId, name, enabled — sem secret).
@@ -88,4 +89,4 @@ Depois disso, `kc <subcomando> ...` funciona em qualquer diretório/shell (ex: `
 
 - Formate roles como tabela ou lista — não é necessário mostrar o JSON bruto.
 - Nunca inclua o `access_token` ou `client_secret` na resposta final ao usuário.
-- Se múltiplos aliases existirem, liste os arquivos em `~/.claude/secrets/keycloak/*.env` (só os nomes, não o conteúdo) para o usuário escolher, caso não tenha especificado qual usar.
+- Se múltiplos aliases existirem e o usuário não tiver especificado qual usar, rode `kc list-aliases` para mostrar as opções (alias, base URL, realm, client ID — nunca a secret).
