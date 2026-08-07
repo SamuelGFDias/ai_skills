@@ -1,0 +1,93 @@
+# Configuração de autenticação — passbolt-cli
+
+Guia focado em como o `passbolt` (go-passbolt-cli) autentica no cofre Passbolt da SES-RJ
+(`https://passbolt.saude.rj.gov.br`). Para instalação do binário, ver `SKILL.md` na raiz desta
+skill.
+
+## O que o CLI precisa
+
+Três informações, todas guardadas em `~/.config/go-passbolt-cli/go-passbolt-cli.toml`:
+
+- `serveraddress` — URL do servidor Passbolt.
+- `userprivatekey` — chave privada GPG do usuário (embutida no TOML ou referenciada por arquivo).
+- `userpassword` — passphrase que destrava essa chave privada.
+
+A chave privada em si normalmente fica exportada em `~/.config/passbolt/passbolt_private.asc`.
+
+## Pré-requisito: exportar a chave privada
+
+Antes de configurar, exporte a chave privada pela interface web do Passbolt:
+**Configurações → Chave privada → Exportar**. Salve o arquivo `.asc` (ex: em
+`~/.config/passbolt/passbolt_private.asc`, `chmod 600`).
+
+## Opção A — comando `configure` (recomendado)
+
+```bash
+passbolt configure \
+  --serverAddress https://passbolt.saude.rj.gov.br \
+  --userPrivateKeyFile ~/.config/passbolt/passbolt_private.asc \
+  --userPassword 'SUA_SENHA_DA_CHAVE'
+```
+
+Isso grava `serveraddress` e `userpassword` no TOML. Como a chave foi passada via
+`--userPrivateKeyFile` (flag global, não persistida), ela **não** fica embutida no TOML — o CLI lê o
+arquivo `.asc` a cada execução.
+
+## Opção B — editar o TOML diretamente
+
+Arquivo: `~/.config/go-passbolt-cli/go-passbolt-cli.toml`.
+
+```toml
+serveraddress = 'https://passbolt.saude.rj.gov.br'
+userpassword = 'SUA_SENHA_DA_CHAVE'
+userprivatekey = "-----BEGIN PGP PRIVATE KEY BLOCK-----\n...\n-----END PGP PRIVATE KEY BLOCK-----\n"
+```
+
+- `userprivatekey` pode ser a chave embutida (com `\n` escapado) **ou** omitida, usando
+  `--userPrivateKeyFile` toda vez que rodar um comando.
+- `chmod 600 ~/.config/go-passbolt-cli/go-passbolt-cli.toml` — o arquivo guarda segredos em texto
+  puro.
+
+## Verificar que a autenticação funcionou
+
+```bash
+passbolt --version
+passbolt list users     # só leitura, não expõe secrets
+```
+
+Se `list users` retornar a lista, autenticação OK. O primeiro acesso pode pedir MFA TOTP
+(interativo, modo padrão `interactive-totp`).
+
+## MFA em scripts/automação
+
+Modo não-interativo, passando o seed TOTP:
+
+```bash
+passbolt <comando> --mfaMode noninteractive-totp --mfaTotpToken <seed>
+```
+
+Para uso manual, deixar o modo padrão (`interactive-totp`) já resolve.
+
+## Trocar/rotacionar credenciais
+
+Repetir a Opção A ou B com a nova passphrase/chave sobrescreve a configuração anterior — não é
+necessário desinstalar o CLI. Rotacionar é obrigatório sempre que a passphrase ou a chave privada
+tiver sido exposta (ex: colada em texto puro num chat, log ou terminal compartilhado).
+
+## Troubleshooting
+
+- **`passbolt: command not found`** — binário fora do `PATH`; ver instalação em `SKILL.md`.
+- **Erro de autenticação/certificado** — conferir `serveraddress` no TOML e conectividade:
+  `curl -sS -o /dev/null -w "%{http_code}" https://passbolt.saude.rj.gov.br/` (esperado `302`).
+- **MFA travando em script** — usar `--mfaMode noninteractive-totp --mfaTotpToken <seed>`.
+- **Máquina nova, nenhuma credencial ainda** — exportar a chave privada pelo navegador Passbolt
+  antes de rodar `configure`.
+
+## Segurança
+
+- Nunca imprimir `userprivatekey` ou `userpassword` em terminal compartilhado, chat ou log.
+- Ao inspecionar o TOML para debug, redigir segredos antes de exibir. O CLI aceita aspas simples
+  **ou** duplas nos valores — um `sed` de redação precisa cobrir os dois casos:
+  ```bash
+  sed -E "s/(passphrase|password|key|secret)\s*=\s*['\"].*['\"]/\1=\"***\"/gi" <arquivo>
+  ```
