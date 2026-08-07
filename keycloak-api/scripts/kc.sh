@@ -18,6 +18,7 @@ Setup (uma vez por alias):
                                                        Secret lida com read -s, nunca ecoada.
 
 Consulta:
+  list-aliases                                        Lista os aliases cadastrados (alias, base URL, realm, client id — sem secret).
   token <alias>                                      Imprime um access_token (uso interno; evite mostrar ao usuário).
   list-clients <alias>                                Lista os clients do realm (sem secret).
   realm-roles <alias>                                 Lista as roles de nível de realm (JSON).
@@ -51,6 +52,7 @@ SUBCOMMAND="${1:-}"
 [ -n "$SUBCOMMAND" ] && shift || true
 
 case "$SUBCOMMAND" in
+  list-aliases)          exec "$SCRIPT_DIR/kc-list-aliases.sh" "$@" ;;
   token)                exec "$SCRIPT_DIR/kc-token.sh" "$@" ;;
   list-clients)          exec "$SCRIPT_DIR/kc-list-clients.sh" "$@" ;;
   realm-roles)           exec "$SCRIPT_DIR/kc-realm-roles.sh" "$@" ;;
