@@ -1,6 +1,6 @@
-# Backend Wiki Skills
+# .NET Backend Wiki Skills
 
-Conjunto de skills para agentes de desenvolvimento backend, organizado a partir das diretrizes arquiteturais de backend acessíveis na wiki de diretrizes.
+Conjunto de skills para agentes de desenvolvimento backend .NET/ASP.NET Core, organizado como regras operacionais para arquitetura, APIs, persistência, segurança, observabilidade e manutenção da stack.
 
 ## Estrutura
 
@@ -8,7 +8,6 @@ Conjunto de skills para agentes de desenvolvimento backend, organizado a partir 
 backend-wiki-skills/
 ├── AGENTS.md
 ├── README.md
-├── SOURCE-NOTES.md
 └── .agents/
     └── skills/
         ├── backend-modular-architecture/SKILL.md
@@ -20,8 +19,23 @@ backend-wiki-skills/
         ├── backend-security/SKILL.md
         ├── backend-persistence-transactions/SKILL.md
         ├── backend-logging/SKILL.md
-        └── backend-spring-boot-upgrade/SKILL.md
+        └── backend-dotnet-upgrade/SKILL.md
 ```
+
+## Stack alvo
+
+As skills foram adaptadas para projetos que utilizam principalmente:
+
+- .NET / ASP.NET Core;
+- Controllers ou Minimal APIs;
+- Entity Framework Core;
+- NuGet / `PackageReference`;
+- `Directory.Packages.props` quando houver gerenciamento central;
+- Dependency Injection nativa do .NET;
+- `ILogger<T>` e logging estruturado;
+- JWT/OAuth2/OpenID Connect;
+- OpenAPI/Swagger;
+- Docker e ambientes Kubernetes/OpenShift quando aplicável.
 
 ## Como usar
 
@@ -33,3 +47,5 @@ backend-wiki-skills/
 ## Princípio
 
 As skills não servem para gerar código mecanicamente. Elas funcionam como regras operacionais: primeiro entender a arquitetura existente, depois aplicar a diretriz pertinente, preservar compatibilidade e validar o resultado.
+
+A adaptação para .NET evita impor padrões como Repository, Clean Architecture, CQRS, Controllers ou Minimal APIs quando o repositório já possui uma abordagem válida diferente.
