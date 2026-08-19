@@ -104,11 +104,24 @@ funciona). Uma versão com metadado corrompido no histórico pode até impedir a
 boas do mesmo pacote — se isso acontecer, remover as versões ruins (`nexus delete-component`)
 costuma destravar.
 
+**Causa raiz confirmada — é bug do Nexus, não configuração nossa** (pesquisado em 2026-08-19):
+issue oficial [sonatype/nexus-public#831](https://github.com/sonatype/nexus-public/issues/831),
+label `bug`, aberta em 2025-11-27, **sem PR/fix/milestone até hoje**. O Nexus remove o separador de
+ponto do TFM ao gerar os metadados NuGet (v2 e v3) — `net8.0` vira `net80`, `net10.0` vira `net100`
+— e esse formato sem ponto colide com a sintaxe antiga do .NET Framework clássico, fazendo
+`NuGet.Protocol`/`dotnet`/Rider interpretarem errado. Não existe nenhuma opção de configuração de
+repositório (protocolo v2/v3, cache, content-type) que afete isso — é hardcoded no parser interno
+do Nexus.
+
+**Não é questão de versão desatualizada**: nossa instância roda 3.58.1; a mais recente é 3.95.1
+(13/ago/2026). Revisão das release notes de todas as versões 2026 não encontrou nenhum fix
+relacionado a esse bug — mesmo atualizando o Nexus, o problema provavelmente persiste.
+
 **Workaround recomendado**: empacotar bibliotecas internas (`classlib`) mirando `netstandard2.0`
 em vez de `net8.0`/`net9.0`/`net10.0`. `netstandard2.0` é consumível por qualquer projeto
-`net5.0+` e o Nexus expõe o metadado corretamente. Se a lib precisa de APIs exclusivas de .NET
-moderno (não disponíveis em `netstandard2.0`), reportar o bug para quem administra o Nexus
-(upgrade de versão ou patch no parser) antes de depender de push de pacotes `net8.0+`.
+`net5.0+` e o Nexus expõe o metadado corretamente (não colide com a sintaxe do .NET Framework). Se
+a lib precisa de APIs exclusivas de .NET moderno (não disponíveis em `netstandard2.0`), a saída é
+acompanhar a issue #831 upstream — não há workaround de configuração para esses casos.
 
 Se o `.csproj` usa `<Nullable>enable</Nullable>`/`ImplicitUsings`, trocar por
 `<LangVersion>latest</LangVersion>` ao migrar para `netstandard2.0` (evita `CS8630` — `netstandard2.0`
