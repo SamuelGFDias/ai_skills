@@ -20,6 +20,7 @@ ai_skills/
 ├── gitlab-auto-merge/
 ├── hangfire-setup/
 ├── keycloak-api/
+├── nexus-nuget/
 ├── passbolt-cli/
 ├── replatforms/
 ├── ses-gitlab-deps/
