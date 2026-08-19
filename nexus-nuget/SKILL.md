@@ -98,12 +98,6 @@ Exemplos observados:
 | `net8.0` | `.NETFramework8.0` | idem |
 | `netstandard2.0` | `.NETStandard2.0` (correto) | resolve normalmente |
 
-Sintoma no cliente: `error: Não há versões disponíveis do pacote '<Nome>'`, mesmo o pacote
-existindo e sendo baixável por URL direta (`GET .../v3/content/<nome>/<versao>/<nome>.<versao>.nupkg`
-funciona). Uma versão com metadado corrompido no histórico pode até impedir a resolução de versões
-boas do mesmo pacote — se isso acontecer, remover as versões ruins (`nexus delete-component`)
-costuma destravar.
-
 **Causa raiz confirmada — é bug do Nexus, não configuração nossa** (pesquisado em 2026-08-19):
 issue oficial [sonatype/nexus-public#831](https://github.com/sonatype/nexus-public/issues/831),
 label `bug`, aberta em 2025-11-27, **sem PR/fix/milestone até hoje**. O Nexus remove o separador de
@@ -111,17 +105,37 @@ ponto do TFM ao gerar os metadados NuGet (v2 e v3) — `net8.0` vira `net80`, `n
 — e esse formato sem ponto colide com a sintaxe antiga do .NET Framework clássico, fazendo
 `NuGet.Protocol`/`dotnet`/Rider interpretarem errado. Não existe nenhuma opção de configuração de
 repositório (protocolo v2/v3, cache, content-type) que afete isso — é hardcoded no parser interno
-do Nexus.
+do Nexus. **Não é questão de versão desatualizada**: nossa instância roda 3.58.1; a mais recente é
+3.95.1 (13/ago/2026) e nenhum changelog de 2026 menciona correção — atualizar o Nexus não resolve.
 
-**Não é questão de versão desatualizada**: nossa instância roda 3.58.1; a mais recente é 3.95.1
-(13/ago/2026). Revisão das release notes de todas as versões 2026 não encontrou nenhum fix
-relacionado a esse bug — mesmo atualizando o Nexus, o problema provavelmente persiste.
+### Impacto real: o bug só afeta a *auto-seleção* de versão
 
-**Workaround recomendado**: empacotar bibliotecas internas (`classlib`) mirando `netstandard2.0`
-em vez de `net8.0`/`net9.0`/`net10.0`. `netstandard2.0` é consumível por qualquer projeto
-`net5.0+` e o Nexus expõe o metadado corretamente (não colide com a sintaxe do .NET Framework). Se
-a lib precisa de APIs exclusivas de .NET moderno (não disponíveis em `netstandard2.0`), a saída é
-acompanhar a issue #831 upstream — não há workaround de configuração para esses casos.
+Testado empiricamente em 2026-08-19 (pacote `net10.0` publicado de propósito com o bug presente):
+
+| Caminho de resolução | Resultado |
+|---|---|
+| `dotnet add package <Nome>` **sem** `--version` (NuGet escolhe a "melhor" versão) | ❌ `error: Não há versões disponíveis do pacote` |
+| `dotnet add package <Nome> --version <X.Y.Z>` (versão explícita, **sem** `--source` nomeado) | ✅ `"O pacote é compatível com todas as estruturas especificadas"` — funciona normal |
+| `<PackageReference Include="<Nome>" Version="<X.Y.Z>" />` fixado direto no `.csproj` + `dotnet restore`/`build`/`run` | ✅ resolve, compila e executa normalmente |
+
+Ou seja: **o Nexus continua utilizável em produção para pacotes `net8.0+`/`net10.0`, desde que a
+versão seja sempre especificada explicitamente** — nunca deixar o NuGet escolher automaticamente a
+última versão sem `--version`. Isso já é boa prática em ambientes corporativos de qualquer forma
+(evita quebra de build por bump de versão não intencional), então na prática o bug raramente é um
+bloqueador real se o time já fixa versões.
+
+**Onde ainda dói**: descoberta de versão automática (`dotnet add package` sem `--version`,
+ferramentas de update automático de dependências, IDEs que sugerem a "última versão" via
+autocomplete) fica quebrada para pacotes `net5.0+`. Se isso for essencial para o fluxo do time,
+o workaround é empacotar mirando `netstandard2.0` em vez de `net8.0+` (metadado sai correto, ver
+tabela acima) — só necessário quando a lib não depende de API exclusiva de .NET moderno.
+
+Sintoma a diagnosticar: `error: Não há versões disponíveis do pacote '<Nome>'` mesmo o pacote
+existindo e sendo baixável por URL direta
+(`GET .../v3/content/<nome>/<versao>/<nome>.<versao>.nupkg` funciona) — geralmente é esse bug, não
+problema de permissão/rede. Uma versão com metadado corrompido no histórico pode até impedir a
+resolução automática de versões boas do mesmo pacote; remover as versões ruins
+(`nexus delete-component`) costuma destravar esse caso específico.
 
 Se o `.csproj` usa `<Nullable>enable</Nullable>`/`ImplicitUsings`, trocar por
 `<LangVersion>latest</LangVersion>` ao migrar para `netstandard2.0` (evita `CS8630` — `netstandard2.0`
