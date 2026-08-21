@@ -21,7 +21,9 @@ ai_skills/
 ├── hangfire-setup/
 ├── keycloak-api/
 ├── nexus-nuget/
+├── openshift-cli/
 ├── passbolt-cli/
+├── redis-port-forward/
 ├── replatforms/
 ├── ses-gitlab-deps/
 └── ...
