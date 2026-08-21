@@ -1,20 +1,17 @@
 #!/usr/bin/env bash
 # Detalha um group: subgrupos, membros e role mappings (realm + client).
-# Uso: kc-group-detail.sh <alias> <groupId>
+# Uso: kc-group-detail.sh <credAlias> <groupId>
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./lib-env.sh
+source "$SCRIPT_DIR/lib-env.sh"
 
-ALIAS="${1:?uso: kc-group-detail.sh <alias> <groupId>}"
+CRED_ALIAS="${1:?uso: kc-group-detail.sh <credAlias> <groupId>}"
 GROUP_ID="${2:?informe o id interno do group}"
 
-ENV_FILE="$HOME/.claude/secrets/keycloak/${ALIAS}.env"
-[ -f "$ENV_FILE" ] || { echo "Credenciais não encontradas: $ENV_FILE" >&2; exit 1; }
-set -a
-# shellcheck disable=SC1090
-source "$ENV_FILE"
-set +a
+load_credential_env "$CRED_ALIAS"
 
-TOKEN="$("$SCRIPT_DIR/kc-token.sh" "$ALIAS")"
+TOKEN="$("$SCRIPT_DIR/kc-token.sh" "$CRED_ALIAS")"
 BASE="${KEYCLOAK_BASE_URL}/admin/realms/${KEYCLOAK_REALM}/groups/${GROUP_ID}"
 
 CHILDREN="$(curl -sf -H "Authorization: Bearer ${TOKEN}" "${BASE}/children")"
