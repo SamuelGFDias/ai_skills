@@ -25,13 +25,23 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
    - Quando as subtarefas forem independentes entre si, disparar os `Agent` correspondentes em paralelo (múltiplos blocos de chamada na mesma resposta).
    - Quando houver dependência real entre subtarefas, delegar sequencialmente, usando o resultado de uma para escrever o prompt da próxima.
 
-3. **Modelo mínimo por subtarefa.**
-   - Seguir a diretriz de economia já registrada: preferir `haiku`; escalar para `sonnet` só se a subtarefa exigir mais capacidade (ex.: lógica não trivial, arquitetura, ambiguidade real); reservar `opus` apenas para subtarefas de complexidade alta que claramente justifiquem.
-   - Escolher esse `model` explicitamente em cada chamada `Agent`, subtarefa a subtarefa — não usar um único modelo padrão para todas.
+3. **Modelo e esforço mínimos por subtarefa.**
+   - Escolher o `subagent_type` entre os 4 tipos graduados abaixo, sempre começando pelo mais barato que atenda à subtarefa:
+
+     | tipo | modelo | esforço | quando usar |
+     |---|---|---|---|
+     | `executor-mecanico` | haiku | low | 1 critério de pronto, zero decisão: commit por caminho, merge fast-forward, rebase sem conflito, rodar um comando e reportar, mover/renomear/copiar arquivos, substituição literal de texto, preencher template. |
+     | `executor-padrao` | sonnet | medium | Decisões já tomadas no prompt: feature ou lote em arquivos listados, testes unitários de comportamento definido, rebase com conflito simples, script com lógica moderada. |
+     | `executor-complexo` | sonnet | high | Precisa julgar, investigar ou resolver: conflito não trivial, auditoria de cobertura (mudança → teste), investigação com evidência (arquivo:linha), refatoração transversal, diagnóstico de bug. |
+     | `executor-critico` | opus | high | Raro — risco alto ou decisão arquitetural: bug sutil de concorrência/segurança, migração com risco de dado. Justificar no prompt por que `executor-complexo` não bastava. |
+
+   - Critério de escalada: 1 critério de pronto e zero decisão → mecânico; decisões já tomadas no prompt → padrão; precisa julgar/investigar/resolver conflito → complexo; risco alto ou arquitetura → crítico.
+   - Só passar `model` explícito na chamada `Agent` quando precisar divergir do tipo escolhido — e, nesse caso, registrar no prompt por quê.
 
 4. **Proibir sub-delegação.**
    - Cada subagente delegado deve executar a subtarefa diretamente, sem repassar trabalho a outro subagente.
    - Incluir, em todo prompt de `Agent` disparado neste modo, uma instrução explícita equivalente a: *"Execute esta tarefa diretamente. Não delegue para outros subagentes nem use a ferramenta Agent."*
+   - Os 4 tipos graduados já trazem `disallowedTools: Agent` no frontmatter, o que bloqueia a sub-delegação tecnicamente — mas isso não dispensa a frase de proibição no prompt: ela vale também para `general-purpose` (que não tem essa restrição técnica) e para qualquer outro tipo sem o bloqueio embutido.
 
 5. **Prompts completos, não atalhos.**
    - Cada subagente começa sem memória desta conversa. O prompt precisa trazer objetivo, contexto relevante já levantado, arquivos/caminhos envolvidos e critério de pronto — nunca "implemente conforme discutido".
@@ -61,3 +71,13 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
     - O gate completo (build da solução + todos os testes) roda **uma vez, no arquiteto**, cobrindo de uma só vez o trabalho de todos os subagentes que rodaram em paralelo.
     - Quando o critério de pronto for publicar artefato (tag, release, deploy), o gate completo é obrigatório e roda antes do push.
     - Declarar no prompt de cada subagente qual é a verificação permitida e que o gate completo NÃO é responsabilidade dele.
+
+## Instalação dos tipos de agente
+
+Os 4 tipos graduados (`executor-mecanico`, `executor-padrao`, `executor-complexo`, `executor-critico`) vivem em `~/.config/ai/skills/arquiteto/agents/`, versionados junto com esta skill.
+
+O Claude Code os enxerga via symlinks em `~/.claude/agents/<nome>.md` — mesmo mecanismo usado para as skills. O Kilo não usa agentes; esta seção não se aplica a ele.
+
+Tipos de agente novos ou alterados só aparecem numa **sessão nova** do Claude Code — uma sessão já aberta não os reconhece.
+
+**Fallback:** se `ls ~/.claude/agents` não mostrar os 4 tipos, ou a chamada `Agent` rejeitar o `subagent_type`, usar `general-purpose` com o `model` equivalente (haiku/sonnet/sonnet/opus) e registrar, na síntese ao usuário, que o esforço ficou no padrão da sessão.
