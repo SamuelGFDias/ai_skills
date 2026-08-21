@@ -84,6 +84,12 @@ manualmente apenas se o objetivo for zerar credenciais.
 
 Guia dedicado (fluxo completo, MFA, rotação, troubleshooting): `docs/autenticacao.md` nesta skill.
 
+Para importar essa mesma chave no keyring do **GnuPG** (necessário para inicializar
+`gopass`/`pass`, skill `openshift-cli`) sem prompt interativo, e para evitar que usos seguintes
+(`pass show`/`insert`) fiquem abrindo popups de pinentry pedindo uma senha que o usuário não
+decorou — usando a passphrase já salva por este CLI, nunca impressa:
+`docs/importar-chave-gpg-sem-prompt.md`.
+
 ### Opção A — comando `configure`
 
 ```bash
