@@ -1,18 +1,15 @@
 #!/usr/bin/env bash
 # Lista os clients do realm, apenas id interno + clientId + name (sem secret).
-# Uso: kc-list-clients.sh <alias>
+# Uso: kc-list-clients.sh <credAlias>
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./lib-env.sh
+source "$SCRIPT_DIR/lib-env.sh"
 
-ALIAS="${1:?uso: kc-list-clients.sh <alias>}"
-ENV_FILE="$HOME/.claude/secrets/keycloak/${ALIAS}.env"
-[ -f "$ENV_FILE" ] || { echo "Credenciais não encontradas: $ENV_FILE" >&2; exit 1; }
-set -a
-# shellcheck disable=SC1090
-source "$ENV_FILE"
-set +a
+CRED_ALIAS="${1:?uso: kc-list-clients.sh <credAlias>}"
+load_credential_env "$CRED_ALIAS"
 
-TOKEN="$("$SCRIPT_DIR/kc-token.sh" "$ALIAS")"
+TOKEN="$("$SCRIPT_DIR/kc-token.sh" "$CRED_ALIAS")"
 
 # Filtra a resposta para remover o campo "secret" antes de deixar o
 # resultado visível (o endpoint /clients retorna a secret em texto puro).

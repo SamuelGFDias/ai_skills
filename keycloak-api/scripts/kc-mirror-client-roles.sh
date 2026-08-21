@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Cria no client de destino as roles que existem no client de origem e faltam no destino
 # (mesmo nome de client nos dois ambientes). Idempotente — roles já existentes são puladas.
-# Uso: kc-mirror-client-roles.sh <sourceAlias> <targetAlias> <clientIdName>
+# Uso: kc-mirror-client-roles.sh <sourceCredAlias> <targetCredAlias> <clientIdName>
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-SRC_ALIAS="${1:?uso: kc-mirror-client-roles.sh <sourceAlias> <targetAlias> <clientIdName>}"
+SRC_ALIAS="${1:?uso: kc-mirror-client-roles.sh <sourceCredAlias> <targetCredAlias> <clientIdName>}"
 TGT_ALIAS="${2:?}"
 CLIENT_NAME="${3:?}"
 
