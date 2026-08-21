@@ -14,21 +14,21 @@ load_credential_env "$CRED_ALIAS"
 
 case "$KEYCLOAK_AUTH_TYPE" in
   client_credentials)
-    curl -sf -X POST "${KEYCLOAK_BASE_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token" \
+    BODY="$(api_request POST "${KEYCLOAK_BASE_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token" \
       -H "Content-Type: application/x-www-form-urlencoded" \
       -d "grant_type=client_credentials" \
       -d "client_id=${KEYCLOAK_CLIENT_ID}" \
-      -d "client_secret=${KEYCLOAK_CLIENT_SECRET}" \
-      | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])"
+      -d "client_secret=${KEYCLOAK_CLIENT_SECRET}")" || exit 1
+    echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])"
     ;;
   password)
-    curl -sf -X POST "${KEYCLOAK_BASE_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token" \
+    BODY="$(api_request POST "${KEYCLOAK_BASE_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token" \
       -H "Content-Type: application/x-www-form-urlencoded" \
       -d "grant_type=password" \
       -d "client_id=${KEYCLOAK_CLIENT_ID}" \
       -d "username=${KEYCLOAK_USERNAME}" \
-      -d "password=${KEYCLOAK_PASSWORD}" \
-      | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])"
+      -d "password=${KEYCLOAK_PASSWORD}")" || exit 1
+    echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])"
     ;;
   *)
     echo "Tipo de credencial desconhecido para '${CRED_ALIAS}': ${KEYCLOAK_AUTH_TYPE}" >&2

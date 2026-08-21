@@ -57,6 +57,11 @@ dois, os scripts de setup avisam se colidir).
 - `scripts/lib-env.sh` centraliza a resolução de credencial/realm (`load_credential_env`,
   `resolve_realm_env_file`) — é sourced por todo `kc-*.sh` e `setup-*.sh`, nunca executado
   diretamente.
+- Chamadas HTTP passam por `api_request` (também em `lib-env.sh`): checa o status HTTP e, em
+  erro, imprime "Erro HTTP `<status>` em `<method>` `<url>`" + a mensagem do Keycloak — nunca
+  o corpo bruto. Isso evita que um 401/403 apareça pro usuário como um traceback de
+  `JSONDecodeError` do Python (curl -f descarta o corpo em erro, e sem esse wrapper o parser
+  json recebia stdin vazio e quebrava com uma mensagem sem sentido pro usuário).
 
 ## Primeiro uso (nenhum realm/credencial cadastrado ainda)
 
@@ -100,7 +105,16 @@ existindo como implementação interna.
 - `kc setup-client` — cadastra/edita um client (escolhe o realm num menu). Secret mascarada
   com `*` em tempo real.
 - `kc setup-user` — cadastra/edita uma credencial de usuário (username/senha, escolhe o realm
-  num menu). Senha mascarada com `*` em tempo real. Client de login padrão: `admin-cli`.
+  num menu). Senha mascarada com `*` em tempo real. Client de login padrão: `admin-cli`. Ao
+  editar um alias existente, se o realm selecionado no menu for diferente do atual, mostra
+  `ATENÇÃO: realm será alterado de X para Y` — o realm sempre é sobrescrito pelo escolhido no
+  menu (não é preservado por Enter como os outros campos).
+- `kc delete-client <alias>` / `kc delete-user <alias>` — remove o cadastro local de um
+  client/usuário (arquivo em `~/.claude/secrets/keycloak/{clients,users}/`). Pede confirmação
+  `[s/N]` — em uso não-interativo (ex: rodado por Claude via Bash tool), só remove se receber
+  `s` na entrada (`echo s | kc delete-user <alias>`), e só faça isso quando o usuário pedir
+  explicitamente a remoção desse alias. Nunca afeta o client/usuário no Keycloak em si, só o
+  cadastro local desta skill.
 
 ### Consulta de cadastro local
 
@@ -116,15 +130,55 @@ Todos aceitam qualquer `<credAlias>` — de um client ou de um user cadastrado, 
 
 - `kc token <credAlias>` — obtém um access_token (uso interno, imprime só o token; evite
   mostrar isso diretamente ao usuário).
-- `kc realm-roles <credAlias>` — lista as roles de nível de realm (JSON).
-- `kc list-clients <credAlias>` — lista os clients do realm (id interno, clientId, name,
-  enabled — sem secret). Não confundir com `kc list-clients-config`: este consulta a API do
-  Keycloak ao vivo; aquele lista o cadastro local desta skill.
-- `kc client-roles <credAlias> <clientId>` — lista as roles de um client pelo nome (ex:
-  `biae`). Resolve o id interno sem expor o corpo bruto de `/clients` (que contém a secret).
-- `kc list-groups <credAlias>` — lista os groups do realm (árvore completa).
-- `kc group-detail <credAlias> <groupId>` — detalha um group: subgrupos, membros, role
-  mappings (realm + client).
+- `kc realm-roles <credAlias> [realmDestino]` — lista as roles de nível de realm (JSON).
+- `kc list-clients <credAlias> [realmDestino]` — lista os clients do realm (id interno,
+  clientId, name, enabled — sem secret). Não confundir com `kc list-clients-config`: este
+  consulta a API do Keycloak ao vivo; aquele lista o cadastro local desta skill.
+- `kc client-roles <credAlias> <clientId> [realmDestino]` — lista as roles de um client pelo
+  nome (ex: `biae`). Resolve o id interno sem expor o corpo bruto de `/clients` (que contém a
+  secret).
+- `kc list-groups <credAlias> [realmDestino]` — lista os groups do realm (árvore completa).
+- `kc group-detail <credAlias> <groupId> [realmDestino]` — detalha um group: subgrupos,
+  membros, role mappings (realm + client).
+
+`realmDestino` (opcional, nesses 5 comandos): consulta outro realm da **mesma instância**
+Keycloak da credencial, usando o token dela — cobre o padrão de admin do realm `master`, que
+autentica no `master` mas no Keycloak pode gerenciar qualquer outro realm da mesma instância
+(diferente de ser admin dentro do realm de destino em si). Sem `realmDestino`, consulta o
+próprio realm da credencial (comportamento de sempre). Exemplo explícito: uma credencial de
+usuário autenticada no realm `master` consultando os clients do realm `sesrj-dev` na mesma
+instância: `kc list-clients sesrj-dev-master sesrj-dev`.
+
+**Modo automático — passar um REALM em vez de uma credencial:** nesses mesmos 5 comandos, o
+1º argumento também aceita o alias de um **realm cadastrado** (em vez de um credAlias). Nesse
+caso a skill resolve sozinha uma credencial de admin do `master` da mesma instância (mesma
+base URL) e usa pra consultar o realm informado — sem precisar saber de cor o alias da
+credencial de master:
+```
+kc list-clients sesrj-dev
+kc client-roles sesrj-dev biae
+```
+Comportamento (função `resolve_target_credential` em `lib-env.sh`):
+- 0 credenciais de master cadastradas para essa instância → erro pedindo `kc setup-realm`
+  (realm técnico `master`, mesma base URL) + `kc setup-user`.
+- 1 candidata (ou já houver um default salvo pra essa base URL) → usa direto, sem perguntar.
+- 2+ candidatas sem default → menu interativo (`select`) pra escolher, depois pergunta `[s/N]`
+  se quer salvar como padrão pra essa instância (arquivo em
+  `~/.claude/secrets/keycloak/master-defaults/`). Como usa `select`/`read` interativos, rodar
+  com o prefixo `!` se for você (usuário) a decidir; se for Claude decidindo em nome do
+  usuário, isso não deve acontecer sem confirmação dele antes.
+- Sempre imprime em stderr qual credencial foi usada (`Usando credencial de master 'X'...`) —
+  nunca oculto, pra não confundir com escolha errada depois.
+
+**Escopos do Keycloak — por que um 403 não é sempre bug:** um **client** (service account,
+grant_type=client_credentials) só enxerga o que as roles atribuídas ao service account dele
+permitirem — sem role de `realm-management` (`view-clients`, `view-realm`, `realm-admin`...),
+as chamadas à Admin REST API voltam 403 mesmo com o client_secret certo. Um **usuário**
+(grant_type=password) tem o mesmo problema a menos que seja admin do `master` (aí gerencia
+qualquer realm da instância, ver modo automático acima) ou tenha essas roles atribuídas
+diretamente nele. `api_request` (em `lib-env.sh`) já reconhece isso: num 403, olha
+`KEYCLOAK_AUTH_TYPE` da credencial em uso e imprime uma dica específica (qual role pedir, ou
+sugestão de usar o modo automático com um usuário master) em vez de só "Forbidden".
 
 ### Criação pontual
 

@@ -38,7 +38,12 @@ EDITING=0
 if [ -f "$ENV_FILE" ]; then
   EDITING=1
   load_env_file_safe "$ENV_FILE" KEYCLOAK_REALM_ALIAS KEYCLOAK_CLIENT_ID KEYCLOAK_CLIENT_SECRET
-  echo "Client '${CLIENT_ALIAS}' já existe (realm atual: ${KEYCLOAK_REALM_ALIAS}) — Enter mantém o valor atual." >&2
+  echo "Client '${CLIENT_ALIAS}' já existe — Enter mantém o valor atual em cada campo abaixo." >&2
+  if [ "$REALM_ALIAS" != "$KEYCLOAK_REALM_ALIAS" ]; then
+    echo "ATENÇÃO: realm será alterado de '${KEYCLOAK_REALM_ALIAS}' (atual) para '${REALM_ALIAS}' (selecionado agora)." >&2
+  else
+    echo "Realm: ${KEYCLOAK_REALM_ALIAS} (sem alteração)." >&2
+  fi
 fi
 
 CLIENT_ID="$(read_required_default "Client ID" "$KEYCLOAK_CLIENT_ID")"
