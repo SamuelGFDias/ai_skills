@@ -37,8 +37,9 @@ url_encode_path() {
 }
 
 client_uuid() { # base realm token clientName
-  curl -sf -H "Authorization: Bearer $3" "$1/admin/realms/$2/clients?clientId=$4" \
-    | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['id'] if d else '')"
+  local resp
+  resp="$(api_request GET "$1/admin/realms/$2/clients?clientId=$4" -H "Authorization: Bearer $3")" || exit 1
+  echo "$resp" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['id'] if d else '')"
 }
 
 SRC_CLIENT_UUID="$(client_uuid "$SRC_BASE" "$SRC_REALM" "$SRC_TOKEN" "$CLIENT_NAME")"
@@ -93,8 +94,9 @@ ensure_group_path() { # base realm token cleanPath -> cria hierarquia faltante, 
 }
 
 group_role_names() { # base realm token groupId clientUuid
-  curl -sf -H "Authorization: Bearer $3" "$1/admin/realms/$2/groups/$4/role-mappings/clients/$5" \
-    | python3 -c "import sys,json; print(chr(10).join(r['name'] for r in json.load(sys.stdin)))"
+  local resp
+  resp="$(api_request GET "$1/admin/realms/$2/groups/$4/role-mappings/clients/$5" -H "Authorization: Bearer $3")" || exit 1
+  echo "$resp" | python3 -c "import sys,json; print(chr(10).join(r['name'] for r in json.load(sys.stdin)))"
 }
 
 do_group() {
@@ -121,23 +123,23 @@ do_group() {
     echo "  '$path': já em paridade ($n roles)"
   else
     local tgt_roles_full payload n_missing
-    tgt_roles_full="$(curl -sf -H "Authorization: Bearer $TGT_TOKEN" "$TGT_BASE/admin/realms/$TGT_REALM/clients/$TGT_CLIENT_UUID/roles")"
+    tgt_roles_full="$(api_request GET "$TGT_BASE/admin/realms/$TGT_REALM/clients/$TGT_CLIENT_UUID/roles" -H "Authorization: Bearer $TGT_TOKEN")" || exit 1
     payload="$(python3 -c "
 import json, sys
 names = set(n for n in sys.argv[1].split(chr(10)) if n)
 roles = json.loads(sys.argv[2])
 print(json.dumps([r for r in roles if r['name'] in names]))
 " "$missing" "$tgt_roles_full")"
-    curl -sf -X POST -H "Authorization: Bearer $TGT_TOKEN" -H "Content-Type: application/json" \
-      -d "$payload" "$TGT_BASE/admin/realms/$TGT_REALM/groups/$tgt_group_id/role-mappings/clients/$TGT_CLIENT_UUID" >/dev/null
+    api_request POST "$TGT_BASE/admin/realms/$TGT_REALM/groups/$tgt_group_id/role-mappings/clients/$TGT_CLIENT_UUID" \
+      -H "Authorization: Bearer $TGT_TOKEN" -H "Content-Type: application/json" -d "$payload" >/dev/null || exit 1
     n_missing="$(echo "$missing" | grep -c .)"
     echo "  '$path': +$n_missing role(s) adicionada(s)"
   fi
 
   if [ "$RECURSIVE" = "1" ]; then
-    local children
-    children="$(curl -sf -H "Authorization: Bearer $SRC_TOKEN" "$SRC_BASE/admin/realms/$SRC_REALM/groups/$src_group_id/children" \
-      | python3 -c "import sys,json; print(chr(10).join(c['name'] for c in json.load(sys.stdin)))")"
+    local children children_resp
+    children_resp="$(api_request GET "$SRC_BASE/admin/realms/$SRC_REALM/groups/$src_group_id/children" -H "Authorization: Bearer $SRC_TOKEN")" || exit 1
+    children="$(echo "$children_resp" | python3 -c "import sys,json; print(chr(10).join(c['name'] for c in json.load(sys.stdin)))")"
     while IFS= read -r child; do
       [ -z "$child" ] && continue
       do_group "$path/$child"

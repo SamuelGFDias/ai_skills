@@ -15,9 +15,9 @@ load_credential_env "$CRED_ALIAS"
 
 TOKEN="$("$SCRIPT_DIR/kc-token.sh" "$CRED_ALIAS")"
 
-INTERNAL_ID="$(curl -sf -X GET "${KEYCLOAK_BASE_URL}/admin/realms/${KEYCLOAK_REALM}/clients?clientId=${CLIENT_ID_NAME}" \
-  -H "Authorization: Bearer ${TOKEN}" \
-  | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['id'] if d else '')")"
+CLIENTS_RESP="$(api_request GET "${KEYCLOAK_BASE_URL}/admin/realms/${KEYCLOAK_REALM}/clients?clientId=${CLIENT_ID_NAME}" \
+  -H "Authorization: Bearer ${TOKEN}")" || exit 1
+INTERNAL_ID="$(echo "$CLIENTS_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['id'] if d else '')")"
 
 if [ -z "$INTERNAL_ID" ]; then
   echo "Client '${CLIENT_ID_NAME}' não encontrado no realm ${KEYCLOAK_REALM}." >&2
