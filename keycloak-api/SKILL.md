@@ -185,6 +185,27 @@ sugestão de usar o modo automático com um usuário master) em vez de só "Forb
 - `kc create-client-role <credAlias> <clientId> <roleName> [descricao]` — cria uma role num
   client. Idempotente (reporta "JÁ EXISTE" em vez de duplicar).
 
+### Alteração pontual
+
+- `kc set-client-attr <credAlias|realmAlias> <clientId> <atributo>=<valor> [<atributo>=<valor> ...] [--apply] [realmDestino]`
+  — altera atributos (`attributes`) de um client existente, resolvido pelo `clientId`.
+  **Dry-run por padrão**: sem `--apply`, só mostra uma tabela `ATRIBUTO | ATUAL | NOVO` com o
+  que mudaria — nenhuma escrita é feita. `<atributo>=` (vazio) ou `<atributo>=@unset` remove o
+  atributo. Só com `--apply` o script grava (PUT com a representação completa do client, todos
+  os outros campos preservados — o Keycloak exige o objeto inteiro no PUT, não um patch),
+  pedindo confirmação `[s/N]` antes (pula a confirmação se `KC_ASSUME_YES=1`, para uso não
+  interativo), e ao final lê de novo do Keycloak e reimprime a tabela com a coluna `APLICADO`
+  para confirmar o valor real gravado. Nome de atributo precisa casar com `^[a-z0-9._-]+$`.
+  Suporta `realmDestino` e o modo automático por realm (credencial de master), como os
+  comandos de consulta acima. A resposta de `/clients` inclui o campo `secret` em texto puro —
+  o script nunca imprime esse campo (fica só em variável de shell, usada apenas para montar o
+  payload do PUT).
+  ```
+  kc set-client-attr sesrj-dev biae client.session.idle.timeout=7200
+  kc set-client-attr sesrj-dev biae client.session.idle.timeout=7200 --apply
+  kc set-client-attr sesrj-dev biae access.token.lifespan=@unset --apply
+  ```
+
 ### Espelhamento entre ambientes (uso recorrente — preferir estes em vez de recompor a lógica manualmente)
 
 Fluxo típico do usuário: comparar/replicar roles e groups de um client entre dois ambientes
