@@ -317,6 +317,51 @@ glab api "groups/ses-rj%2Fdesenvolvimento/issues?per_page=100&state=all&assignee
 
 ---
 
+## Fluxo — Descobrir se uma Issue já foi Atribuída a Alguém no Passado
+
+**Importante:** `glab issue list`/`glab api .../issues` só retorna o **estado atual** (`assignee`/`assignees`). Não existe campo de histórico nesse payload — não adianta filtrar isso com `jq`, o dado não está lá. A Search API (`scope=notes`) também não ajuda: notas de sistema (as que registram troca de assignee) não são indexadas pela busca, mesmo em projeto único (`scope=notes` retorna `[]` mesmo quando a nota existe).
+
+A única fonte de verdade é a nota de sistema por issue (`assigned to @user` / `unassigned @user`), disponível em `/projects/:id/issues/:iid/notes`. Isso exige 1 chamada por issue — **mas rodar essas chamadas em sequência é o que fica lento** (74 issues × ~6s = 7+min). Paralelizar com `xargs -P` resolve (as mesmas 74 issues em ~3s):
+
+```bash
+# 1) Listar issues abertas do grupo e extrair project_id + iid
+glab api "groups/ses-rj%2Fdesenvolvimento/issues?per_page=100&state=opened&scope=all" \
+  | python3 -c "
+import json,sys
+for i in json.load(sys.stdin):
+    print(f\"{i['project_id']} {i['iid']} {i['references']['full']}\")
+" > /tmp/issue_ids.txt
+
+# 2) Script standalone (xargs não herda funções do zsh — precisa de arquivo)
+cat > /tmp/check_issue.sh << 'EOF'
+#!/usr/bin/env bash
+export GITLAB_HOST=gitlab-prod.saude.rj.gov.br
+pid="$1"; iid="$2"; ref="$3"
+notes=$(glab api "projects/$pid/issues/$iid/notes?per_page=100" 2>/dev/null)
+hit=$(echo "$notes" | python3 -c "
+import json,sys
+try:
+    notes = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+for n in notes:
+    if n.get('system') and 'samuel.dias' in n.get('body','') and 'assign' in n.get('body','').lower():
+        print(n['body'])
+")
+[ -n "$hit" ] && echo "$ref :: $hit"
+EOF
+chmod +x /tmp/check_issue.sh
+
+# 3) Rodar em paralelo (15 workers é um bom equilíbrio, não satura a API)
+cat /tmp/issue_ids.txt | xargs -P 15 -L 1 /tmp/check_issue.sh
+```
+
+Troque `samuel.dias` pelo username desejado. O resultado mostra `assigned to @user` / `unassigned @user` na ordem cronológica das notas — a última entrada é o estado mais recente daquela troca.
+
+**Nota sobre `--hostname`:** `glab issue update`/`glab issue list` não têm flag `--hostname`. Fora de um repositório git local (sem remote configurado), definir `export GITLAB_HOST=gitlab-prod.saude.rj.gov.br` antes do comando resolve; `glab api` aceita `--hostname` normalmente.
+
+---
+
 ## Fluxo — Atribuir Milestone em Massa para Múltiplos Usuários
 
 ```bash
@@ -362,9 +407,38 @@ Ao criar a issue, sempre incluir:
 
 ## Estrutura esperada de cada issue
 
-1. **Título** — descrição objetiva
+1. **Título** — descrição objetiva (ver padrão abaixo)
 2. **US (História de Usuário)** — "Como [papel], quero [funcionalidade], para [benefício]"
 3. **Descrição da solução** — implementação, arquivos alterados, commits relacionados
+
+## Padrão de título de issue
+
+O título da issue **não é** mensagem de commit. Formato:
+
+```
+<Módulo/Escopo> - <Ação no infinitivo> <complemento>
+```
+
+- **`<Módulo/Escopo>`**: a tela, entidade, componente ou área do sistema afetada (ex: `Recepção`, `Tabela Recepção`, `Editar dados pessoais`, `Migrations`, `Testes`, `Build`, `Agenda`). Deve ser o que a pessoa reconhece de imediato ao escanear a lista de issues — é o que aparece primeiro, antes do hífen.
+- **Separador**: ` - ` (espaço-hífen-espaço) entre módulo e ação.
+- **`<Ação>`**: frase objetiva em português, iniciando com verbo no infinitivo que descreva a ação/resultado esperado (ex: `Corrigir`, `Adicionar`, `Padronizar`, `Validar`, `Permitir`, `Remover`, `Investigar`, `Ajustar`, `Configurar`, `Incluir`).
+- Primeira letra maiúscula em cada parte (módulo e ação), resto em minúsculas — exceto nomes próprios, siglas e identificadores de código (classes, métodos, tabelas).
+- **Proibido** prefixo de conventional commits no título: `feat:`, `fix:`, `bugfix:`, `refactor:`, `build:`, `test:`, `style:`, `perf:`, `docs:`, `chore:`. Esses rótulos pertencem à mensagem de commit/PR, não ao título da issue — usar labels do projeto para categorizar, não o texto do título.
+- Sem emojis no título.
+- Sem sufixos técnicos entre parênteses (ex: `(no-op)`) — esse detalhe vai na descrição/US, não no título.
+- O título deve ser autoexplicativo por si só, sem precisar abrir a issue para entender do que se trata.
+
+Exceção tolerada: prefixo entre colchetes com código de requisito (ex: `[RF-14]`, `[Melhoria]`, `[Correção]`) pode conviver **antes** do módulo, quando já for a convenção adotada no projeto — mas nunca substituir o formato `Módulo - Ação`, e nunca misturar com prefixo de conventional commit.
+
+**Exemplos (antes → depois):**
+- `refactor: adicionar IDesignTimeDbContextFactory para gerar migrations sem as ~34 variáveis de ambiente` → `Migrations - Adicionar IDesignTimeDbContextFactory para gerar sem exigir variáveis de ambiente de runtime`
+- `test: RollForward ausente em Talonario.Api.Tests e Infra.CrossCutting.Tests impede rodar a suíte local` → `Testes - Configurar RollForward em Talonario.Api.Tests e Infra.CrossCutting.Tests para rodar a suíte localmente`
+- `build: build da solução dispara o npm build e apaga o wwwroot da Api` → `Build - Corrigir build da solução para não disparar o build do Angular e apagar o wwwroot da Api`
+- `refactor: validação de duplicidade de período em ExisteAgendaData nunca dispara (no-op)` → `Agenda - Corrigir validação de duplicidade de período em ExisteAgendaData que nunca dispara`
+
+Referência de bom uso já existente no grupo: `Recepção - Adicionar modal assim que entrar na recepção`, `Tabela Recepção - Adicionar coluna de justificativa`, `Editar dados pessoais - Incluir o alerta de cautela no editar também` (`pericia-medica#113-115`).
+
+Ao criar uma issue nova (fluxo "Criar Issue" acima) ou ao revisar issues existentes num projeto, sempre validar o título contra este padrão antes de submeter.
 
 ## Observações
 
