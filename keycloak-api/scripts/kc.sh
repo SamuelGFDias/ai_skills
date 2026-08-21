@@ -13,35 +13,48 @@ kc — CLI da skill keycloak-api (consulta/sincroniza a Admin REST API do Keyclo
 
 Uso: kc <subcomando> [args...]
 
-Setup (uma vez por alias):
-  setup-credentials                                  Cadastra um novo alias (base URL, realm, client id/secret).
-                                                       Secret lida com read -s, nunca ecoada.
+Cadastro (realm e credencial são configurados separadamente):
+  setup-realm                                         Cadastra/edita um realm (alias, base URL, nome do realm).
+  setup-client                                        Cadastra/edita um client (escolhe o realm num menu; secret
+                                                        mascarada com * enquanto você digita/cola, pra conferir
+                                                        visualmente que colou certo e não colou em dobro).
+  setup-user                                          Cadastra/edita uma credencial de usuário (username/senha,
+                                                        grant_type=password) — para operações fora do escopo de
+                                                        um client, quando não há service account habilitado.
 
-Consulta:
-  list-aliases                                        Lista os aliases cadastrados (alias, base URL, realm, client id — sem secret).
-  token <alias>                                      Imprime um access_token (uso interno; evite mostrar ao usuário).
-  list-clients <alias>                                Lista os clients do realm (sem secret).
-  realm-roles <alias>                                 Lista as roles de nível de realm (JSON).
-  list-groups <alias>                                 Lista os groups do realm (árvore completa).
-  group-detail <alias> <groupId>                      Detalha um group: subgrupos, membros, role mappings.
-  client-roles <alias> <clientId>                     Lista as roles de um client pelo nome (ex: biae).
+Consulta de cadastro local:
+  list-realms                                         Lista os realms cadastrados (alias, base URL, realm).
+  list-clients-config                                 Lista os clients cadastrados (alias, realm, client id — sem secret).
+  list-users-config                                   Lista os usuários cadastrados (alias, realm, client id, username — sem senha).
+
+Consulta na API do Keycloak (aceitam qualquer <credAlias> de client OU de user):
+  token <credAlias>                                   Imprime um access_token (uso interno; evite mostrar ao usuário).
+  list-clients <credAlias>                            Lista os clients do realm (sem secret).
+  realm-roles <credAlias>                              Lista as roles de nível de realm (JSON).
+  list-groups <credAlias>                              Lista os groups do realm (árvore completa).
+  group-detail <credAlias> <groupId>                   Detalha um group: subgrupos, membros, role mappings.
+  client-roles <credAlias> <clientId>                  Lista as roles de um client pelo nome (ex: biae).
 
 Criação pontual:
-  create-client-role <alias> <clientId> <roleName> [descricao]
+  create-client-role <credAlias> <clientId> <roleName> [descricao]
                                                        Cria uma role num client. Idempotente.
 
 Espelhamento entre ambientes (idempotente — seguro rodar de novo):
-  mirror-client-roles <sourceAlias> <targetAlias> <clientIdName>
+  mirror-client-roles <sourceCredAlias> <targetCredAlias> <clientIdName>
                                                        Cria no destino as roles que existem na origem e faltam nele.
-  mirror-group-roles <sourceAlias> <targetAlias> <groupPath> <clientIdName> [--recursive]
+  mirror-group-roles <sourceCredAlias> <targetCredAlias> <groupPath> <clientIdName> [--recursive]
                                                        Espelha client-role-mappings de um group. Cria o group se faltar.
                                                        --recursive aplica também aos subgrupos.
 
 Exemplos:
-  kc setup-credentials
+  kc setup-realm
+  kc setup-client
   kc client-roles sesrj-dev-biae biae
   kc mirror-client-roles sesrj-dev-biae sesrj-stg-biae biae
   kc mirror-group-roles sesrj-dev-biae sesrj-stg-biae "/Biae" biae --recursive
+
+Ordem recomendada ao cadastrar um ambiente novo: setup-realm (uma vez) -> setup-client (um por
+client desse realm) — o client não repete base URL/realm, só referencia o realm pelo alias.
 
 Ordem recomendada ao espelhar um client completo: mirror-client-roles antes de mirror-group-roles
 (as roles precisam existir no destino antes de mapeá-las nos groups).
@@ -52,8 +65,13 @@ SUBCOMMAND="${1:-}"
 [ -n "$SUBCOMMAND" ] && shift || true
 
 case "$SUBCOMMAND" in
-  list-aliases)          exec "$SCRIPT_DIR/kc-list-aliases.sh" "$@" ;;
-  token)                exec "$SCRIPT_DIR/kc-token.sh" "$@" ;;
+  setup-realm)           exec "$SCRIPT_DIR/setup-realm.sh" "$@" ;;
+  setup-client)          exec "$SCRIPT_DIR/setup-client.sh" "$@" ;;
+  setup-user)            exec "$SCRIPT_DIR/setup-user.sh" "$@" ;;
+  list-realms)           exec "$SCRIPT_DIR/kc-list-realms.sh" "$@" ;;
+  list-clients-config)   exec "$SCRIPT_DIR/kc-list-clients-config.sh" "$@" ;;
+  list-users-config)     exec "$SCRIPT_DIR/kc-list-users-config.sh" "$@" ;;
+  token)                 exec "$SCRIPT_DIR/kc-token.sh" "$@" ;;
   list-clients)          exec "$SCRIPT_DIR/kc-list-clients.sh" "$@" ;;
   realm-roles)           exec "$SCRIPT_DIR/kc-realm-roles.sh" "$@" ;;
   list-groups)           exec "$SCRIPT_DIR/kc-list-groups.sh" "$@" ;;
@@ -62,7 +80,6 @@ case "$SUBCOMMAND" in
   create-client-role)    exec "$SCRIPT_DIR/kc-create-client-role.sh" "$@" ;;
   mirror-client-roles)   exec "$SCRIPT_DIR/kc-mirror-client-roles.sh" "$@" ;;
   mirror-group-roles)    exec "$SCRIPT_DIR/kc-mirror-group-roles.sh" "$@" ;;
-  setup-credentials)     exec "$SCRIPT_DIR/setup-credentials.sh" "$@" ;;
   ""|-h|--help|help)     usage; exit 0 ;;
   *)
     echo "Subcomando desconhecido: $SUBCOMMAND" >&2

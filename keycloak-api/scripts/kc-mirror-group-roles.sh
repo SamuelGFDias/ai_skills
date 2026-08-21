@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# Espelha, de um alias/realm de origem para um de destino, os client-role-mappings
+# Espelha, de uma credencial/realm de origem para um de destino, os client-role-mappings
 # de um group (por path). Cria o group no destino se não existir. Idempotente.
-# Uso: kc-mirror-group-roles.sh <sourceAlias> <targetAlias> <groupPath> <clientIdName> [--recursive]
+# Uso: kc-mirror-group-roles.sh <sourceCredAlias> <targetCredAlias> <groupPath> <clientIdName> [--recursive]
 #   groupPath ex: /Biae/Administrador
 #   --recursive: aplica também a todos os subgrupos (por nome) da origem
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./lib-env.sh
+source "$SCRIPT_DIR/lib-env.sh"
 
 RECURSIVE=0
 ARGS=()
@@ -14,22 +16,18 @@ for a in "$@"; do
 done
 set -- "${ARGS[@]}"
 
-SRC_ALIAS="${1:?uso: kc-mirror-group-roles.sh <sourceAlias> <targetAlias> <groupPath> <clientIdName> [--recursive]}"
+SRC_ALIAS="${1:?uso: kc-mirror-group-roles.sh <sourceCredAlias> <targetCredAlias> <groupPath> <clientIdName> [--recursive]}"
 TGT_ALIAS="${2:?}"
 GROUP_PATH="${3:?}"
 CLIENT_NAME="${4:?}"
 
-SRC_ENV="$HOME/.claude/secrets/keycloak/${SRC_ALIAS}.env"
-TGT_ENV="$HOME/.claude/secrets/keycloak/${TGT_ALIAS}.env"
-[ -f "$SRC_ENV" ] || { echo "Credenciais não encontradas: $SRC_ENV" >&2; exit 1; }
-[ -f "$TGT_ENV" ] || { echo "Credenciais não encontradas: $TGT_ENV" >&2; exit 1; }
+load_credential_env "$SRC_ALIAS"
+SRC_BASE="$KEYCLOAK_BASE_URL"
+SRC_REALM="$KEYCLOAK_REALM"
 
-read_env_var() { ( set -a; source "$1" >/dev/null 2>&1; set +a; eval "echo \"\$$2\"" ); }
-
-SRC_BASE="$(read_env_var "$SRC_ENV" KEYCLOAK_BASE_URL)"
-SRC_REALM="$(read_env_var "$SRC_ENV" KEYCLOAK_REALM)"
-TGT_BASE="$(read_env_var "$TGT_ENV" KEYCLOAK_BASE_URL)"
-TGT_REALM="$(read_env_var "$TGT_ENV" KEYCLOAK_REALM)"
+load_credential_env "$TGT_ALIAS"
+TGT_BASE="$KEYCLOAK_BASE_URL"
+TGT_REALM="$KEYCLOAK_REALM"
 
 SRC_TOKEN="$("$SCRIPT_DIR/kc-token.sh" "$SRC_ALIAS")"
 TGT_TOKEN="$("$SCRIPT_DIR/kc-token.sh" "$TGT_ALIAS")"
@@ -78,9 +76,16 @@ ensure_group_path() { # base realm token cleanPath -> cria hierarquia faltante, 
       else
         create_url="$base/admin/realms/$realm/groups/$parent_id/children"
       fi
-      local loc
-      loc="$(curl -s -o /dev/null -D - -H "Authorization: Bearer $token" -H "Content-Type: application/json" \
-        -d "{\"name\":\"$seg\"}" "$create_url" | tr -d '\r' | grep -i '^location:' | awk '{print $2}')"
+      local hdrs status loc
+      hdrs="$(mktemp)"
+      status="$(curl -s -o /dev/null -D "$hdrs" -w '%{http_code}' -H "Authorization: Bearer $token" -H "Content-Type: application/json" \
+        -d "{\"name\":\"$seg\"}" "$create_url")"
+      loc="$(tr -d '\r' < "$hdrs" | grep -i '^location:' | awk '{print $2}')"
+      rm -f "$hdrs"
+      if [ -z "$loc" ]; then
+        echo "erro: falha ao criar segmento de group '$seg' (path acumulado: '$accum') em '$create_url' — resposta HTTP $status sem header Location; abortando para evitar corromper a hierarquia de groups no destino" >&2
+        exit 1
+      fi
       parent_id="${loc##*/}"
     fi
   done
