@@ -21,19 +21,34 @@ Cadastro (realm e credencial são configurados separadamente):
   setup-user                                          Cadastra/edita uma credencial de usuário (username/senha,
                                                         grant_type=password) — para operações fora do escopo de
                                                         um client, quando não há service account habilitado.
+  delete-client <alias>                               Remove um client cadastrado (só o arquivo local; pede
+                                                        confirmação [s/N]; não afeta o client no Keycloak).
+  delete-user <alias>                                 Remove uma credencial de usuário cadastrada (idem).
 
 Consulta de cadastro local:
   list-realms                                         Lista os realms cadastrados (alias, base URL, realm).
   list-clients-config                                 Lista os clients cadastrados (alias, realm, client id — sem secret).
   list-users-config                                   Lista os usuários cadastrados (alias, realm, client id, username — sem senha).
 
-Consulta na API do Keycloak (aceitam qualquer <credAlias> de client OU de user):
+Consulta na API do Keycloak (1º argumento aceita <credAlias> de client OU de user; nos 5
+comandos abaixo também aceita <realmAlias> — ver modo automático mais abaixo):
   token <credAlias>                                   Imprime um access_token (uso interno; evite mostrar ao usuário).
-  list-clients <credAlias>                            Lista os clients do realm (sem secret).
-  realm-roles <credAlias>                              Lista as roles de nível de realm (JSON).
-  list-groups <credAlias>                              Lista os groups do realm (árvore completa).
-  group-detail <credAlias> <groupId>                   Detalha um group: subgrupos, membros, role mappings.
-  client-roles <credAlias> <clientId>                  Lista as roles de um client pelo nome (ex: meu-app).
+  list-clients <credAlias|realmAlias> [realmDestino]  Lista os clients do realm (sem secret).
+  realm-roles <credAlias|realmAlias> [realmDestino]   Lista as roles de nível de realm (JSON).
+  list-groups <credAlias|realmAlias> [realmDestino]   Lista os groups do realm (árvore completa).
+  group-detail <credAlias|realmAlias> <groupId> [realmDestino]
+                                                       Detalha um group: subgrupos, membros, role mappings.
+  client-roles <credAlias|realmAlias> <clientId> [realmDestino]
+                                                       Lista as roles de um client pelo nome (ex: meu-app).
+
+  realmDestino (opcional, com <credAlias>): consulta outro realm da MESMA instância Keycloak
+  da credencial, usando o token dela — cobre o padrão de admin do realm master, que autentica
+  no master mas pode gerenciar qualquer outro realm da mesma instância. Sem realmDestino,
+  consulta o próprio realm da credencial.
+
+  Modo automático (com <realmAlias> no lugar do credAlias): resolve sozinho uma credencial de
+  admin do master da mesma instância pra consultar esse realm — menu se houver mais de uma
+  candidata, com opção de salvar como padrão.
 
 Criação pontual:
   create-client-role <credAlias> <clientId> <roleName> [descricao]
@@ -53,6 +68,12 @@ Exemplos:
   kc mirror-client-roles realm-dev-meu-app realm-stg-meu-app meu-app
   kc mirror-group-roles realm-dev-meu-app realm-stg-meu-app "/MeuApp" meu-app --recursive
 
+  # Modo automático: passe o REALM em vez do credAlias em list-clients/client-roles/
+  # realm-roles/list-groups/group-detail — resolve sozinho uma credencial de admin do
+  # 'master' da mesma instância (menu se houver mais de uma, com opção de salvar padrão).
+  kc list-clients realm-dev
+  kc client-roles realm-dev meu-app
+
 Ordem recomendada ao cadastrar um ambiente novo: setup-realm (uma vez) -> setup-client (um por
 client desse realm) — o client não repete base URL/realm, só referencia o realm pelo alias.
 
@@ -68,6 +89,8 @@ case "$SUBCOMMAND" in
   setup-realm)           exec "$SCRIPT_DIR/setup-realm.sh" "$@" ;;
   setup-client)          exec "$SCRIPT_DIR/setup-client.sh" "$@" ;;
   setup-user)            exec "$SCRIPT_DIR/setup-user.sh" "$@" ;;
+  delete-client)         exec "$SCRIPT_DIR/kc-delete-client.sh" "$@" ;;
+  delete-user)           exec "$SCRIPT_DIR/kc-delete-user.sh" "$@" ;;
   list-realms)           exec "$SCRIPT_DIR/kc-list-realms.sh" "$@" ;;
   list-clients-config)   exec "$SCRIPT_DIR/kc-list-clients-config.sh" "$@" ;;
   list-users-config)     exec "$SCRIPT_DIR/kc-list-users-config.sh" "$@" ;;
