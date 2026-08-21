@@ -40,7 +40,12 @@ EDITING=0
 if [ -f "$ENV_FILE" ]; then
   EDITING=1
   load_env_file_safe "$ENV_FILE" KEYCLOAK_REALM_ALIAS KEYCLOAK_CLIENT_ID KEYCLOAK_USERNAME KEYCLOAK_PASSWORD
-  echo "Usuário '${USER_ALIAS}' já existe (realm atual: ${KEYCLOAK_REALM_ALIAS}) — Enter mantém o valor atual." >&2
+  echo "Usuário '${USER_ALIAS}' já existe — Enter mantém o valor atual em cada campo abaixo." >&2
+  if [ "$REALM_ALIAS" != "$KEYCLOAK_REALM_ALIAS" ]; then
+    echo "ATENÇÃO: realm será alterado de '${KEYCLOAK_REALM_ALIAS}' (atual) para '${REALM_ALIAS}' (selecionado agora)." >&2
+  else
+    echo "Realm: ${KEYCLOAK_REALM_ALIAS} (sem alteração)." >&2
+  fi
 fi
 
 # admin-cli é o client público padrão do Keycloak para grant_type=password; raramente

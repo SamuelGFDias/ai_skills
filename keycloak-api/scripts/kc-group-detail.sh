@@ -1,23 +1,24 @@
 #!/usr/bin/env bash
 # Detalha um group: subgrupos, membros e role mappings (realm + client).
-# Uso: kc-group-detail.sh <credAlias> <groupId>
+# Uso: kc-group-detail.sh <credAlias|realmAlias> <groupId> [realmDestino]
+# 1º argumento: ver comentário em kc-list-clients.sh.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./lib-env.sh
 source "$SCRIPT_DIR/lib-env.sh"
 
-CRED_ALIAS="${1:?uso: kc-group-detail.sh <credAlias> <groupId>}"
+ARG1="${1:?uso: kc-group-detail.sh <credAlias|realmAlias> <groupId> [realmDestino]}"
 GROUP_ID="${2:?informe o id interno do group}"
 
-load_credential_env "$CRED_ALIAS"
+resolve_target_credential "$ARG1" "${3:-}"
 
 TOKEN="$("$SCRIPT_DIR/kc-token.sh" "$CRED_ALIAS")"
-BASE="${KEYCLOAK_BASE_URL}/admin/realms/${KEYCLOAK_REALM}/groups/${GROUP_ID}"
+BASE="${KEYCLOAK_BASE_URL}/admin/realms/${TARGET_REALM}/groups/${GROUP_ID}"
 
-CHILDREN="$(curl -sf -H "Authorization: Bearer ${TOKEN}" "${BASE}/children")"
-MEMBERS="$(curl -sf -H "Authorization: Bearer ${TOKEN}" "${BASE}/members")"
-REALM_ROLES="$(curl -sf -H "Authorization: Bearer ${TOKEN}" "${BASE}/role-mappings/realm")"
-CLIENT_ROLE_MAPPINGS="$(curl -sf -H "Authorization: Bearer ${TOKEN}" "${BASE}/role-mappings")"
+CHILDREN="$(api_request GET "${BASE}/children" -H "Authorization: Bearer ${TOKEN}")" || exit 1
+MEMBERS="$(api_request GET "${BASE}/members" -H "Authorization: Bearer ${TOKEN}")" || exit 1
+REALM_ROLES="$(api_request GET "${BASE}/role-mappings/realm" -H "Authorization: Bearer ${TOKEN}")" || exit 1
+CLIENT_ROLE_MAPPINGS="$(api_request GET "${BASE}/role-mappings" -H "Authorization: Bearer ${TOKEN}")" || exit 1
 
 python3 -c "
 import json, sys
