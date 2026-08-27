@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # Espelha, de uma credencial/realm de origem para um de destino, os client-role-mappings
 # de um group (por path). Cria o group no destino se não existir. Idempotente.
-# Uso: kc-mirror-group-roles.sh <sourceCredAlias> <targetCredAlias> <groupPath> <clientIdName> [--recursive]
+# Uso: kc-mirror-group-roles.sh <sourceCredAlias|realmAlias> <targetCredAlias|realmAlias> <groupPath> <clientIdName> [--recursive]
 #   groupPath ex: /Biae/Administrador
 #   --recursive: aplica também a todos os subgrupos (por nome) da origem
+#   origem/destino aceitam também um realmAlias (ver comentário em kc-list-clients.sh) — útil
+#   quando não há credencial com permissão de realm-management no realm de destino: passe o
+#   realm e a skill resolve sozinha uma credencial de admin do master da mesma instância.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./lib-env.sh
@@ -16,21 +19,23 @@ for a in "$@"; do
 done
 set -- "${ARGS[@]}"
 
-SRC_ALIAS="${1:?uso: kc-mirror-group-roles.sh <sourceCredAlias> <targetCredAlias> <groupPath> <clientIdName> [--recursive]}"
+SRC_ALIAS="${1:?uso: kc-mirror-group-roles.sh <sourceCredAlias|realmAlias> <targetCredAlias|realmAlias> <groupPath> <clientIdName> [--recursive]}"
 TGT_ALIAS="${2:?}"
 GROUP_PATH="${3:?}"
 CLIENT_NAME="${4:?}"
 
-load_credential_env "$SRC_ALIAS"
+resolve_target_credential "$SRC_ALIAS"
+SRC_CRED_ALIAS="$CRED_ALIAS"
 SRC_BASE="$KEYCLOAK_BASE_URL"
-SRC_REALM="$KEYCLOAK_REALM"
+SRC_REALM="$TARGET_REALM"
 
-load_credential_env "$TGT_ALIAS"
+resolve_target_credential "$TGT_ALIAS"
+TGT_CRED_ALIAS="$CRED_ALIAS"
 TGT_BASE="$KEYCLOAK_BASE_URL"
-TGT_REALM="$KEYCLOAK_REALM"
+TGT_REALM="$TARGET_REALM"
 
-SRC_TOKEN="$("$SCRIPT_DIR/kc-token.sh" "$SRC_ALIAS")"
-TGT_TOKEN="$("$SCRIPT_DIR/kc-token.sh" "$TGT_ALIAS")"
+SRC_TOKEN="$("$SCRIPT_DIR/kc-token.sh" "$SRC_CRED_ALIAS")"
+TGT_TOKEN="$("$SCRIPT_DIR/kc-token.sh" "$TGT_CRED_ALIAS")"
 
 url_encode_path() {
   python3 -c "import urllib.parse,sys; print('/'.join(urllib.parse.quote(s) for s in sys.argv[1].split('/')))" "$1"
