@@ -182,8 +182,10 @@ sugestão de usar o modo automático com um usuário master) em vez de só "Forb
 
 ### Criação pontual
 
-- `kc create-client-role <credAlias> <clientId> <roleName> [descricao]` — cria uma role num
-  client. Idempotente (reporta "JÁ EXISTE" em vez de duplicar).
+- `kc create-client-role <credAlias|realmAlias> <clientId> <roleName> [descricao]` — cria uma
+  role num client. Idempotente (reporta "JÁ EXISTE" em vez de duplicar). Aceita também um
+  realmAlias no lugar do credAlias — modo automático por realm (credencial de master), como
+  os comandos de consulta acima.
 
 ### Alteração pontual
 
@@ -213,14 +215,25 @@ Fluxo típico do usuário: comparar/replicar roles e groups de um client entre d
 sem duplicar nada, e servem tanto para aplicar quanto para conferir paridade (rodar de novo e
 ver "já em paridade" = confirmação).
 
-- `kc mirror-client-roles <sourceCredAlias> <targetCredAlias> <clientIdName>` — cria no
-  client de destino as roles (nome + descrição) que existem na origem e faltam no destino.
-  Assume mesmo `clientId` nos dois ambientes.
-- `kc mirror-group-roles <sourceCredAlias> <targetCredAlias> <groupPath> <clientIdName> [--recursive]`
+- `kc mirror-client-roles <sourceCredAlias|realmAlias> <targetCredAlias|realmAlias> <clientIdName>`
+  — cria no client de destino as roles (nome + descrição) que existem na origem e faltam no
+  destino. Assume mesmo `clientId` nos dois ambientes.
+- `kc mirror-group-roles <sourceCredAlias|realmAlias> <targetCredAlias|realmAlias> <groupPath> <clientIdName> [--recursive]`
   — espelha os **client-role-mappings de um group** da origem para o destino. Cria o group no
   destino se não existir (inclusive hierarquia intermediária). Com `--recursive`, aplica
   também a todos os subgrupos (por nome) encontrados na origem — cobre uma árvore inteira
   (ex: `/Biae` + todos os filhos) numa única chamada.
+
+Origem e destino aceitam também um **realmAlias** no lugar do credAlias — mesmo modo
+automático dos comandos de consulta (resolve sozinho uma credencial de admin do `master` da
+mesma instância). Útil quando o client do próprio ambiente (ex: service account de produção)
+não tem permissão de `realm-management` — em vez de conceder isso a ele, cadastre o realm
+técnico `master` da instância (`kc setup-realm` + `kc setup-user`) e passe o **realm** de
+destino diretamente:
+```
+kc mirror-client-roles sesrj-dev ses-rj biae
+kc mirror-group-roles sesrj-dev ses-rj "/Biae" biae --recursive
+```
 
 Ordem recomendada ao espelhar um client completo entre ambientes: primeiro
 `kc mirror-client-roles` (garante que as roles existem no destino), depois
