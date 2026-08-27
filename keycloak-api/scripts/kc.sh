@@ -51,8 +51,9 @@ comandos abaixo também aceita <realmAlias> — ver modo automático mais abaixo
   candidata, com opção de salvar como padrão.
 
 Criação pontual:
-  create-client-role <credAlias> <clientId> <roleName> [descricao]
-                                                       Cria uma role num client. Idempotente.
+  create-client-role <credAlias|realmAlias> <clientId> <roleName> [descricao]
+                                                       Cria uma role num client. Idempotente. Aceita
+                                                       também um realmAlias (modo automático acima).
 
 Alteração pontual:
   set-client-attr <credAlias|realmAlias> <clientId> <atributo>=<valor> [<atributo>=<valor> ...] [--apply] [realmDestino]
@@ -62,10 +63,12 @@ Alteração pontual:
                                                        que KC_ASSUME_YES=1). <atributo>=@unset ou
                                                        <atributo>= remove o atributo.
 
-Espelhamento entre ambientes (idempotente — seguro rodar de novo):
-  mirror-client-roles <sourceCredAlias> <targetCredAlias> <clientIdName>
+Espelhamento entre ambientes (idempotente — seguro rodar de novo; origem/destino aceitam
+também um realmAlias no lugar do credAlias — modo automático acima, útil quando não há
+credencial com permissão de realm-management no ambiente):
+  mirror-client-roles <sourceCredAlias|realmAlias> <targetCredAlias|realmAlias> <clientIdName>
                                                        Cria no destino as roles que existem na origem e faltam nele.
-  mirror-group-roles <sourceCredAlias> <targetCredAlias> <groupPath> <clientIdName> [--recursive]
+  mirror-group-roles <sourceCredAlias|realmAlias> <targetCredAlias|realmAlias> <groupPath> <clientIdName> [--recursive]
                                                        Espelha client-role-mappings de um group. Cria o group se faltar.
                                                        --recursive aplica também aos subgrupos.
 
@@ -78,10 +81,14 @@ Exemplos:
   kc mirror-group-roles realm-dev-meu-app realm-stg-meu-app "/MeuApp" meu-app --recursive
 
   # Modo automático: passe o REALM em vez do credAlias em list-clients/client-roles/
-  # realm-roles/list-groups/group-detail — resolve sozinho uma credencial de admin do
-  # 'master' da mesma instância (menu se houver mais de uma, com opção de salvar padrão).
+  # realm-roles/list-groups/group-detail/create-client-role/mirror-client-roles/
+  # mirror-group-roles — resolve sozinho uma credencial de admin do 'master' da mesma
+  # instância (menu se houver mais de uma, com opção de salvar padrão). Útil quando o
+  # client do ambiente (ex: service account de prod) não tem permissão de realm-management.
   kc list-clients realm-dev
   kc client-roles realm-dev meu-app
+  kc mirror-client-roles realm-dev realm-prod meu-app
+  kc mirror-group-roles realm-dev realm-prod "/MeuApp" meu-app --recursive
 
 Ordem recomendada ao cadastrar um ambiente novo: setup-realm (uma vez) -> setup-client (um por
 client desse realm) — o client não repete base URL/realm, só referencia o realm pelo alias.
