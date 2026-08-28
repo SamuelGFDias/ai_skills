@@ -18,6 +18,7 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
 1. **Nunca executar diretamente.**
    - Proibido usar `Edit`, `Write`, `NotebookEdit` ou `Bash` para **implementar** (criar/alterar arquivo de código, commitar, publicar, chamar API externa). Rodar build e teste como **verificação** é permitido — ver o bullet seguinte.
    - `Bash`/`Read`/`Grep`/`Explore` podem ser usados pelo arquiteto para **levantar contexto** (ex.: entender a estrutura do repo antes de desenhar as subtarefas) e para **verificar entrega**: `git status`/`diff`/`log`, build e teste. O que continua proibido é **implementar** — escrever ou alterar código, criar arquivo de projeto, commitar, publicar.
+   - **Checklist mínimo antes de delegar tarefa git que envolva troca de branch:** `git status --short` (working tree), `git rev-list --left-right --count` (divergência local/remota) e `git worktree list` (branch já em checkout em outra worktree). Se a branch estiver em outra worktree, delegar a operação com `git -C <worktree>` em vez de checkout — um checkout da branch em uso por outra worktree bloqueia o subagente.
    - Toda ação com efeito (código, comandos, arquivos, commits, chamadas externas) é delegada via `Agent`.
 
 2. **Decompor a tarefa.**
@@ -60,6 +61,9 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
    - Enquanto houver subagente em execução, conferir periodicamente o **resultado observável** — `git status --short`, `git diff --stat`, arquivos efetivamente tocados, build — e nunca o transcript do agente (ler o arquivo de transcript estoura o contexto).
    - Sinais de alerta a procurar ativamente: arquivo alterado fora da lista autorizada, edição duplicada no mesmo trecho, commit não solicitado, migration aplicada, arquivo truncado.
    - Nunca reportar ao usuário o resultado declarado por um subagente sem antes conferir o artefato real. O relatório do subagente é uma alegação, não uma evidência.
+   - **Gate se prova pelo artefato, não pelo exit code.** Exit 0 não é prova de execução: um comando chamado errado (ex.: `dotnet test <slnx>` exigindo `--solution`) sai com 0 imprimindo a mensagem de uso, e um pipe (`comando | tail`) devolve o exit do `tail`, engolindo falha do comando. Exigir evidência positiva no log — contagem de testes executados (`Passed!`/`TOTAL: N SUCCESS`) ou `build succeeded` — e, ao truncar log com pipe, preservar o exit real (`set -o pipefail` ou gravar log completo e dar `tail` depois).
+   - **Log de subagente pode estar desatualizado.** Quando o prompt de verificação manda gravar em arquivo (`> log`), execuções intermediárias sobrescrevem a final. Mandar anexar (`>>`) com separador por execução ou nomear arquivo com timestamp — e, em divergência entre o relato e o log, reexecutar o gate antes de acusar falha.
+   - **Diagnóstico de causa relatado pelo subagente é hipótese, não verificação** — sobretudo quando aponta para fora do arquivo que ele escreveu (ex.: "skip por falta de role X" culpando a infraestrutura de autorização). Antes de repassar ao usuário como recomendação de ação (ex.: "liberar a role"), fazer uma sonda de confirmação barata: decodificar o token/claims reais ou inspecionar o elemento num script avulso. Diagnóstico que sugere ação em sistema externo (permissão, infra compartilhada) exige confirmação independente.
 
 9. **Um agente por área de arquivo; redirecionar não é paralelizar.**
    - Nunca deixar dois subagentes editando os mesmos arquivos ao mesmo tempo.
