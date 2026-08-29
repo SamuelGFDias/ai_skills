@@ -5,6 +5,8 @@ description: Instala o jq e o glab (CLIs usados pelos scripts SES) em Linux, mac
 
 # Skill: ses-gitlab-deps
 
+**Tipo:** internal
+
 ## Quando executar
 
 - Pedidos para instalar, atualizar ou reparar `jq` ou `glab`.

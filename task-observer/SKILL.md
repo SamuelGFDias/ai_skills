@@ -18,6 +18,8 @@ description: >
 
 # Task Observer — Continuous Skill Discovery & Improvement
 
+**Tipo:** internal
+
 **Created by Eoghan Henn / [rebelytics.com](https://rebelytics.com)** —
 *"One Skill to Rule Them All."* Licensed CC BY 4.0: share and adapt freely
 with credit to the author. Canonical source:

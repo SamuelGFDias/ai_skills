@@ -5,6 +5,8 @@ description: Consulta e integra com a API REST do sistema Cronograma da SES-RJ (
 
 # Skill: Cronograma API (SES-RJ)
 
+**Tipo:** internal
+
 ## Quando executar
 
 - Pedidos para consultar, testar ou integrar com `https://cronograma.saude.rj.gov.br/api`.

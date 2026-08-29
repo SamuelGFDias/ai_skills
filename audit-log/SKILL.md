@@ -5,6 +5,8 @@ description: AuditLog library — NuGet packages, DSL, troubleshooting, pack & p
 
 # AuditLog — Skill
 
+**Tipo:** internal
+
 Biblioteca de auditoria automática para EF Core com Source Generators Roslyn.
 
 **Repositório:** https://github.com/SamuelGFDias/audit_log

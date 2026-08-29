@@ -5,6 +5,8 @@ description: Consulta e sincroniza a Admin REST API de instâncias Keycloak (tok
 
 # Keycloak API
 
+**Tipo:** internal
+
 Esta skill encapsula chamadas comuns à Admin REST API do Keycloak, mantendo `client_secret`/senha fora do contexto da conversa e do histórico de chat.
 
 ## Modelo de cadastro: realm, client e user são separados
@@ -78,7 +80,7 @@ na mensagem**. Duas opções, em ordem de preferência:
    kc setup-realm      # só se o realm ainda não existir em `kc list-realms`
    kc setup-client      # ou: kc setup-user
    ```
-   (ou, se ainda não rodou `init.sh`: `~/.claude/skills/keycloak-api/scripts/kc.sh setup-client`)
+   (ou, se ainda não rodou `init.sh`: `~/.config/ai/skills/keycloak-api/scripts/kc.sh setup-client`)
 2. **Aceitável:** o usuário roda o mesmo comando dentro do Claude Code usando o prefixo `!`.
    Os prompts são interativos (`select` para escolher o realm, leitura mascarada pra
    secret/senha) — funcionam normalmente com `!`, e o valor real nunca aparece na conversa,
@@ -248,7 +250,7 @@ kc mirror-client-roles sesrj-dev-biae sesrj-stg-biae biae
 kc mirror-group-roles sesrj-dev-biae sesrj-stg-biae "/Biae" biae --recursive
 ```
 
-Antes do `init.sh` (ou se preferir caminho completo): `~/.claude/skills/keycloak-api/scripts/kc.sh <subcomando> ...`.
+Antes do `init.sh` (ou se preferir caminho completo): `~/.config/ai/skills/keycloak-api/scripts/kc.sh <subcomando> ...`.
 
 ## Disponibilizar o comando fora da skill
 
@@ -258,7 +260,7 @@ shell, ficam só como implementação interna do wrapper (controlado por `script
 lista apenas `kc`). Idempotente, não mexe em blocos de outras skills:
 
 ```bash
-~/.claude/skills/keycloak-api/scripts/init.sh
+~/.config/ai/skills/keycloak-api/scripts/init.sh
 source ~/.zshrc   # ou abrir um novo terminal
 ```
 

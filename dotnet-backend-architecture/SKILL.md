@@ -5,6 +5,8 @@ description: "Use sempre que a tarefa envolver backend .NET, C#, ASP.NET Core, A
 
 # Skill: dotnet-backend-architecture
 
+**Tipo:** internal
+
 Use esta skill como padrao arquitetural para qualquer projeto backend .NET. O estilo foi extraido de um projeto real grande, mas deve ser aplicado de forma generica e adaptado aos nomes, pastas e bibliotecas do repo atual.
 
 ## Principio central

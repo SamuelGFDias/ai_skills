@@ -5,6 +5,8 @@ description: Ativa o modo arquiteto — planeja e delega toda a execução a sub
 
 # Skill: arquiteto
 
+**Tipo:** internal
+
 ## Quando executar
 
 Sempre que o usuário invocar `/arquiteto <tarefa>` ou pedir explicitamente para atuar "como arquiteto" nesta tarefa. Os argumentos passados (`args`) são a descrição da tarefa a planejar e delegar.

@@ -5,6 +5,8 @@ description: Abre um túnel local (oc port-forward) até o Redis (svc/redis-mast
 
 # Skill: redis-port-forward
 
+**Tipo:** internal
+
 ## Quando executar
 
 Pedidos para acessar, depurar ou consultar chaves do Redis dos ambientes SES-RJ (DEV/HML/PRD) a

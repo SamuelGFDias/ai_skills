@@ -58,7 +58,6 @@ omitida ele lê a senha de stdin quando não há tty interativo. **Nunca** usar 
 
 ```bash
 for env in hub hml prd; do
-  oc logout >/dev/null 2>&1
   pass show ad-ses/senha | oc login -u "$(pass show ad-ses/usuario)" \
     --server="https://api.ses-rj-$env.saude.rj.gov.br:6443" \
     --certificate-authority="$HOME/.config/openshift-ca/$env-ca.crt" >/dev/null 2>&1
@@ -68,6 +67,15 @@ done
 
 `oc whoami -t | pass insert -e ...` — o token nunca é impresso, vai direto do `oc` para o `pass`
 via pipe.
+
+**Não usar `oc logout` entre os ambientes do loop.** `oc logout` revoga o token **no servidor**,
+não só localmente (confirmado empiricamente: token de um ambiente salvo no `pass` parou de
+funcionar depois que o loop deu `oc logout` antes de passar para o próximo ambiente — só o último
+processado, sem `oc logout` depois, sobreviveu). Como cada iteração já mira um `--server`
+diferente, não existe cache a "furar" — o `oc login -u/-p` sempre faz uma autenticação de verdade
+contra um cluster novo, então o `logout` prévio é desnecessário aqui. Só usar `oc logout` quando o
+objetivo for forçar reautenticação no **mesmo** cluster onde já existe um token válido em cache
+(nesse caso, sabendo que o token atual daquele cluster será descartado).
 
 ## Convenção de nomes no cofre
 

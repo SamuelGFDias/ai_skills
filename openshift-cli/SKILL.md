@@ -5,6 +5,8 @@ description: Instala o OpenShift CLI (oc/kubectl) e autentica nos clusters SES-R
 
 # Skill: openshift-cli
 
+**Tipo:** internal
+
 ## Quando executar
 
 Pedidos para instalar o `oc`/`kubectl`, autenticar num cluster OpenShift SES-RJ (HUB/HML/PRD),
@@ -13,7 +15,7 @@ authority` no `oc login`.
 
 ## Pré-requisitos
 
-- Cofre de senhas configurado (`pass` no Linux, `gopass` no Windows) — ver skill `passbolt-cli`
+- Cofre de senhas configurado (`pass` no Linux, `gopass` no Windows) — ver skill `vault-factory`
   para a chave GPG. Runbook completo: `Runbook — Gopass e Pass` na wiki.
 - Fonte oficial: `wiki.saude.rj.gov.br/en/plataforma/openshift/runbooks/instalacao-openshift-cli`.
 
@@ -88,4 +90,4 @@ Depois do primeiro `oc login --certificate-authority=...` bem-sucedido, a CA fic
 - `docs/login-usuario-senha.md` — login direto usuário/senha e renovação de token sem console.
 - `scripts/get-cluster-ca.sh` — extrai a CA raiz de um cluster para uso com `--certificate-authority`.
 - Skill `redis-port-forward` — usa este `oc` já autenticado para abrir túnel até o Redis.
-- Skill `passbolt-cli` — chave GPG usada pelo `pass`/`gopass` que guarda os tokens.
+- Skill `vault-factory` — chave GPG usada pelo `pass`/`gopass` que guarda os tokens.
