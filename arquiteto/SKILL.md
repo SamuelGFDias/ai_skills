@@ -29,17 +29,25 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
    - Quando houver dependência real entre subtarefas, delegar sequencialmente, usando o resultado de uma para escrever o prompt da próxima.
 
 3. **Modelo e esforço mínimos por subtarefa.**
-   - Escolher o `subagent_type` entre os 4 tipos graduados abaixo, sempre começando pelo mais barato que atenda à subtarefa:
+   - **Duas famílias de subagentes, dimensões ortogonais:** *executores* (escrevem, isolados por área de arquivo — regra 9) e *investigadores* (read-only, nunca alteram arquivo). Investigação não é "executor que ainda não decidiu": é um tipo próprio, livre para paralelizar sem limite porque não gera conflito nem efeito colateral.
+   - **Executores** (escolher o mais barato que atenda; critério de escalada: 1 critério de pronto e zero decisão → mecânico; decisões tomadas no prompt → padrão; precisa julgar/resolver conflito → complexo; risco alto ou arquitetura → crítico):
 
      | tipo | modelo | esforço | quando usar |
      |---|---|---|---|
      | `executor-mecanico` | haiku | low | 1 critério de pronto, zero decisão: commit por caminho, merge fast-forward, rebase sem conflito, rodar um comando e reportar, mover/renomear/copiar arquivos, substituição literal de texto, preencher template. |
      | `executor-padrao` | sonnet | medium | Decisões já tomadas no prompt: feature ou lote em arquivos listados, testes unitários de comportamento definido, rebase com conflito simples, script com lógica moderada. |
-     | `executor-complexo` | sonnet | high | Precisa julgar, investigar ou resolver: conflito não trivial, auditoria de cobertura (mudança → teste), investigação com evidência (arquivo:linha), refatoração transversal, diagnóstico de bug. |
+     | `executor-complexo` | sonnet | high | Precisa julgar, investigar ou resolver: conflito não trivial, refatoração transversal, auditoria de cobertura (mudança → teste), diagnóstico de bug. A parte de **investigação pura** prefere `investigador-*` abaixo. |
      | `executor-critico` | opus | high | Raro — risco alto ou decisão arquitetural: bug sutil de concorrência/segurança, migração com risco de dado. Justificar no prompt por que `executor-complexo` não bastava. |
 
-   - Critério de escalada: 1 critério de pronto e zero decisão → mecânico; decisões já tomadas no prompt → padrão; precisa julgar/investigar/resolver conflito → complexo; risco alto ou arquitetura → crítico.
+   - **Investigadores** (read-only; constatação com evidência `arquivo:linha`; hipótese de memória não é prova — sempre confirmar no código atual):
+
+     | tipo | modelo | esforço | quando usar |
+     |---|---|---|---|
+     | `investigador-padrao` | sonnet | medium | Reconhecimento: mapear estrutura, localizar símbolos/usos, resumir módulos, achar candidatos a mudança. Paralelizável em massa antes de delegar execução. |
+     | `investigador-critico` | opus | high | Causa-raiz não trivial, auditoria de cobertura profunda, fluxo transversal com risco. Justificar no prompt por que `investigador-padrao` não bastava. |
+
    - Só passar `model` explícito na chamada `Agent` quando precisar divergir do tipo escolhido — e, nesse caso, registrar no prompt por quê.
+   - **Fluxo típico:** disparar N `investigador-padrao` em paralelo → consolidar constatações → escrever prompts dos executores já com contexto provado (reforça a regra 5 e reduz retrabalho da regra 11).
 
 4. **Proibir sub-delegação.**
    - Cada subagente delegado deve executar a subtarefa diretamente, sem repassar trabalho a outro subagente.
@@ -52,7 +60,7 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
 
 6. **Síntese e prestação de contas.**
    - Ao final (ou conforme os subagentes retornam), revisar os resultados, verificar se atendem ao critério de pronto, e reportar ao usuário de forma objetiva: o que foi delegado, para qual modelo/tipo de agente, e o resultado.
-   - **Contrato de retorno obrigatório.** Todo prompt de `Agent` deve exigir que o executor responda num bloco fixo — nada de relato livre:
+   - **Contrato de retorno obrigatório — único para todos os subagentes.** Todo prompt de `Agent` deve exigir que o subagente responda num bloco fixo — nada de relato livre. Vale idêntico para executores e investigadores:
 
      ```
      Resultado: ENTREGA | BLOQUEIO
@@ -61,6 +69,10 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
      Evidência: (resumo de saída/artefato que sustenta a entrega)
      Riscos/pendências: (ou "nenhum")
      ```
+
+     A adaptação entre famílias é **semântica, não estrutural** — o parser do arquiteto é um só:
+     - **Executor:** `Arquivos tocados` = arquivos alterados/escritos; `Evidência` = saída de build/teste/artefato.
+     - **Investigador (read-only):** `Arquivos tocados` = `nenhum (read-only)`; `Evidência` = lista de constatações com `arquivo:linha` (e, no crítico, o diagnóstico constatado com sua cadeia de evidência). Não criar campos extras específicos de investigador.
 
      Ao receber o retorno, conferir o artefato real (regra 8) e a evidência contra o critério de pronto — o formato padronizado existe para o arquiteto não ter de re-parsificar relatórios heterogêneos.
    - Ações sensíveis (push, merge, deleção, etc.) continuam exigindo confirmação do usuário antes de qualquer subagente executá-las, mesmo em modo arquiteto.
@@ -105,10 +117,10 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
 
 ## Instalação dos tipos de agente
 
-Os 4 tipos graduados (`executor-mecanico`, `executor-padrao`, `executor-complexo`, `executor-critico`) vivem em `~/.config/ai/skills/arquiteto/agents/`, versionados junto com esta skill.
+Os 6 tipos graduados (4 executores: `executor-mecanico`, `executor-padrao`, `executor-complexo`, `executor-critico`; 2 investigadores read-only: `investigador-padrao`, `investigador-critico`) vivem em `~/.config/ai/skills/arquiteto/agents/`, versionados junto com esta skill.
 
 O Claude Code os enxerga via symlinks em `~/.claude/agents/<nome>.md` — mesmo mecanismo usado para as skills. O Kilo não usa agentes; esta seção não se aplica a ele.
 
 Tipos de agente novos ou alterados só aparecem numa **sessão nova** do Claude Code — uma sessão já aberta não os reconhece.
 
-**Fallback:** se `ls ~/.claude/agents` não mostrar os 4 tipos, ou a chamada `Agent` rejeitar o `subagent_type`, usar `general-purpose` com o `model` equivalente (haiku/sonnet/sonnet/opus) e registrar, na síntese ao usuário, que o esforço ficou no padrão da sessão.
+**Fallback:** se `ls ~/.claude/agents` não mostrar os 6 tipos, ou a chamada `Agent` rejeitar o `subagent_type`, usar `general-purpose` com o `model` equivalente (haiku/sonnet/sonnet/opus/sonnet/opus) e registrar, na síntese ao usuário, que o esforço ficou no padrão da sessão.
