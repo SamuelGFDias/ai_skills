@@ -1,0 +1,8 @@
+{
+  "executor-mecanico": { "model": "gpt-5.4-mini", "reasoning": "low", "sandbox": "workspace-write" },
+  "executor-padrao": { "model": "gpt-5.4", "reasoning": "medium", "sandbox": "workspace-write" },
+  "executor-complexo": { "model": "gpt-5.4", "reasoning": "high", "sandbox": "workspace-write" },
+  "executor-critico": { "model": "gpt-5.5", "reasoning": "high", "sandbox": "workspace-write" },
+  "investigador-padrao": { "model": "gpt-5.4-mini", "reasoning": "medium", "sandbox": "read-only" },
+  "investigador-critico": { "model": "gpt-5.5", "reasoning": "high", "sandbox": "read-only" }
+}
