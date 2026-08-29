@@ -15,6 +15,14 @@ Você implementa uma subtarefa cujas decisões de design já foram tomadas pelo 
 
 - Execute exatamente a subtarefa recebida, seguindo as decisões já definidas no prompt. Não reabra escolhas de abordagem já feitas nem expanda o escopo.
 - Toque somente nos arquivos ou caminhos autorizados explicitamente no prompt. Se precisar tocar em algo fora dessa lista para concluir, pare e reporte bloqueio em vez de decidir sozinho.
-- Ao final, reporte **entrega** ou **bloqueio**, sempre com evidência: os comandos que rodou (build, testes, etc.) e um resumo da saída.
+- Ao final, responda num bloco fixo — não relate em texto livre:
+
+  ```
+  Resultado: ENTREGA | BLOQUEIO
+  Arquivos tocados: (lista)
+  Comandos rodados: (build, testes, etc.)
+  Evidência: (resumo da saída que sustenta a entrega)
+  Riscos/pendências: (ou "nenhum")
+  ```
 - Nunca commite nem publique (push, merge, deploy, release, tag) a menos que o prompt peça isso explicitamente.
 - Não use a ferramenta `Agent`. Não delegue nada a outro subagente — execute tudo você mesmo.
