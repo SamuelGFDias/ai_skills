@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
-"""Gera os agentes do arquiteto para um CLI específico a partir da fonte canônica.
+"""Gera os agentes do arquiteto em arquiteto/dist/<cli>/ a partir da fonte canônica.
 
 Fonte canônica: arquiteto/roles/<papel>.md (frontmatter name/description/effort/color/readonly + corpo).
 Mapeamento por CLI: arquiteto/cli/<cli>/models.json (papel -> {model, ...}).
 
+Os agentes gerados são COMMITADOS em dist/<cli>/ (configuração já validada por CLI).
+A instalação no diretório real de cada CLI é feita por bin/sync-agents.sh via symlink,
+então um git pull propaga mudanças sem rodar este gerador.
+
 Uso:
-  build-agents.py <cli> [--target <dir>]   # cli: claude | kilo | codex
-  build-agents.py --list                   # lista CLIs e destinos padrão
+  build-agents.py <cli>                # grava em arquiteto/dist/<cli>/
+  build-agents.py --check              # verifica se dist está em dia com roles+models (drift)
+  build-agents.py --list               # lista CLIs suportados
+  build-agents.py <cli> --target <dir> # destino alternativo (uso pontual)
 """
 import json
-import os
 import sys
 import argparse
 import re
@@ -18,12 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent  # arquiteto/
 ROLES_DIR = ROOT / "roles"
 CLI_DIR = ROOT / "cli"
-
-DEFAULT_TARGETS = {
-    "claude": Path(os.environ["HOME"]) / ".claude" / "agents",
-    "kilo": Path(os.environ["HOME"]) / ".config" / "kilo" / "agent",
-    "codex": Path(os.environ["HOME"]) / ".codex" / "agents",
-}
+DIST_DIR = ROOT / "dist"
 
 READONLY_TOOLS = "Edit, Write, NotebookEdit, Agent"
 
@@ -44,33 +44,23 @@ def parse_role(path: Path):
 
 
 def build_claude(meta, body, cfg):
-    fm = {
-        "name": meta["name"],
-        "description": meta["description"],
-        "model": cfg["model"],
-        "effort": cfg.get("effort", meta.get("effort", "medium")),
-        "disallowedTools": cfg.get("disallowedTools", ["Agent"]) if meta.get("readonly") == "true" else cfg.get("disallowedTools", ["Agent"]),
-        "color": meta.get("color", "blue"),
-    }
-    # desempacota lista de disallowedTools como string no estilo do Claude
-    dt = fm["disallowedTools"]
+    dt = cfg.get("disallowedTools", ["Agent"])
     if isinstance(dt, list):
         dt = ", ".join(dt)
     header = (
         "---\n"
-        f"name: {fm['name']}\n"
-        f"description: {fm['description']}\n"
-        f"model: {fm['model']}\n"
-        f"effort: {fm['effort']}\n"
+        f"name: {meta['name']}\n"
+        f"description: {meta['description']}\n"
+        f"model: {cfg['model']}\n"
+        f"effort: {cfg.get('effort', meta.get('effort', 'medium'))}\n"
         f"disallowedTools: {dt}\n"
-        f"color: {fm['color']}\n"
+        f"color: {meta.get('color', 'blue')}\n"
         "---\n\n"
     )
     return header + body + "\n"
 
 
 def build_kilo(meta, body, cfg):
-    model = cfg["model"]  # provider/model, ex: anthropic/claude-sonnet-4.6
     perm_lines = ["  task: deny"]
     if meta.get("readonly") == "true":
         perm_lines.append("  edit: deny")
@@ -79,7 +69,7 @@ def build_kilo(meta, body, cfg):
         f"name: {meta['name']}\n"
         f"description: {meta['description']}\n"
         f"mode: subagent\n"
-        f"model: {model}\n"
+        f"model: {cfg['model']}\n"
         "permission:\n" + "\n".join(perm_lines) + "\n"
         "---\n\n"
     )
@@ -104,17 +94,59 @@ BUILDERS = {"claude": build_claude, "kilo": build_kilo, "codex": build_codex}
 EXT = {"claude": ".md", "kilo": ".md", "codex": ".toml"}
 
 
+def build_cli(cli):
+    """Retorna {nome_arquivo: conteudo} para um CLI."""
+    models = json.loads((CLI_DIR / cli / "models.json").read_text(encoding="utf-8"))
+    out = {}
+    for role_path in sorted(ROLES_DIR.glob("*.md")):
+        meta, body = parse_role(role_path)
+        cfg = models[meta["name"]]
+        out[f"{meta['name']}{EXT[cli]}"] = BUILDERS[cli](meta, body, cfg)
+    return out
+
+
+def check_drift(cli):
+    """Verifica se dist/<cli> está em dia com roles/ + cli/<cli>/models.json. Retorna 0 se ok, 2 se drift."""
+    generated = build_cli(cli)
+    target = DIST_DIR / cli
+    stale = [f for f in target.glob(f"*{EXT[cli]}") if f.name not in generated]
+    drift = []
+    for name, content in generated.items():
+        path = target / name
+        if not path.exists():
+            drift.append(f"  FALTA: {name}")
+        elif path.read_text(encoding="utf-8") != content:
+            drift.append(f"  DIVERGE: {name}")
+    if stale:
+        drift.append("  ÓRFÃOS (não gerados mais): " + ", ".join(f.name for f in stale))
+    if drift:
+        print(f"DRIFT em {target}:")
+        print("\n".join(drift))
+        print("Rode 'python3 build-agents.py' e commite dist/.")
+        return 2
+    print(f"OK: dist/{cli} em dia com roles/ + cli/{cli}/models.json")
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("cli", nargs="?", help="claude | kilo | codex")
-    ap.add_argument("--target", help="diretório de destino (default: padrão do CLI)")
-    ap.add_argument("--list", action="store_true", help="mostra CLIs e destinos")
+    ap.add_argument("--target", help="destino alternativo (default: arquiteto/dist/<cli>)")
+    ap.add_argument("--list", action="store_true", help="mostra CLIs suportados")
+    ap.add_argument("--check", action="store_true", help="verifica drift entre roles+models e dist/")
     args = ap.parse_args()
 
+    if args.check:
+        clis = [args.cli] if args.cli else sorted(BUILDERS)
+        rc = 0
+        for c in clis:
+            r = check_drift(c)
+            if r:
+                rc = 2
+        return rc
+
     if args.list or not args.cli:
-        print("CLIs suportados:")
-        for cli, dest in DEFAULT_TARGETS.items():
-            print(f"  {cli:8} -> {dest}")
+        print("CLIs suportados:", ", ".join(sorted(BUILDERS)))
         return 0
 
     cli = args.cli
@@ -122,19 +154,13 @@ def main():
         print(f"CLI desconhecido: {cli}", file=sys.stderr)
         return 1
 
-    models = json.loads((CLI_DIR / cli / "models.json").read_text(encoding="utf-8"))
-    target = Path(args.target) if args.target else DEFAULT_TARGETS[cli]
+    generated = build_cli(cli)
+    target = Path(args.target) if args.target else DIST_DIR / cli
     target.mkdir(parents=True, exist_ok=True)
-
-    for role_path in sorted(ROLES_DIR.glob("*.md")):
-        meta, body = parse_role(role_path)
-        cfg = models[meta["name"]]
-        content = BUILDERS[cli](meta, body, cfg)
-        out = target / f"{meta['name']}{EXT[cli]}"
-        out.write_text(content, encoding="utf-8")
-        print(f"  {out}  ({meta['name']})")
-
-    print(f"\nGerados {len(list(target.glob(f'*{EXT[cli]}')))} agentes em {target}")
+    for name, content in generated.items():
+        (target / name).write_text(content, encoding="utf-8")
+        print(f"  {target / name}  ({name})")
+    print(f"\nGerados {len(generated)} agentes em {target} — commite dist/.")
     return 0
 
 
