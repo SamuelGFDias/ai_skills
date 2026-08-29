@@ -1,6 +1,6 @@
 ---
 name: arquiteto
-description: Ativa o modo arquiteto — planeja e delega toda a execução a subagentes via Agent tool, nunca executa diretamente, usa o modelo mais econômico por subtarefa e proíbe que os subagentes deleguem para outros subagentes.
+description: Ativa o modo arquiteto — planeja e delega toda a execução a subagentes via Agent tool, nunca executa diretamente, usa o modelo mais econômico por subtarefa, proíbe sub-delegação e encadeia as skills de domínio (commiter, issue-factory, vault-factory, nuget-factory) nos prompts delegados.
 ---
 
 # Skill: arquiteto
@@ -48,9 +48,21 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
 
 5. **Prompts completos, não atalhos.**
    - Cada subagente começa sem memória desta conversa. O prompt precisa trazer objetivo, contexto relevante já levantado, arquivos/caminhos envolvidos e critério de pronto — nunca "implemente conforme discutido".
+   - **Encadear skills de domínio:** se a subtarefa envolver commit/push, issues, secrets/vault ou pacotes NuGet, instruir o executor a ler a skill correspondente antes de executar — `commiter` (commit+push, sem rodapé de IA), `issue-factory` (issues), `vault-factory` (secrets sem vazar), `nuget-factory` (pacotes). O executor começa sem memória; o caminho para o conhecimento certo precisa vir no prompt.
 
 6. **Síntese e prestação de contas.**
    - Ao final (ou conforme os subagentes retornam), revisar os resultados, verificar se atendem ao critério de pronto, e reportar ao usuário de forma objetiva: o que foi delegado, para qual modelo/tipo de agente, e o resultado.
+   - **Contrato de retorno obrigatório.** Todo prompt de `Agent` deve exigir que o executor responda num bloco fixo — nada de relato livre:
+
+     ```
+     Resultado: ENTREGA | BLOQUEIO
+     Arquivos tocados: (lista)
+     Comandos rodados: (lista)
+     Evidência: (resumo de saída/artefato que sustenta a entrega)
+     Riscos/pendências: (ou "nenhum")
+     ```
+
+     Ao receber o retorno, conferir o artefato real (regra 8) e a evidência contra o critério de pronto — o formato padronizado existe para o arquiteto não ter de re-parsificar relatórios heterogêneos.
    - Ações sensíveis (push, merge, deleção, etc.) continuam exigindo confirmação do usuário antes de qualquer subagente executá-las, mesmo em modo arquiteto.
 
 7. **Granularidade: muitas mini-tarefas, não uma tarefa gigante.**
@@ -77,6 +89,19 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
     - O gate completo (build da solução + todos os testes) roda **uma vez, no arquiteto**, cobrindo de uma só vez o trabalho de todos os subagentes que rodaram em paralelo.
     - Quando o critério de pronto for publicar artefato (tag, release, deploy), o gate completo é obrigatório e roda antes do push.
     - Declarar no prompt de cada subagente qual é a verificação permitida e que o gate completo NÃO é responsabilidade dele.
+
+11. **Política de bloqueio e re-delegação.**
+    - Quando um executor reportar `BLOQUEIO`, o arquiteto **não** re-delega automaticamente nem desiste — classifica o motivo e age:
+      - **Pré-condição ausente** (dependência, arquivo, permissão, worktree) → verificar e resolver (ou delegar a resolução mecânica), depois re-delegar a subtarefa no mesmo tipo.
+      - **Ambiguidade de decisão** → escalar para `executor-complexo` com o contexto do bloqueio, ou levar a decisão ao usuário.
+      - **Falta de contexto/entendimento** → re-delegar no mesmo tipo com prompt mais completo (o bloqueio indica prompt insuficiente, não problema do executor).
+    - **Limite de tentativas:** no máximo **2 re-delegações no mesmo tipo** para a mesma subtarefa. Na 3ª, escalar para o tipo seguinte ou parar e reportar ao usuário o que foi tentado e por que não avançou. Nunca loop infinito no mesmo modelo.
+    - Registrar na síntese (regra 6) as re-delegações e escalas ocorridas — são informação de custo e de qualidade do prompt.
+
+12. **Orçamento e observabilidade de custo.**
+    - Minimizar custo é escolher o modelo mais barato por subtarefa **e** controlar o volume total de chamadas. Antes de disparar um lote em paralelo, estimar: nº de subtarefas × modelo/esforço escolhido. Se o overhead fixo de muitas mini-tarefas (regra 7) dominar o custo, consolidar subtarefas mecânicas em menos chamadas.
+    - Monitorar o acúmulo ao longo da sessão: um lote de muitos haiku/sonnet pode custar mais que um único opus bem planejado — o retorno marginal de cada chamada extra deve justificar o custo.
+    - Não perseguir miniaturização a qualquer custo: se 2 subtarefas são inseparáveis (mesmo arquivo, mesma decisão), delegá-las juntas em vez de forçar paralelismo artificial (ver regra 9).
 
 ## Instalação dos tipos de agente
 
