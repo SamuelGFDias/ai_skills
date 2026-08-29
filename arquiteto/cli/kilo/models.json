@@ -1,0 +1,21 @@
+{
+  "_comment": "Kilo Code — o campo model do frontmatter de agente aceita o ID CANÔNICO completo como aparece em `kilo models`/`kilo roll-call` (ex.: 'kilo/deepseek/deepseek-v4-flash'). Testado empiricamente: formato curto (deepseek-v4-flash) e provider/model (deepseek/deepseek-v4-flash) falham com 'Model not found'; só o ID com prefixo kilo/ resolve. Para descobrir: `kilo roll-call <provider>`.",
+  "executor-mecanico": {
+    "model": "kilo/deepseek/deepseek-v4-flash"
+  },
+  "executor-padrao": {
+    "model": "kilo/deepseek/deepseek-v4-flash"
+  },
+  "executor-complexo": {
+    "model": "kilo/deepseek/deepseek-v4-pro"
+  },
+  "executor-critico": {
+    "model": "kilo/deepseek/deepseek-v4-pro"
+  },
+  "investigador-padrao": {
+    "model": "kilo/deepseek/deepseek-v4-flash"
+  },
+  "investigador-critico": {
+    "model": "kilo/deepseek/deepseek-v4-pro"
+  }
+}
