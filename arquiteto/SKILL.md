@@ -30,29 +30,30 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
 
 3. **Modelo e esforço mínimos por subtarefa.**
    - **Duas famílias de subagentes, dimensões ortogonais:** *executores* (escrevem, isolados por área de arquivo — regra 9) e *investigadores* (read-only, nunca alteram arquivo). Investigação não é "executor que ainda não decidiu": é um tipo próprio, livre para paralelizar sem limite porque não gera conflito nem efeito colateral.
+   - **Papel ≠ modelo.** As tabelas abaixo definem os **papéis** (semântica de esforço e de uso, agnóstica de CLI). O **modelo concreto** de cada papel é resolvido pelo adaptador do CLI em que o arquiteto roda — ver seção "Verificação de configuração dos subagentes". Não hardcodar nome de modelo de outro CLI no prompt.
    - **Executores** (escolher o mais barato que atenda; critério de escalada: 1 critério de pronto e zero decisão → mecânico; decisões tomadas no prompt → padrão; precisa julgar/resolver conflito → complexo; risco alto ou arquitetura → crítico):
 
-     | tipo | modelo | esforço | quando usar |
-     |---|---|---|---|
-     | `executor-mecanico` | haiku | low | 1 critério de pronto, zero decisão: commit por caminho, merge fast-forward, rebase sem conflito, rodar um comando e reportar, mover/renomear/copiar arquivos, substituição literal de texto, preencher template. |
-     | `executor-padrao` | sonnet | medium | Decisões já tomadas no prompt: feature ou lote em arquivos listados, testes unitários de comportamento definido, rebase com conflito simples, script com lógica moderada. |
-     | `executor-complexo` | sonnet | high | Precisa julgar, investigar ou resolver: conflito não trivial, refatoração transversal, auditoria de cobertura (mudança → teste), diagnóstico de bug. A parte de **investigação pura** prefere `investigador-*` abaixo. |
-     | `executor-critico` | opus | high | Raro — risco alto ou decisão arquitetural: bug sutil de concorrência/segurança, migração com risco de dado. Justificar no prompt por que `executor-complexo` não bastava. |
+     | papel | esforço | quando usar |
+     |---|---|---|
+     | `executor-mecanico` | low | 1 critério de pronto, zero decisão: commit por caminho, merge fast-forward, rebase sem conflito, rodar um comando e reportar, mover/renomear/copiar arquivos, substituição literal de texto, preencher template. |
+     | `executor-padrao` | medium | Decisões já tomadas no prompt: feature ou lote em arquivos listados, testes unitários de comportamento definido, rebase com conflito simples, script com lógica moderada. |
+     | `executor-complexo` | high | Precisa julgar, investigar ou resolver: conflito não trivial, refatoração transversal, auditoria de cobertura (mudança → teste), diagnóstico de bug. A parte de **investigação pura** prefere `investigador-*` abaixo. |
+     | `executor-critico` | high | Raro — risco alto ou decisão arquitetural: bug sutil de concorrência/segurança, migração com risco de dado. Justificar no prompt por que `executor-complexo` não bastava. |
 
    - **Investigadores** (read-only; constatação com evidência `arquivo:linha`; hipótese de memória não é prova — sempre confirmar no código atual):
 
-     | tipo | modelo | esforço | quando usar |
-     |---|---|---|---|
-     | `investigador-padrao` | sonnet | medium | Reconhecimento: mapear estrutura, localizar símbolos/usos, resumir módulos, achar candidatos a mudança. Paralelizável em massa antes de delegar execução. |
-     | `investigador-critico` | opus | high | Causa-raiz não trivial, auditoria de cobertura profunda, fluxo transversal com risco. Justificar no prompt por que `investigador-padrao` não bastava. |
+     | papel | esforço | quando usar |
+     |---|---|---|
+     | `investigador-padrao` | medium | Reconhecimento: mapear estrutura, localizar símbolos/usos, resumir módulos, achar candidatos a mudança. Paralelizável em massa antes de delegar execução. |
+     | `investigador-critico` | high | Causa-raiz não trivial, auditoria de cobertura profunda, fluxo transversal com risco. Justificar no prompt por que `investigador-padrao` não bastava. |
 
-   - Só passar `model` explícito na chamada `Agent` quando precisar divergir do tipo escolhido — e, nesse caso, registrar no prompt por quê.
+   - Só passar `model` explícito na chamada `Agent` quando precisar divergir do adaptador do CLI — e, nesse caso, registrar no prompt por quê.
    - **Fluxo típico:** disparar N `investigador-padrao` em paralelo → consolidar constatações → escrever prompts dos executores já com contexto provado (reforça a regra 5 e reduz retrabalho da regra 11).
 
 4. **Proibir sub-delegação.**
    - Cada subagente delegado deve executar a subtarefa diretamente, sem repassar trabalho a outro subagente.
    - Incluir, em todo prompt de `Agent` disparado neste modo, uma instrução explícita equivalente a: *"Execute esta tarefa diretamente. Não delegue para outros subagentes nem use a ferramenta Agent."*
-   - Os 4 tipos graduados já trazem `disallowedTools: Agent` no frontmatter, o que bloqueia a sub-delegação tecnicamente — mas isso não dispensa a frase de proibição no prompt: ela vale também para `general-purpose` (que não tem essa restrição técnica) e para qualquer outro tipo sem o bloqueio embutido.
+   - Os executores definidos nos adaptadores de CLI (ver "Verificação de configuração dos subagentes") já bloqueiam a sub-delegação tecnicamente (`disallowedTools: Agent`/`permission: task deny`) — mas isso não dispensa a frase de proibição no prompt: ela vale também para `general-purpose`/agente geral (que não tem essa restrição técnica) e para qualquer tipo sem o bloqueio embutido.
 
 5. **Prompts completos, não atalhos.**
    - Cada subagente começa sem memória desta conversa. O prompt precisa trazer objetivo, contexto relevante já levantado, arquivos/caminhos envolvidos e critério de pronto — nunca "implemente conforme discutido".
@@ -115,12 +116,11 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
     - Monitorar o acúmulo ao longo da sessão: um lote de muitos haiku/sonnet pode custar mais que um único opus bem planejado — o retorno marginal de cada chamada extra deve justificar o custo.
     - Não perseguir miniaturização a qualquer custo: se 2 subtarefas são inseparáveis (mesmo arquivo, mesma decisão), delegá-las juntas em vez de forçar paralelismo artificial (ver regra 9).
 
-## Instalação dos tipos de agente
+## Verificação de configuração dos subagentes
 
-Os 6 tipos graduados (4 executores: `executor-mecanico`, `executor-padrao`, `executor-complexo`, `executor-critico`; 2 investigadores read-only: `investigador-padrao`, `investigador-critico`) vivem em `~/.config/ai/skills/arquiteto/agents/`, versionados junto com esta skill.
+Antes de delegar, o arquiteto confere se os 6 papéis (`executor-mecanico`, `executor-padrao`, `executor-complexo`, `executor-critico`, `investigador-padrao`, `investigador-critico`) estão disponíveis como subagentes no CLI em que está rodando. A definição dos papéis (prompts) vive em `arquiteto/roles/`; o mapeamento papel→modelo por CLI vive em `arquiteto/cli/<cli>/models.json`.
 
-O Claude Code os enxerga via symlinks em `~/.claude/agents/<nome>.md` — mesmo mecanismo usado para as skills. O Kilo não usa agentes; esta seção não se aplica a ele.
+- **Se configurado:** delegar normalmente, usando os nomes dos papéis como `subagent_type`/nome do agente.
+- **Se não configurado** (tipos ausentes ou rejeitados pelo CLI): **não** tentar contornar sozinho. Identificar qual CLI está em uso, ler `arquiteto/cli/<cli>/models.json` (e `arquiteto/roles/` se preciso) para saber o que falta, e **instruir o usuário** a gerar os agentes via `arquiteto/bin/setup-<cli>.sh`, explicando que tipos novos ou alterados só aparecem numa sessão nova do CLI. Enquanto não configurado, usar o agente geral disponível (`general-purpose`/`general`) com o modelo mais próximo do papel (conforme `models.json`) e registrar na síntese que a execução ficou no padrão da sessão.
 
-Tipos de agente novos ou alterados só aparecem numa **sessão nova** do Claude Code — uma sessão já aberta não os reconhece.
-
-**Fallback:** se `ls ~/.claude/agents` não mostrar os 6 tipos, ou a chamada `Agent` rejeitar o `subagent_type`, usar `general-purpose` com o `model` equivalente (haiku/sonnet/sonnet/opus/sonnet/opus) e registrar, na síntese ao usuário, que o esforço ficou no padrão da sessão.
+O arquiteto não precisa conhecer a configuração de todos os CLIs de antemão — lê o `models.json` do CLI detectado somente quando constata a ausência dos tipos.
