@@ -1,130 +1,78 @@
-# 🤖 AI Skills
+# AI Skills
 
-Repositório de **skills, prompts e instruções reutilizáveis para agentes de IA**, organizados por domínio e finalidade.
+Repositório de **skills reutilizáveis para agentes de IA** (Claude Code e Kilo), organizadas por
+domínio. Cada skill é um diretório com `SKILL.md` (obrigatório) e, quando aplicável, `scripts/` e
+`docs/`.
 
-O objetivo é centralizar conhecimento técnico e procedimentos que podem ser utilizados por ferramentas como **ChatGPT, Codex e outros agentes de desenvolvimento** para executar tarefas de forma mais consistente.
-
-## 📁 Estrutura
-
-Cada diretório representa uma skill específica.
-
-Exemplos:
+## Estrutura
 
 ```text
 ai_skills/
-├── arquiteto/
-├── audit-log/
-├── backend-diretriz/
-├── dotnet-backend-architecture/
-├── hangfire-setup/
-├── keycloak-api/
-├── replatforms/
-└── ...
+├── AGENTS.md                  # arquitetura do ambiente (leia ao trabalhar neste repo)
+├── bin/sync-symlinks.sh       # sincroniza symlinks em ~/.claude/skills
+├── providers/                 # referência de plataformas (NÃO é skill carregável)
+│   ├── gitlab/arquivos.md     # GitLab: host, auth, projetos, labels, GraphQL
+│   ├── gitlab/automerge.md    # ferramenta gitlab-auto-merge.sh
+│   ├── nexus/arquivos.md      # Nexus: host, TFM bug, armadilhas
+│   ├── passbolt/arquivos.md   # Passbolt: CLI, pb find/import/export
+│   └── pass-gopass/arquivos.md# pass/gopass: cofre local GPG
+├── arquiteto/                 # orquestração: subagentes graduados por modelo/esforço
+├── audit-log/                 # biblioteca AuditLog (NuGet)
+├── commiter/                  # workflow genérico de commit + push
+├── dotnet-backend-architecture/  # padrão arquitetural .NET backend
+├── hangfire-setup/            # Hangfire: abstrações + implementação (código em docs/)
+├── headroom/                  # headroom (proxy de contexto)
+├── issue-factory/             # workflow genérico de issues
+├── keycloak-api/              # Admin REST API Keycloak (CLI kc)
+├── nuget-factory/             # workflow genérico de pacotes NuGet (+ providers/nexus)
+├── replatforms/               # migração Delphi 7 → .NET + Angular (prompt em docs/)
+├── task-observer/             # observação contínua de skills
+└── vault-factory/             # abstração de cofres de secrets (+ providers/passbolt, pass-gopass)
 ```
 
-As skills podem conter instruções, padrões, exemplos e fluxos de trabalho relacionados a diferentes tarefas de engenharia de software.
+## Arquitetura: factory + provider
 
-## 🧠 O que é uma Skill?
+Skills que misturam **workflow genérico** e **detalhes de plataforma** são divididas:
 
-Uma **skill** é um conjunto de instruções especializadas que fornece contexto e regras para um agente de IA executar determinada tarefa.
+- **Factory** (`*-factory`): o fluxo reutilizável, independente da tecnologia (ex.: `issue-factory`).
+- **Provider** (`providers/<plataforma>/arquivos.md`): comandos, URLs e credenciais concretos
+  (ex.: `providers/nexus/arquivos.md`). Arquivos de provider **não têm `SKILL.md`** — são
+  referência que as factories apontam.
 
-Por exemplo, uma skill pode ensinar o agente a:
+Relação atual:
 
-* criar ou analisar uma arquitetura de software;
-* abrir issues seguindo um padrão;
-* configurar serviços e ferramentas;
-* seguir convenções de desenvolvimento;
-* analisar logs e auditorias;
-* trabalhar com GitLab;
-* configurar autenticação com Keycloak;
-* utilizar Hangfire;
-* aplicar padrões de arquitetura .NET;
-* executar procedimentos internos de desenvolvimento.
+| Factory | Provider(s) |
+|---|---|
+| `nuget-factory` | `providers/nexus/arquivos.md` |
+| `vault-factory` | `providers/passbolt/arquivos.md`, `providers/pass-gopass/arquivos.md` |
 
-## 📦 Estrutura recomendada de uma Skill
+Regra: se uma skill depende de host/credencial de um sistema específico, o detalhe vai para
+`providers/`; a skill mantém o fluxo genérico e aponta para o provider.
 
-Cada skill deve possuir seu próprio diretório.
+## Confidencialidade
 
-Exemplo:
+**Todas as skills são `internal`** — o repo é privado (GitHub). Todo `SKILL.md` deve
+carregar `**Tipo:** internal`. Nenhum segredo deve ser versionado (senhas, tokens, chaves) — segredos
+vivem em vaults (`vault-factory`).
 
-```text
-nome-da-skill/
-└── SKILL.md
-```
+## Convenções ao criar/editar skills
 
-Exemplo de conteúdo:
+1. Diretório em `kebab-case`; obrigatório `SKILL.md` com frontmatter (`name`, `description`).
+2. Primeira linha do corpo: `**Tipo:** internal`.
+3. Seção "Quando executar" com gatilhos claros de ativação.
+4. `SKILL.md` enxuto (legível em uma passada); código/detalhe longo vai para `docs/` referenciado
+   por caminho (ver `hangfire-setup`).
+5. Detalhes de plataforma vão para `providers/` (nunca no `SKILL.md` da factory).
+6. Prefira `kebab-case`, sem duplicar instruções de outras skills.
+7. Após criar, rode `bin/sync-symlinks.sh` para expor ao Claude Code.
 
-```markdown
-# Nome da Skill
+## Publicação
 
-## Objetivo
-
-Descreva o objetivo da skill.
-
-## Quando utilizar
-
-Explique em quais situações o agente deve utilizar esta skill.
-
-## Instruções
-
-Defina as regras e o fluxo que o agente deve seguir.
-
-## Exemplos
-
-Inclua exemplos de entradas, comandos ou resultados esperados.
-```
-
-## ✍️ Convenções
-
-Ao criar novas skills:
-
-1. Utilize nomes de diretórios claros e objetivos.
-2. Prefira nomes em `kebab-case`.
-3. Mantenha cada skill focada em uma responsabilidade.
-4. Documente quando a skill deve ser utilizada.
-5. Inclua exemplos quando possível.
-6. Evite duplicar instruções existentes em outras skills.
-7. Atualize a documentação sempre que o processo mudar.
-
-## ➕ Criando uma nova Skill
-
-Crie um novo diretório:
-
-```bash
-mkdir minha-nova-skill
-```
-
-Crie o arquivo principal:
-
-```bash
-touch minha-nova-skill/SKILL.md
-```
-
-Depois adicione as alterações ao Git:
-
-```bash
-git add .
-git commit -m "feat: add minha-nova-skill"
-git push
-```
-
-## 🔄 Atualizando o repositório
-
-Antes de enviar novas alterações, sincronize sua branch local:
+O repo tem remote privado no GitHub (`git@github.com:SamuelGFDias/ai_skills.git`).
 
 ```bash
 git pull --rebase origin main
+git add .
+git commit -m "feat: descrição"
+git push
 ```
-
-Depois:
-
-```bash
-git push origin main
-```
-
-## 🎯 Objetivo do projeto
-
-Construir uma biblioteca de conhecimento reutilizável que permita que agentes de IA entendam melhor os padrões, tecnologias e processos utilizados nos projetos, reduzindo trabalho repetitivo e aumentando a consistência das respostas e implementações.
-
----
-
