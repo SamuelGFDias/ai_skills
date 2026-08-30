@@ -17,6 +17,7 @@ arquivos `.md` pré-criados** — as demandas são descritas diretamente na conv
 
 Os comandos concretos (host, auth, projeto, labels, milestones, GraphQL) estão em:
 
+- **GitHub** → `providers/github/arquivos.md` (ler antes de executar comandos `gh`).
 
 Ao adaptar para outro tracker, manter este fluxo e trocar apenas a seção do provider.
 
