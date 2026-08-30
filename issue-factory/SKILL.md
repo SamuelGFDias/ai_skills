@@ -18,6 +18,7 @@ arquivos `.md` pré-criados** — as demandas são descritas diretamente na conv
 Os comandos concretos (host, auth, projeto, labels, milestones, GraphQL) estão em:
 
 - **GitLab SES-RJ** → `providers/gitlab/arquivos.md` (ler antes de executar comandos `glab`).
+- **GitHub** → `providers/github/arquivos.md` (ler antes de executar comandos `gh`).
 
 Ao adaptar para outro tracker, manter este fluxo e trocar apenas a seção do provider.
 
