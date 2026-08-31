@@ -38,6 +38,10 @@ description: Consulta e integra com a API REST do sistema Cronograma da SES-RJ (
 
 ### Exemplo de fluxo com curl
 
+> Nota: o exemplo abaixo com usuário/senha direto no `curl` é só ilustrativo do protocolo
+> HTTP puro. Para uso real, prefira `setup-login.sh` (cadastra a credencial uma vez, fora do
+> git) + `login.sh <alias>` — nunca digite a senha em texto puro na conversa com o assistente.
+
 ```bash
 # 1. Login (grava cookie de sessão em cookies.txt)
 curl -s -c /tmp/cronograma_cookies.txt -X POST \
@@ -54,6 +58,13 @@ curl -s -b /tmp/cronograma_cookies.txt -X POST https://cronograma.saude.rj.gov.b
 ```
 
 **Nunca pedir a senha do usuário em texto puro na conversa sem necessidade** — se precisar de credenciais, oriente o usuário a rodar o `curl` de login ele mesmo (ou usar `! curl ...` no prompt) para o cookie de sessão não passar pelo histórico do chat como texto legível junto da senha.
+
+**Fluxo preferido — credencial cadastrada, nunca em texto puro:** rode `setup-login.sh` uma
+vez (interativo: pergunta alias, usuário e senha com leitura mascarada) — a credencial fica
+salva em `~/.claude/secrets/cronograma/users/<alias>.env` (`chmod 600`, fora do repo git).
+Depois disso, use `login.sh <alias>` sempre que precisar de uma sessão nova. Nunca passe
+usuário/senha como argumento de linha de comando (fica visível em `ps aux` e no histórico do
+shell) nem os digite na conversa com o assistente.
 
 ## Limitação conhecida do Swagger: DTOs sem campos documentados
 
@@ -156,6 +167,49 @@ Exemplo de import:
 curl -s -b /tmp/cronograma_cookies.txt -X POST \
   https://cronograma.saude.rj.gov.br/api/import/xlsx \
   -F "file=@/caminho/para/planilha.xlsx"
+```
+
+## Scripts prontos
+
+Em vez de escrever `curl` + `python3 -c "..."` inline a cada uso, use os scripts em
+`scripts/` (`~/.config/ai/skills/cronograma-saude-rj-api/scripts/`) — essa é a forma
+preferida de interagir com a API. Os exemplos de `curl` das seções acima continuam
+valendo como documentação de referência, mas para uso do dia a dia prefira os scripts.
+
+Todos aceitam o caminho do cookie jar via variável de ambiente `CRONOGRAMA_COOKIE_JAR`
+(default `$HOME/.cache/cronograma-cookies.txt`) e falham com exit code != 0 (imprimindo
+o corpo do erro) se a API responder 4xx/5xx.
+
+| Script | Uso | Descrição |
+|---|---|---|
+| `setup-login.sh` | `setup-login.sh` | Cadastra/edita (interativo) uma credencial de usuário/senha em `~/.claude/secrets/cronograma/users/<alias>.env` (`chmod 600`, fora do repo git); senha lida com eco mascarado. |
+| `login.sh` | `login.sh [alias]` | Faz login (`POST /api/auth/login`) com a credencial cadastrada via `setup-login.sh` (alias padrão: `default`), salva o cookie de sessão no jar e imprime o usuário retornado. |
+| `list-projects.sh` | `list-projects.sh [--archived]` | Lista projetos (`GET /api/projects`); com `--archived` inclui os arquivados. |
+| `create-category.sh` | `create-category.sh <projectId> <name>` | Cria categoria (`POST /api/categories`); imprime o `id` criado em stdout (para capturar com `$(...)`) e o JSON completo em stderr. |
+| `list-categories.sh` | `list-categories.sh <projectId>` | Lista categorias de um projeto (`GET /api/categories?projectId=...`). |
+| `create-activity.sh` | `create-activity.sh <projectId> <categoryId> <number> <description>` | Cria atividade (`POST /api/activities`); mesma convenção de saída do `create-category.sh`. |
+| `update-activity.sh` | `update-activity.sh <activityId> <categoryId> <number> <description>` | Atualiza atividade (`PUT /api/activities/{id}`) — os 3 campos são obrigatórios juntos, sem `projectId`. |
+| `list-activities.sh` | `list-activities.sh <projectId> [categoryId]` | Lista atividades de um projeto; com o segundo argumento, filtra client-side (via `python3`) só as da categoria informada. |
+| `delete-activity.sh` | `delete-activity.sh <activityId>` | Exclui atividade (`DELETE /api/activities/{id}`). |
+| `probe-dto.sh` | `probe-dto.sh <METHOD> <path> [json_body]` | Sondagem genérica autenticada — envia `json_body` (default `{}`) ao endpoint informado e imprime a resposta, útil para descobrir campos de DTOs não documentados via erro 400 (ver técnica acima). Ex: `probe-dto.sh POST /projects '{}'`. |
+
+Exemplo de fluxo completo:
+
+```bash
+export CRONOGRAMA_COOKIE_JAR="$HOME/.cache/cronograma-cookies.txt"
+
+# Uma vez (interativo, credencial fica salva fora do git):
+./scripts/setup-login.sh
+
+./scripts/login.sh default
+./scripts/list-projects.sh
+
+CATEGORY_ID=$(./scripts/create-category.sh "$PROJECT_ID" "Minha categoria")
+ACTIVITY_ID=$(./scripts/create-activity.sh "$PROJECT_ID" "$CATEGORY_ID" 1 "Minha atividade")
+
+./scripts/list-activities.sh "$PROJECT_ID" "$CATEGORY_ID"
+./scripts/update-activity.sh "$ACTIVITY_ID" "$CATEGORY_ID" 2 "Descrição atualizada"
+./scripts/delete-activity.sh "$ACTIVITY_ID"
 ```
 
 ## Como atualizar esta skill
