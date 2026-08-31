@@ -1,5 +1,5 @@
 {
-  "_comment": "Kilo Code — o campo model do frontmatter de agente aceita o ID CANÔNICO completo como aparece em `kilo models`/`kilo roll-call` (ex.: 'kilo/deepseek/deepseek-v4-flash'). Testado empiricamente: formato curto (deepseek-v4-flash) e provider/model (deepseek/deepseek-v4-flash) falham com 'Model not found'; só o ID com prefixo kilo/ resolve. Para descobrir: `kilo roll-call <provider>`.",
+  "_comment": "Kilo Code — o campo model do frontmatter de agente aceita o ID CANÔNICO completo como aparece em `kilo models`/`kilo roll-call` (ex.: 'kilo/deepseek/deepseek-v4-flash'). Testado empiricamente: formato curto (deepseek-v4-flash) e provider/model (deepseek/deepseek-v4-flash) falham com 'Model not found'; só o ID com prefixo kilo/ resolve. Para descobrir: `kilo roll-call <provider>`. PAPEL ORQUESTRADOR: o modelo da sessão/`/arquiteto` é o que decide delegar — flash (padrão desta máquina) tende a investigar diretamente em vez de delegar; o comando `arquiteto` (instalado em ~/.config/kilo/command/arquiteto.md) força o orquestrador em deepseek-v4-pro. Mantido por design: executores/investigadores continuam em flash/pro conforme a tabela abaixo.",
   "executor-mecanico": {
     "model": "kilo/deepseek/deepseek-v4-flash"
   },
