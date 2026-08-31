@@ -43,6 +43,24 @@ gh label create "<nome>" --color "<hex-sem-#>" --description "<descrição>" --f
 `--force` atualiza cor/descrição se a label já existir, em vez de falhar — seguro para rodar
 sempre antes de criar issues, sem checar existência primeiro.
 
+## Fluxo — Verificar se já existe issue aberta sobre o assunto (anti-duplicata)
+
+Obrigatório antes de criar qualquer issue (passo 2 do `SKILL.md`). Buscar por termos-chave da
+demanda no repositório de destino:
+
+```bash
+# No repositório específico — qualificador in:title,body restringe a busca
+gh issue list -R owner/repo --state open --search "<termos-chave> in:title,body"
+
+# Alternativa global (busca em todos os repositórios do usuário/organização)
+gh search issues --repo owner/repo --state open "<termos-chave>"
+```
+
+- `gh issue list --search` usa a mesma sintaxe de qualificadores do `gh search issues`
+  (`in:title`, `in:body`, `is:open`, etc.).
+- Se a busca retornar correspondência clara, **não criar**: reportar a issue existente ao usuário.
+- Por padrão a busca cobre issues e PRs abertos; adicionar `is:issue` para restringir a issues.
+
 ## Fluxo — Criar Issue
 
 GitHub tem uma vantagem sobre o GitLab aqui: `gh issue create` aceita `-F/--body-file` nativo,

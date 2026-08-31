@@ -34,6 +34,25 @@ subprojetos) importa na hora de criar/listar.
 glab auth status
 ```
 
+## Fluxo — Verificar se já existe issue aberta sobre o assunto (anti-duplicata)
+
+Obrigatório antes de criar qualquer issue (passo 2 do `SKILL.md`). Buscar por termos-chave da
+demanda, preferencialmente no escopo do projeto de destino:
+
+```bash
+# Busca no projeto específico (título + descrição), apenas issues abertas
+glab issue list -R ses-rj/desenvolvimento/biae/biae --state opened --search "<termos-chave>"
+
+# Busca ampla em todo o grupo (inclui subprojetos)
+glab api "groups/ses-rj%2Fdesenvolvimento/issues?per_page=100&state=opened&search=<termos-chave>"
+```
+
+- A REST API do GitLab busca em título **e** descrição por padrão; usar mais de um termo
+  (ex: `"talonario pdf assinatura"`) para reduzir falsos positivos.
+- Se a busca retornar correspondência clara, **não criar**: reportar a issue existente ao usuário.
+- Issues fechadas não aparecem com `state=opened` — se o usuário quiser reaproveitar algo antigo,
+  repetir com `state=all` ou `state=closed`.
+
 ## Fluxo — Criar Issue
 
 Montar **label de status** + **label do projeto** separadas por vírgula:
