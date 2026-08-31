@@ -16,6 +16,12 @@ description: Workflow genérico de commit + push de mudanças em repositórios g
 
 ## Fluxo
 
+### 0. Convenção de nome de branch (GitLab SES)
+
+O padrão aprovado para nome de branch no GitLab SES-RJ **não usa barra (`/`)** — usar hífen no
+lugar. Ex.: `fix/correcao` vira `fix-correcao`. Aplicar essa convenção ao criar a branch, antes do
+commit e do push.
+
 ### 1. Pré-checagens (nunca pular)
 
 ```bash
