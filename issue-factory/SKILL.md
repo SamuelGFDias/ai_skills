@@ -87,12 +87,20 @@ Sempre validar o título contra este padrão antes de submeter.
 ## Fluxo — Criar Issue
 
 1. Verificar autenticação na plataforma (provider).
-2. Coletar as demandas (título, US, solução).
-3. Montar labels conforme regras do provider (label de status + label do projeto).
-4. Para descrições longas ou com acentos, **usar arquivo temporário UTF-8** com `-d "$(cat ...)"`
+2. **Verificar se já existe issue aberta sobre o assunto** antes de criar — a busca de duplicata é
+   **obrigatória, nunca pulável** (comando por provider: GitLab/GitHub). Buscar nos campos de título
+   e descrição usando termos-chave da demanda. Se houver correspondência clara (mesmo escopo, aberta
+   e ativa), **não criar duplicata**: reportar ao usuário a issue existente (número, título, link) e
+   deixar que ele decida entre reaproveitar/atualizar a existente ou abrir nova (ex: a existente
+   está fechada há muito tempo, estagnada ou o escopo é diferente). Se houver correspondência
+   parcial ou a busca não for conclusiva, apresentar ao usuário as candidatas encontradas antes de
+   criar.
+3. Coletar as demandas (título, US, solução).
+4. Montar labels conforme regras do provider (label de status + label do projeto).
+5. Para descrições longas ou com acentos, **usar arquivo temporário UTF-8** com `-d "$(cat ...)"`
    — o CLI pode truncar descrições longas ou corromper acentos (ver provider para o comando exato).
-5. Atribuir milestone após criar, se informado.
-6. Limpeza do arquivo temporário.
+6. Atribuir milestone após criar, se informado.
+7. Limpeza do arquivo temporário.
 
 ## Fluxo — Adicionar Comentário com Solução
 
