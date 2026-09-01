@@ -48,6 +48,7 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
      | `investigador-critico` | high | Causa-raiz não trivial, auditoria de cobertura profunda, fluxo transversal com risco. Justificar no prompt por que `investigador-padrao` não bastava. |
 
    - Só passar `model` explícito na chamada `Agent` quando precisar divergir do adaptador do CLI — e, nesse caso, registrar no prompt por quê.
+   - **`fork` (específico do Claude Code) não é um papel da tabela acima.** Um fork herda todo o contexto e o cache de prompt do arquiteto — elimina o custo de reexplicar contexto (regra 5/12) — mas sempre roda no modelo do arquiteto, nunca num modelo mais barato. Usar fork só quando o ganho buscado for reuso de contexto já quente (ex.: uma investigação exploratória cujo resultado não vale a pena manter no contexto principal) e não redução de custo por modelo — nesses casos, `fork` substitui o papel `investigador-padrao`/`investigador-complexo`. Quando o objetivo é baratear a execução, manter o papel tipado da tabela, mesmo pagando o custo de contexto frio. Em CLIs sem esse mecanismo, ignorar este bullet.
    - **Fluxo típico:** disparar N `investigador-padrao` em paralelo → consolidar constatações → escrever prompts dos executores já com contexto provado (reforça a regra 5 e reduz retrabalho da regra 11).
 
 4. **Proibir sub-delegação.**
@@ -58,6 +59,7 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
 5. **Prompts completos, não atalhos.**
    - Cada subagente começa sem memória desta conversa. O prompt precisa trazer objetivo, contexto relevante já levantado, arquivos/caminhos envolvidos e critério de pronto — nunca "implemente conforme discutido".
    - **Encadear skills de domínio:** se a subtarefa envolver commit/push, issues, secrets/vault ou pacotes NuGet, instruir o executor a ler a skill correspondente antes de executar — `commiter` (commit+push, sem rodapé de IA), `issue-factory` (issues), `vault-factory` (secrets sem vazar), `nuget-factory` (pacotes). O executor começa sem memória; o caminho para o conhecimento certo precisa vir no prompt.
+   - **Contexto de projeto via `AGENTS.md`:** se o projeto-alvo tiver `AGENTS.md` na raiz, instruir o subagente a lê-lo primeiro em vez de reexplicar arquitetura/convenções/estrutura de pastas inline — o prompt então só acrescenta o que é específico da subtarefa (arquivos, critério de pronto, restrições). Isso evita reescrever o mesmo pano de fundo em cada prompt de um lote paralelo (ver gatilho de consolidação na regra 12). Sem `AGENTS.md` no projeto, o contexto completo permanece inline, como no bullet anterior.
 
 6. **Síntese e prestação de contas.**
    - Ao final (ou conforme os subagentes retornam), revisar os resultados, verificar se atendem ao critério de pronto, e reportar ao usuário de forma objetiva: o que foi delegado, para qual modelo/tipo de agente, e o resultado.
@@ -113,6 +115,7 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
 
 12. **Orçamento e observabilidade de custo.**
     - Minimizar custo é escolher o modelo mais barato por subtarefa **e** controlar o volume total de chamadas. Antes de disparar um lote em paralelo, estimar: nº de subtarefas × modelo/esforço escolhido. Se o overhead fixo de muitas mini-tarefas (regra 7) dominar o custo, consolidar subtarefas mecânicas em menos chamadas.
+    - **Gatilho de consolidação por contexto compartilhado.** Antes de fragmentar, agrupar as subtarefas candidatas por pano de fundo necessário (mesma stack, mesma área de arquitetura, mesma convenção a explicar) — não só por arquivo (regra 9, que trata de conflito de edição). Se duas ou mais subtarefas sem conflito de arquivo dependem do mesmo bloco de contexto extenso e esse bloco não está coberto por `AGENTS.md` (regra 5), delegá-las juntas num único subagente em vez de replicar o bloco em prompts separados. A fragmentação da regra 7 existe para reduzir escopo de decisão e isolar blast-radius, não para forçar reescrita redundante do mesmo contexto em N prompts.
     - Monitorar o acúmulo ao longo da sessão: um lote de muitos haiku/sonnet pode custar mais que um único opus bem planejado — o retorno marginal de cada chamada extra deve justificar o custo.
     - Não perseguir miniaturização a qualquer custo: se 2 subtarefas são inseparáveis (mesmo arquivo, mesma decisão), delegá-las juntas em vez de forçar paralelismo artificial (ver regra 9).
 
