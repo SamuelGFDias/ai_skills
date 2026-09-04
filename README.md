@@ -29,6 +29,7 @@ ai_skills/
 ├── nuget-factory/             # workflow genérico de pacotes NuGet (+ providers/nexus)
 ├── openshift-cli/             # instalação/login OpenShift SES-RJ
 ├── playwright-e2e-estomizados/# receita e2e Playwright (Estomizados)
+├── portifolio-observer/       # observa stack/perfil real e sugere conteúdo pro portfólio pessoal
 ├── redis-port-forward/        # túnel até o Redis SES-RJ
 ├── replatforms/               # migração Delphi 7 → .NET + Angular (prompt em docs/)
 ├── ses-gitlab-deps/           # instalação de jq/glab
