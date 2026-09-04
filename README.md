@@ -18,6 +18,7 @@ ai_skills/
 │   └── pass-gopass/arquivos.md# pass/gopass: cofre local GPG
 ├── arquiteto/                 # orquestração: subagentes graduados por modelo/esforço
 ├── audit-log/                 # biblioteca AuditLog (NuGet)
+├── claude-mem-project-exclusion/ # excluir pasta e apagar memórias do plugin claude-mem
 ├── commiter/                  # workflow genérico de commit + push
 ├── dotnet-backend-architecture/  # padrão arquitetural .NET backend
 ├── hangfire-setup/            # Hangfire: abstrações + implementação (código em docs/)
