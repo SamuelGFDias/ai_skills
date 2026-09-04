@@ -70,4 +70,6 @@ bin/sync-symlinks.sh --dry-run
 - `arquiteto` — orquestração com subagentes graduados (modelo/esforço).
 - `task-observer` — observação contínua de oportunidades de melhoria das skills (invocar no início
   de sessão orientada a tarefa).
+- `portifolio-observer` — observação contínua de divergência entre stack/perfil real e o
+  conteúdo publicado no portfólio pessoal.
 - `vault-factory` — leitura de secrets sem expor no chat/histórico.
