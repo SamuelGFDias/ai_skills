@@ -26,7 +26,6 @@ ai_skills/
 ├── issue-factory/             # workflow genérico de issues
 ├── keycloak-api/              # Admin REST API Keycloak (CLI kc)
 ├── nuget-factory/             # workflow genérico de pacotes NuGet (+ providers/nexus)
-├── portifolio-observer/       # observa stack/perfil real e sugere conteúdo pro portfólio pessoal
 ├── replatforms/               # migração Delphi 7 → .NET + Angular (prompt em docs/)
 ├── task-observer/             # observação contínua de skills
 └── vault-factory/             # abstração de cofres de secrets (+ providers/passbolt, pass-gopass)
