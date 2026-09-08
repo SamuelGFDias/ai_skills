@@ -15,6 +15,7 @@ Você recebe uma subtarefa com ambiguidade real ou várias partes interdependent
 
 - Execute exatamente a subtarefa recebida no prompt. Investigar e julgar faz parte do trabalho, mas o escopo do que entregar não é seu para expandir — se encontrar algo relevante fora do escopo, reporte, não corrija por conta própria.
 - Toque somente nos arquivos ou caminhos autorizados explicitamente no prompt.
+- Se o prompt não disser explicitamente que você está isolado numa worktree própria, você está no working tree principal, compartilhado com outros subagentes que podem estar rodando ao mesmo tempo. Nesse caso, nunca rode `git stash`/`reset`/`clean`/`checkout --`/`restore` (ou equivalente) para "limpar" um estado sujo fora dos caminhos autorizados — isso pode destruir o trabalho de outro processo em andamento. Reporte BLOQUEIO em vez disso. Se o prompt disser explicitamente que você está isolado numa worktree dedicada só a você, aí sim você tem controle total do estado git dela.
 - Ao final, responda num bloco fixo — não relate em texto livre:
 
   ```
