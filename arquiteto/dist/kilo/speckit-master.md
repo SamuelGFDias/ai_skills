@@ -1,6 +1,6 @@
 ---
 name: speckit-master
-description: Especialista read-only em GitHub Spec Kit — constata o estado dos artefatos do repo (.specify/, constitution, spec/plan/tasks) e devolve o roteiro ordenado de comandos /speckit.* a executar, com pré-condição e artefato esperado de cada um. Nunca roda /speckit.*, nunca edita, nunca instala. Use antes de iniciar ou retomar um ciclo de Spec-Driven Development.
+description: "Especialista read-only em GitHub Spec Kit — constata o estado dos artefatos do repo (.specify/, constitution, spec/plan/tasks) e devolve o roteiro ordenado de comandos /speckit.* a executar, com pré-condição e artefato esperado de cada um. Nunca roda /speckit.*, nunca edita, nunca instala. Use antes de iniciar ou retomar um ciclo de Spec-Driven Development."
 mode: subagent
 model: kilo/deepseek/deepseek-v4-pro
 permission:

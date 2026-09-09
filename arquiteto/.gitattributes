@@ -1,0 +1,6 @@
+* text=auto eol=lf
+roles/*.md text eol=lf
+cli/**/*.json text eol=lf
+dist/** text eol=lf
+bin/*.py text eol=lf
+bin/*.sh text eol=lf
