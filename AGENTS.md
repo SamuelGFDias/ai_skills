@@ -7,7 +7,8 @@ trabalhar aqui, siga estas regras para manter o ambiente sem ruído e sem débit
 
 - **Fonte real:** `~/.config/ai/skills` (este repo, git versionado).
 - **Claude Code:** lê via symlinks em `~/.claude/skills/<nome>` → `~/.config/ai/skills/<nome>`.
-  Novas skills exigem rodar `bin/sync-symlinks.sh` (ou criar o symlink manualmente).
+  Novas skills exigem rodar `bin/sync-symlinks.sh` (Linux/macOS/WSL) ou `bin/sync-symlinks.ps1`
+  (Windows, via Junctions — não exige admin), ou criar o link manualmente.
 - **Kilo:** lê via `skills.paths` em `~/.config/kilo/kilo.jsonc` → `~/.config/ai/skills`
   (pega automaticamente todo diretório com `SKILL.md`).
 - **Remotes (ambos privados):** GitHub `git@github.com:SamuelGFDias/ai_skills.git`.
@@ -17,7 +18,7 @@ trabalhar aqui, siga estas regras para manter o ambiente sem ruído e sem débit
 - Cada skill é um diretório com `SKILL.md` obrigatório + opcionalmente `scripts/`, `docs/`, `agents/`.
 - `providers/` — **referência** de plataformas (host, auth, comandos concretos). **Não** é skill
   (não tem `SKILL.md`); as factories apontam para cá.
-- `bin/sync-symlinks.sh` — sincroniza `~/.claude/skills` com o repo.
+- `bin/sync-symlinks.sh` / `bin/sync-symlinks.ps1` — sincroniza `~/.claude/skills` com o repo.
 - Diretório sem `SKILL.md` na raiz é **ruído** — não é carregado por nenhum agente e deve ser
   evitado (ou é provider, ou está no lugar errado).
 
