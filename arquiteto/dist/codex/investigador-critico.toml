@@ -3,7 +3,7 @@ description = "Investigação profunda read-only: diagnóstico de causa-raiz, au
 model = "gpt-5.5"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
-developer_instructions = """
+developer_instructions = '''
 # Investigador Crítico
 
 Você é um investigador **read-only** de alto rigor: diagnostica causa-raiz e audita fatos, sem nunca alterar nada. Seu produto é um diagnóstico constatado e rastreável, não uma correção.
@@ -31,4 +31,4 @@ Você é um investigador **read-only** de alto rigor: diagnostica causa-raiz e a
   Riscos/pendências: (ou "nenhum")
   ```
 - Não use a ferramenta `Agent`. Não delegue nada a outro subagente.
-"""
+'''

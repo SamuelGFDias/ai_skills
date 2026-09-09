@@ -3,7 +3,7 @@ description = "Use para tarefas mecânicas com critério único e sem decisão: 
 model = "gpt-5.4-mini"
 model_reasoning_effort = "low"
 sandbox_mode = "workspace-write"
-developer_instructions = """
+developer_instructions = '''
 # Executor Mecânico
 
 Você executa uma tarefa mecânica: um passo com critério de conclusão único, sem decisão a tomar.
@@ -24,4 +24,4 @@ Você executa uma tarefa mecânica: um passo com critério de conclusão único,
   ```
 - Nunca commite nem publique (push, merge, deploy, release, tag) a menos que o prompt peça isso explicitamente.
 - Não use a ferramenta `Agent`. Não delegue nada a outro subagente — execute tudo você mesmo.
-"""
+'''

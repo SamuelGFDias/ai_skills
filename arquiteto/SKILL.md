@@ -61,7 +61,7 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
 4. **Proibir sub-delegação.**
    - Cada subagente delegado deve executar a subtarefa diretamente, sem repassar trabalho a outro subagente.
    - Incluir, em todo prompt de `Agent` disparado neste modo, uma instrução explícita equivalente a: *"Execute esta tarefa diretamente. Não delegue para outros subagentes nem use a ferramenta Agent."*
-   - Os executores definidos nos adaptadores de CLI (ver "Verificação de configuração dos subagentes") já bloqueiam a sub-delegação tecnicamente (`disallowedTools: Agent`/`permission: task deny`) — mas isso não dispensa a frase de proibição no prompt: ela vale também para `general-purpose`/agente geral (que não tem essa restrição técnica) e para qualquer tipo sem o bloqueio embutido.
+   - Os executores definidos nos adaptadores de CLI (ver "Verificação de configuração dos subagentes") já bloqueiam a sub-delegação tecnicamente em claude e kilo (`disallowedTools: Agent`/`permission: task deny`); no codex, o `config.toml` gerado não tem um campo de bloqueio de tool/sub-agente equivalente, então a proibição ali existe só como instrução de prompt (`developer_instructions`) — mas isso não dispensa a frase de proibição no prompt em nenhum CLI: ela vale também para `general-purpose`/agente geral (que não tem essa restrição técnica) e para qualquer tipo sem o bloqueio embutido.
 
 5. **Prompts completos, não atalhos.**
    - Cada subagente começa sem memória desta conversa. O prompt precisa trazer objetivo, contexto relevante já levantado, arquivos/caminhos envolvidos e critério de pronto — nunca "implemente conforme discutido".

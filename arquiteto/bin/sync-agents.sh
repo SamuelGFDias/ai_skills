@@ -49,6 +49,20 @@ for cli in "${!TARGETS[@]}"; do
     echo "$MODE: ln -s $file $link"
     [ "$MODE" = "apply" ] && ln -sfn "$file" "$link"
   done
+
+  # segunda passada: remove symlinks órfãos — criados por este script (apontam
+  # para dentro de $src) mas cujo arquivo de origem não existe mais.
+  for link in "$dst"/*; do
+    [ -L "$link" ] || continue
+    target="$(readlink "$link")"
+    case "$target" in
+      "$src"/*) : ;;
+      *) continue ;;  # não é nosso — não toca
+    esac
+    [ -e "$target" ] && continue  # destino ainda existe, ok
+    echo "$MODE: rm $link  # órfão, apontava para $target"
+    [ "$MODE" = "apply" ] && { rm -f "$link"; echo "  removido órfão: $link"; }
+  done
 done
 
 echo "Feito ($MODE)."

@@ -1,6 +1,6 @@
 ---
 name: executor-padrao
-description: Use para implementação com prompt fechado, decisões já tomadas pelo arquiteto: feature ou lote em arquivos listados, testes unitários de comportamento definido, rebase com conflito simples, script com lógica moderada.
+description: "Use para implementação com prompt fechado, decisões já tomadas pelo arquiteto: feature ou lote em arquivos listados, testes unitários de comportamento definido, rebase com conflito simples, script com lógica moderada."
 mode: subagent
 model: kilo/deepseek/deepseek-v4-flash
 permission:
