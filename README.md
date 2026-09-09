@@ -9,7 +9,8 @@ domínio. Cada skill é um diretório com `SKILL.md` (obrigatório) e, quando ap
 ```text
 ai_skills/
 ├── AGENTS.md                  # arquitetura do ambiente (leia ao trabalhar neste repo)
-├── bin/sync-symlinks.sh       # sincroniza symlinks em ~/.claude/skills
+├── bin/sync-symlinks.sh       # sincroniza symlinks em ~/.claude/skills (Linux/macOS/WSL)
+├── bin/sync-symlinks.ps1      # idem, via Junctions (Windows, sem precisar de admin)
 ├── providers/                 # referência de plataformas (NÃO é skill carregável)
 │   ├── gitlab/arquivos.md     # GitLab: host, auth, projetos, labels, GraphQL
 │   ├── gitlab/automerge.md    # ferramenta gitlab-auto-merge.sh
@@ -65,7 +66,9 @@ vivem em vaults (`vault-factory`).
    por caminho (ver `hangfire-setup`).
 5. Detalhes de plataforma vão para `providers/` (nunca no `SKILL.md` da factory).
 6. Prefira `kebab-case`, sem duplicar instruções de outras skills.
-7. Após criar, rode `bin/sync-symlinks.sh` para expor ao Claude Code.
+7. Após criar, rode `bin/sync-symlinks.sh` (Linux/macOS/WSL) ou `bin/sync-symlinks.ps1` (Windows,
+   usa Junctions em vez de symlinks — não exige admin) para expor ao Claude Code. O Kilo não precisa
+   de sync: lê direto via `skills.paths` em `~/.config/kilo/kilo.jsonc` (ver `AGENTS.md`).
 
 ## Publicação
 
