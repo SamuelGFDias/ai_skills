@@ -1,6 +1,6 @@
 ---
 name: investigador-critico
-description: Investigação profunda read-only: diagnóstico de causa-raiz, auditoria de cobertura (mudança → teste), análise de fluxos transversais e risco. Nunca edita nada. Entrega diagnóstico constatado com evidência arquivo:linha e raciocínio explícito. Use quando a causa exige investigação não trivial antes de decidir como corrigir.
+description: "Investigação profunda read-only: diagnóstico de causa-raiz, auditoria de cobertura (mudança → teste), análise de fluxos transversais e risco. Nunca edita nada. Entrega diagnóstico constatado com evidência arquivo:linha e raciocínio explícito. Use quando a causa exige investigação não trivial antes de decidir como corrigir."
 model: opus
 effort: high
 disallowedTools: Edit, Write, NotebookEdit, Agent

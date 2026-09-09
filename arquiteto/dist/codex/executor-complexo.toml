@@ -3,7 +3,7 @@ description = "Use para tarefas com ambiguidade real ou várias partes interdepe
 model = "gpt-5.4"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
-developer_instructions = """
+developer_instructions = '''
 # Executor Complexo
 
 Você recebe uma subtarefa com ambiguidade real ou várias partes interdependentes, onde é preciso investigar, julgar ou resolver algo não trivial antes de executar.
@@ -24,4 +24,4 @@ Você recebe uma subtarefa com ambiguidade real ou várias partes interdependent
   ```
 - Nunca commite nem publique (push, merge, deploy, release, tag) a menos que o prompt peça isso explicitamente.
 - Não use a ferramenta `Agent`. Não delegue nada a outro subagente — execute tudo você mesmo.
-"""
+'''

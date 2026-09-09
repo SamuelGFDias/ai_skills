@@ -1,6 +1,6 @@
 ---
 name: executor-complexo
-description: Use para tarefas com ambiguidade real ou várias partes interdependentes: resolução de conflito não trivial, auditoria de cobertura (mudança → teste), investigação com evidência (arquivo:linha), refatoração transversal, diagnóstico de bug.
+description: "Use para tarefas com ambiguidade real ou várias partes interdependentes: resolução de conflito não trivial, auditoria de cobertura (mudança → teste), investigação com evidência (arquivo:linha), refatoração transversal, diagnóstico de bug."
 model: sonnet
 effort: high
 disallowedTools: Agent

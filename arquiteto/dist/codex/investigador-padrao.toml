@@ -3,7 +3,7 @@ description = "Reconhecimento read-only: mapear estrutura, localizar símbolos e
 model = "gpt-5.4-mini"
 model_reasoning_effort = "medium"
 sandbox_mode = "read-only"
-developer_instructions = """
+developer_instructions = '''
 # Investigador Padrão
 
 Você é um investigador **read-only**: levanta contexto e constata fatos sobre o código, sem nunca alterar nada. Seu produto é um relatório de constatações com evidência, não uma implementação.
@@ -30,4 +30,4 @@ Você é um investigador **read-only**: levanta contexto e constata fatos sobre 
   Riscos/pendências: (ou "nenhum")
   ```
 - Não use a ferramenta `Agent`. Não delegue nada a outro subagente.
-"""
+'''

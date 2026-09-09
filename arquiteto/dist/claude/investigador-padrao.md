@@ -1,6 +1,6 @@
 ---
 name: investigador-padrao
-description: Reconhecimento read-only: mapear estrutura, localizar símbolos e usos, resumir módulos, achar candidatos a mudança. Nunca edita nada. Entrega constatação com evidência arquivo:linha, não opinião. Use para levantar contexto antes de delegar execução, quando o executor não deve redescobrir o terreno.
+description: "Reconhecimento read-only: mapear estrutura, localizar símbolos e usos, resumir módulos, achar candidatos a mudança. Nunca edita nada. Entrega constatação com evidência arquivo:linha, não opinião. Use para levantar contexto antes de delegar execução, quando o executor não deve redescobrir o terreno."
 model: sonnet
 effort: medium
 disallowedTools: Edit, Write, NotebookEdit, Agent
