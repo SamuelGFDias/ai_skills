@@ -48,6 +48,12 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
      | `investigador-padrao` | medium | Reconhecimento: mapear estrutura, localizar símbolos/usos, resumir módulos, achar candidatos a mudança. Paralelizável em massa antes de delegar execução. |
      | `investigador-critico` | high | Causa-raiz não trivial, auditoria de cobertura profunda, fluxo transversal com risco. Justificar no prompt por que `investigador-padrao` não bastava. |
 
+   - **Especialistas de domínio** (read-only; dominam um ecossistema específico, leem a skill do domínio antes de decidir e **prescrevem sem executar** — o roteiro que devolvem vira prompt de executor):
+
+     | papel | esforço | quando usar |
+     |---|---|---|
+     | `speckit-master` | high | Repo sob Spec-Driven Development (GitHub Spec Kit): constatar em que ponto do ciclo o repo está (`.specify/`, constitution, spec/plan/tasks) e obter o roteiro ordenado de comandos `/speckit.*`. Lê a skill `speckit`. |
+
    - Só passar `model` explícito na chamada `Agent` quando precisar divergir do adaptador do CLI — e, nesse caso, registrar no prompt por quê.
    - **`fork` (específico do Claude Code) não é um papel da tabela acima.** Um fork herda todo o contexto e o cache de prompt do arquiteto — elimina o custo de reexplicar contexto (regra 5/12) — mas sempre roda no modelo do arquiteto, nunca num modelo mais barato. Usar fork só quando o ganho buscado for reuso de contexto já quente (ex.: uma investigação exploratória cujo resultado não vale a pena manter no contexto principal) e não redução de custo por modelo — nesses casos, `fork` substitui o papel `investigador-padrao`/`investigador-complexo`. Quando o objetivo é baratear a execução, manter o papel tipado da tabela, mesmo pagando o custo de contexto frio. Em CLIs sem esse mecanismo, ignorar este bullet.
    - **Fluxo típico:** disparar N `investigador-padrao` em paralelo → consolidar constatações → escrever prompts dos executores já com contexto provado (reforça a regra 5 e reduz retrabalho da regra 11).
@@ -59,7 +65,7 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
 
 5. **Prompts completos, não atalhos.**
    - Cada subagente começa sem memória desta conversa. O prompt precisa trazer objetivo, contexto relevante já levantado, arquivos/caminhos envolvidos e critério de pronto — nunca "implemente conforme discutido".
-   - **Encadear skills de domínio:** se a subtarefa envolver commit/push, issues, secrets/vault ou pacotes NuGet, instruir o executor a ler a skill correspondente antes de executar — `commiter` (commit+push, sem rodapé de IA), `issue-factory` (issues), `vault-factory` (secrets sem vazar), `nuget-factory` (pacotes). O executor começa sem memória; o caminho para o conhecimento certo precisa vir no prompt.
+   - **Encadear skills de domínio:** se a subtarefa envolver commit/push, issues, secrets/vault, pacotes NuGet ou spec/plan/tasks sob Spec Kit, instruir o executor a ler a skill correspondente antes de executar — `commiter` (commit+push, sem rodapé de IA), `issue-factory` (issues), `vault-factory` (secrets sem vazar), `nuget-factory` (pacotes), `speckit` (Spec-Driven Development com GitHub Spec Kit). O executor começa sem memória; o caminho para o conhecimento certo precisa vir no prompt.
    - **Contexto de projeto via `AGENTS.md`:** se o projeto-alvo tiver `AGENTS.md` na raiz, instruir o subagente a lê-lo primeiro em vez de reexplicar arquitetura/convenções/estrutura de pastas inline — o prompt então só acrescenta o que é específico da subtarefa (arquivos, critério de pronto, restrições). Isso evita reescrever o mesmo pano de fundo em cada prompt de um lote paralelo (ver gatilho de consolidação na regra 12). Sem `AGENTS.md` no projeto, o contexto completo permanece inline, como no bullet anterior.
 
 6. **Síntese e prestação de contas.**
@@ -123,7 +129,7 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
 
 ## Verificação de configuração dos subagentes
 
-Antes de delegar, o arquiteto confere se os 6 papéis (`executor-mecanico`, `executor-padrao`, `executor-complexo`, `executor-critico`, `investigador-padrao`, `investigador-critico`) estão disponíveis como subagentes no CLI em que está rodando. A definição dos papéis (prompts) vive em `arquiteto/roles/`; o mapeamento papel→modelo por CLI vive em `arquiteto/cli/<cli>/models.json`.
+Antes de delegar, o arquiteto confere se os 7 papéis (`executor-mecanico`, `executor-padrao`, `executor-complexo`, `executor-critico`, `investigador-padrao`, `investigador-critico`, `speckit-master`) estão disponíveis como subagentes no CLI em que está rodando. A definição dos papéis (prompts) vive em `arquiteto/roles/`; o mapeamento papel→modelo por CLI vive em `arquiteto/cli/<cli>/models.json`.
 
 - **Se configurado:** delegar normalmente, usando os nomes dos papéis como `subagent_type`/nome do agente.
 - **Se não configurado** (tipos ausentes ou rejeitados pelo CLI): **não** tentar contornar sozinho. Identificar qual CLI está em uso, ler `arquiteto/cli/<cli>/models.json` (e `arquiteto/roles/` se preciso) para saber o que falta, e **instruir o usuário** a instalar via `arquiteto/bin/sync-agents.sh` (cria symlinks de `arquiteto/dist/<cli>/` para o diretório real do CLI), explicando que tipos novos ou alterados só aparecem numa sessão nova do CLI. Enquanto não configurado, usar o agente geral disponível (`general-purpose`/`general`) com o modelo mais próximo do papel (conforme `models.json`) e registrar na síntese que a execução ficou no padrão da sessão.

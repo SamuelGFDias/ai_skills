@@ -32,6 +32,7 @@ ai_skills/
 ├── playwright-e2e-estomizados/# receita e2e Playwright (Estomizados)
 ├── redis-port-forward/        # túnel até o Redis SES-RJ
 ├── replatforms/               # migração Delphi 7 → .NET + Angular (prompt em docs/)
+├── speckit/                   # Spec-Driven Development com GitHub Spec Kit (comandos + instalação em docs/)
 ├── ses-gitlab-deps/           # instalação de jq/glab
 ├── task-observer/             # observação contínua de skills
 └── vault-factory/             # abstração de cofres de secrets (+ providers/passbolt, pass-gopass)
@@ -73,7 +74,9 @@ vivem em vaults (`vault-factory`).
    por caminho (ver `hangfire-setup`).
 5. Detalhes de plataforma vão para `providers/` (nunca no `SKILL.md` da factory).
 6. Prefira `kebab-case`, sem duplicar instruções de outras skills.
-7. Após criar, rode `bin/sync-skills.sh` (Linux/macOS/WSL) ou `bin/sync-skills.ps1` (Windows) para
+7. Após criar, rode o sync — sequência completa e armadilhas de Windows/Git Bash em
+   `AGENTS.md`, seção "Sincronização". Em resumo: `bin/sync-skills.sh` (bash/WSL/Git Bash) ou
+   `bin/sync-skills.ps1` (PowerShell) para
    expor a skill aos CLIs. Sem argumento, sincroniza claude + kilo; use `claude` ou `kilo` para um
    alvo só. Para o Claude Code, a skill é **copiada** (não symlink/junction) para
    `~/.claude/skills/<nome>` e recriada a cada run. Para o Kilo, o script só garante que o caminho

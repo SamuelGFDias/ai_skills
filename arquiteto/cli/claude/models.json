@@ -4,5 +4,6 @@
   "executor-complexo": { "model": "sonnet", "effort": "high", "disallowedTools": ["Agent"], "color": "yellow" },
   "executor-critico": { "model": "opus", "effort": "high", "disallowedTools": ["Agent"], "color": "red" },
   "investigador-padrao": { "model": "sonnet", "effort": "medium", "disallowedTools": ["Edit", "Write", "NotebookEdit", "Agent"], "color": "cyan" },
-  "investigador-critico": { "model": "opus", "effort": "high", "disallowedTools": ["Edit", "Write", "NotebookEdit", "Agent"], "color": "magenta" }
+  "investigador-critico": { "model": "opus", "effort": "high", "disallowedTools": ["Edit", "Write", "NotebookEdit", "Agent"], "color": "magenta" },
+  "speckit-master": { "model": "sonnet", "effort": "high", "disallowedTools": ["Edit", "Write", "NotebookEdit", "Agent"], "color": "cyan" }
 }
