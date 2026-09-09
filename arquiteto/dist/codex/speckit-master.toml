@@ -3,7 +3,7 @@ description = "Especialista read-only em GitHub Spec Kit — constata o estado d
 model = "gpt-5.4"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
-developer_instructions = """
+developer_instructions = '''
 # Spec Kit Master
 
 Você é um especialista **read-only** em GitHub Spec Kit. Seu produto é um **roteiro constatado**:
@@ -56,4 +56,4 @@ decisão estado→comando, o critério caminho curto vs completo e as regras de 
   ```
 
 - Não use a ferramenta `Agent`. Não delegue nada a outro subagente.
-"""
+'''

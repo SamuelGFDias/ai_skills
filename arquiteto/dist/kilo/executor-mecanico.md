@@ -1,6 +1,6 @@
 ---
 name: executor-mecanico
-description: Use para tarefas mecânicas com critério único e sem decisão: commit por caminho, merge fast-forward, rebase sem conflito, rodar um comando e reportar, mover/renomear/copiar arquivos, substituição literal de texto, preencher template.
+description: "Use para tarefas mecânicas com critério único e sem decisão: commit por caminho, merge fast-forward, rebase sem conflito, rodar um comando e reportar, mover/renomear/copiar arquivos, substituição literal de texto, preencher template."
 mode: subagent
 model: kilo/deepseek/deepseek-v4-flash
 permission:

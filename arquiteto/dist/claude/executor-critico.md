@@ -1,6 +1,6 @@
 ---
 name: executor-critico
-description: Use raramente, só quando a complexidade justificar o custo: decisão arquitetural, bug sutil de concorrência/segurança, migração com risco de dado. O arquiteto deve justificar no prompt por que não usou executor-complexo.
+description: "Use raramente, só quando a complexidade justificar o custo: decisão arquitetural, bug sutil de concorrência/segurança, migração com risco de dado. O arquiteto deve justificar no prompt por que não usou executor-complexo."
 model: opus
 effort: high
 disallowedTools: Agent
