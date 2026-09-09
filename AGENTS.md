@@ -6,11 +6,15 @@ trabalhar aqui, siga estas regras para manter o ambiente sem ruído e sem débit
 ## Contexto de integração
 
 - **Fonte real:** `~/.config/ai/skills` (este repo, git versionado).
-- **Claude Code:** lê via symlinks em `~/.claude/skills/<nome>` → `~/.config/ai/skills/<nome>`.
-  Novas skills exigem rodar `bin/sync-symlinks.sh` (Linux/macOS/WSL) ou `bin/sync-symlinks.ps1`
-  (Windows, via Junctions — não exige admin), ou criar o link manualmente.
+- **Claude Code:** lê de **cópias** em `~/.claude/skills/<nome>` (não symlink/junction — cópia
+  fiel do diretório da skill). Toda skill nova ou alterada exige rodar `bin/sync-skills.sh claude`
+  (Linux/macOS/WSL) ou `bin/sync-skills.ps1 -Cli claude` (Windows) para recriar a cópia; sem
+  isso o Claude Code continua vendo a versão antiga.
 - **Kilo:** lê via `skills.paths` em `~/.config/kilo/kilo.jsonc` → `~/.config/ai/skills`
-  (pega automaticamente todo diretório com `SKILL.md`).
+  (pega automaticamente todo diretório com `SKILL.md`, direto da fonte — sem cópia). O sync
+  (`bin/sync-skills.sh kilo` / `bin/sync-skills.ps1 -Cli kilo`) só garante que esse caminho está
+  configurado; é idempotente e normalmente roda uma vez só.
+- Rodar `bin/sync-skills.sh` / `bin/sync-skills.ps1` sem argumento aplica os dois alvos.
 - **Remotes (ambos privados):** GitHub `git@github.com:SamuelGFDias/ai_skills.git`.
 
 ## Estrutura de diretórios
@@ -18,7 +22,8 @@ trabalhar aqui, siga estas regras para manter o ambiente sem ruído e sem débit
 - Cada skill é um diretório com `SKILL.md` obrigatório + opcionalmente `scripts/`, `docs/`, `agents/`.
 - `providers/` — **referência** de plataformas (host, auth, comandos concretos). **Não** é skill
   (não tem `SKILL.md`); as factories apontam para cá.
-- `bin/sync-symlinks.sh` / `bin/sync-symlinks.ps1` — sincroniza `~/.claude/skills` com o repo.
+- `bin/sync-skills.sh` / `bin/sync-skills.ps1` — recria as cópias em `~/.claude/skills` e garante
+  a config do Kilo (`-Cli claude|kilo`, default os dois).
 - Diretório sem `SKILL.md` na raiz é **ruído** — não é carregado por nenhum agente e deve ser
   evitado (ou é provider, ou está no lugar errado).
 
@@ -57,8 +62,8 @@ grep -rn '~/.claude/skills' --include='SKILL.md' . || true
 # 3. Nenhum segredo em texto claro (senha/token no corpo da skill)
 grep -rniE '(password|secret|token)\s*[:=]\s*["'"'"'][^"'"'"']{6,}' --include='*.md' . || true
 
-# 4. Sync dos symlinks
-bin/sync-symlinks.sh --dry-run
+# 4. Sync das skills (claude + kilo)
+bin/sync-skills.sh all --dry-run
 ```
 
 ## Padrão de commit
