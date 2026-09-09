@@ -17,5 +17,8 @@
   },
   "investigador-critico": {
     "model": "kilo/deepseek/deepseek-v4-pro"
+  },
+  "speckit-master": {
+    "model": "kilo/deepseek/deepseek-v4-pro"
   }
 }
