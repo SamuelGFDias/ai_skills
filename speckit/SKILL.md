@@ -112,6 +112,13 @@ Fluxo correto:
    (fecha o `clarify`) e então segue a árvore de decisão normalmente — ou re-delega ao subagente se
    alguma resposta abrir necessidade de nova investigação.
 
+**Sem `arquiteto` / sem delegação:** se o `/speckit.clarify` roda direto na sessão main (skill
+carregada sem passar por subagente), o passo 1 (consolidar todas as ambiguidades numa lista única
+antes de perguntar) continua valendo — não pule direto para a primeira pergunta encontrada. A
+diferença é só o passo 2: como a própria sessão main é quem decide, ela pode abrir a interação
+(tool nativa da tabela acima) diretamente com a lista consolidada, sem precisar "devolver" a
+pergunta para si mesma.
+
 ## Regras de ouro
 
 1. **Nunca pular `clarify` com spec ambíguo.** Ambiguidade não resolvida no spec vira decisão
