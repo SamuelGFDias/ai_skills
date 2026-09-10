@@ -6,10 +6,13 @@ trabalhar aqui, siga estas regras para manter o ambiente sem ruído e sem débit
 ## Contexto de integração
 
 - **Fonte real:** `~/.config/ai/skills` (este repo, git versionado).
-- **Claude Code:** lê de **cópias** em `~/.claude/skills/<nome>` (não symlink/junction — cópia
-  fiel do diretório da skill). Toda skill nova ou alterada exige rodar o sync (ver
-  "Sincronização" abaixo) para recriar a cópia; sem isso o Claude Code continua vendo a versão
-  antiga. Os subagentes do `arquiteto` são instalados por outro script — mesma seção.
+- **Claude Code:** lê de `~/.claude/skills/<nome>` — no Linux/macOS/WSL é **symlink** para a skill
+  neste repo; no Windows/Git Bash é **cópia** fiel (ver "Armadilhas no Windows" abaixo pra saber
+  por quê). Toda skill nova ou alterada exige rodar o sync (ver "Sincronização" abaixo) para
+  recriar o destino; sem isso o Claude Code continua vendo a versão antiga — no modo cópia sempre,
+  no modo symlink só quando a skill é renomeada/removida (o conteúdo de uma skill existente já
+  propaga sozinho via `git pull`, sem precisar de sync). Os subagentes do `arquiteto` são
+  instalados por outro script — mesma seção.
 - **Kilo:** lê via `skills.paths` em `~/.config/kilo/kilo.jsonc` → `~/.config/ai/skills`
   (pega automaticamente todo diretório com `SKILL.md`, direto da fonte — sem cópia). O sync com
   alvo `kilo` só garante que esse caminho está configurado; é idempotente e normalmente roda uma
@@ -23,7 +26,7 @@ Duas coisas independentes precisam ser sincronizadas — alterar uma não sincro
 
 | O quê | Fonte | Destino | Script |
 |---|---|---|---|
-| **Skills** (`<nome>/SKILL.md`) | este repo | `~/.claude/skills/<nome>` (cópia) | `bin/sync-skills.sh` / `bin/sync-skills.ps1` |
+| **Skills** (`<nome>/SKILL.md`) | este repo | `~/.claude/skills/<nome>` (symlink no Linux/macOS/WSL, cópia no Windows) | `bin/sync-skills.sh` / `bin/sync-skills.ps1` |
 | **Subagentes do `arquiteto`** | `arquiteto/roles/` + `arquiteto/cli/<cli>/models.json` | `~/.claude/agents/`, `~/.config/kilo/agent/`, `~/.codex/agents/` | `arquiteto/bin/build-agents.py` → `arquiteto/bin/sync-agents.sh` |
 
 ### Sequência completa
@@ -64,13 +67,19 @@ bash arquiteto/bin/sync-agents.sh              # barras normais aqui: o argument
   arquivo: o agente funciona, mas perde-se a propriedade de "`git pull` propaga sozinho" — é preciso
   rodar `sync-agents.sh` a cada mudança em `dist/`. Para symlink de verdade:
   `export MSYS=winsymlinks:nativestrict` com Developer Mode ligado.
+- **Por isso `sync-skills.sh` copia em vez de linkar no Windows.** O script detecta a plataforma via
+  `uname -s` (`MINGW*`/`MSYS*`/`CYGWIN*` → cópia; qualquer outra, incluindo Linux/macOS/WSL →
+  symlink) e escolhe o modo sozinho — não precisa configurar nada. Pra forçar um modo específico
+  (ex.: testar o caminho "Windows" a partir do Linux), defina `FORCE_LINK_MODE=copy` ou
+  `FORCE_LINK_MODE=symlink` antes de chamar o script.
 
 ## Estrutura de diretórios
 
 - Cada skill é um diretório com `SKILL.md` obrigatório + opcionalmente `scripts/`, `docs/`, `agents/`.
 - `providers/` — **referência** de plataformas (host, auth, comandos concretos). **Não** é skill
   (não tem `SKILL.md`); as factories apontam para cá.
-- `bin/sync-skills.sh` / `bin/sync-skills.ps1` — recria as cópias em `~/.claude/skills` e garante
+- `bin/sync-skills.sh` / `bin/sync-skills.ps1` — recria o destino em `~/.claude/skills` (symlink no
+  Linux/macOS/WSL via `.sh`; cópia no Windows, seja via `.sh` no Git Bash ou via `.ps1`) e garante
   a config do Kilo (`-Cli claude|kilo`, default os dois).
 - `arquiteto/bin/build-agents.py` — gera `arquiteto/dist/<cli>/` a partir de `roles/` + `models.json`
   (`--check` valida drift). `arquiteto/bin/sync-agents.sh` — instala o `dist/` no diretório de cada CLI.
