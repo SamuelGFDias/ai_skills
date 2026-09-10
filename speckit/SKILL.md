@@ -86,6 +86,25 @@ de arquivo).
 Depois de implementar por qualquer um dos dois caminhos, `/speckit.converge` reconcilia os artefatos
 com o que o código virou de fato.
 
+## Clarify em subagente: consolidar perguntas com AskUserQuestion
+
+Quando `/speckit.clarify` roda dentro de um subagente delegado (ex.: pelo modo `arquiteto`, por um
+`investigador-*` ou `executor-*`), o subagente **não faz perguntas inline** ao longo da varredura —
+ele não é a sessão que conversa com o usuário, e perguntas soltas no meio da delegação quebram o
+fluxo do orquestrador.
+
+Fluxo correto:
+
+1. O subagente varre o `spec.md` inteiro, levanta **todas** as ambiguidades (`[NEEDS CLARIFICATION]`,
+   requisitos subespecificados) e consolida numa lista única de perguntas — não pausa para perguntar
+   uma de cada vez nem resolve por conta própria com suposição.
+2. Devolve essa lista para a sessão principal, sem editar o `spec.md` ainda.
+3. A sessão principal usa `AskUserQuestion` para apresentar todas as perguntas de uma vez e coletar
+   as respostas do usuário.
+4. Com as respostas, a sessão principal decide o próximo passo: atualiza o `spec.md` com as decisões
+   (fecha o `clarify`) e então segue a árvore de decisão normalmente — ou re-delega ao subagente se
+   alguma resposta abrir necessidade de nova investigação.
+
 ## Regras de ouro
 
 1. **Nunca pular `clarify` com spec ambíguo.** Ambiguidade não resolvida no spec vira decisão
