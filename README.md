@@ -78,10 +78,11 @@ vivem em vaults (`vault-factory`).
    `AGENTS.md`, seção "Sincronização". Em resumo: `bin/sync-skills.sh` (bash/WSL/Git Bash) ou
    `bin/sync-skills.ps1` (PowerShell) para
    expor a skill aos CLIs. Sem argumento, sincroniza claude + kilo; use `claude` ou `kilo` para um
-   alvo só. Para o Claude Code, a skill é **copiada** (não symlink/junction) para
-   `~/.claude/skills/<nome>` e recriada a cada run. Para o Kilo, o script só garante que o caminho
-   do repo esteja em `skills.paths` de `~/.config/kilo/kilo.jsonc` — ele lê os `SKILL.md` direto da
-   fonte, sem cópia (ver `AGENTS.md`).
+   alvo só. Para o Claude Code, a skill vira **symlink** em `~/.claude/skills/<nome>` no
+   Linux/macOS/WSL, ou é **copiada** no Windows/Git Bash — o destino é recriado a cada run em
+   ambos os casos. Para o Kilo, o script só garante que o caminho do repo esteja em
+   `skills.paths` de `~/.config/kilo/kilo.jsonc` — ele lê os `SKILL.md` direto da fonte, sem
+   cópia nem symlink (ver `AGENTS.md`).
 
 ## Publicação
 

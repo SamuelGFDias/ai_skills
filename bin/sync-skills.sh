@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
 # sync-skills.sh — (re)cria as skills deste repo nos locais que cada CLI de IA espera.
 #
-# Em vez de symlink, copia o conteúdo de cada skill — o destino fica sempre como uma cópia
-# fiel e descartável, recriada a cada run.
+# Linux/macOS/WSL: destino vira symlink para a skill (ln -s nativo funciona sem ressalva).
+# Git Bash/MSYS/Cygwin (Windows): destino vira cópia — sem Developer Mode + winsymlinks:nativestrict,
+# `ln -s` no MSYS apenas copia o arquivo em vez de linkar de verdade (ver AGENTS.md, "Armadilhas no
+# Windows"), então symlink nesse ambiente vira uma cópia disfarçada e some no próximo `git pull` sem
+# rodar o sync de novo — cópia explícita evita essa falsa promessa. Detecção via `uname -s`;
+# sobrescreva com FORCE_LINK_MODE=copy|symlink para testar o outro modo manualmente.
 #
 # Alvos (primeiro argumento posicional, default "all"):
-#   claude  -> copia cada skill (diretório com SKILL.md na raiz) para ~/.claude/skills/<nome>,
-#              apagando e recriando o destino a cada run; remove cópias órfãs (skill removida do repo).
+#   claude  -> linka (Linux/macOS/WSL) ou copia (Windows/Git Bash) cada skill (diretório com
+#              SKILL.md na raiz) para ~/.claude/skills/<nome>, recriando o destino a cada run;
+#              remove órfãos (skill removida do repo).
 #   kilo    -> garante que ~/.config/kilo/kilo.jsonc tenha o caminho deste repo em "skills.paths"
-#              (o Kilo lê os SKILL.md direto da fonte, não precisa de cópia).
+#              (o Kilo lê os SKILL.md direto da fonte, não precisa de cópia nem symlink).
 #
 # Uso:
 #   bin/sync-skills.sh                  # aplica em claude + kilo
@@ -23,6 +28,19 @@ MODE="apply"
 [[ "${2:-}" == "--dry-run" || "${1:-}" == "--dry-run" ]] && MODE="dry-run"
 [[ "$CLI" == "--dry-run" ]] && CLI="all"
 
+if [ -n "${FORCE_LINK_MODE:-}" ]; then
+  LINK_MODE="$FORCE_LINK_MODE"
+else
+  case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) LINK_MODE="copy" ;;
+    *) LINK_MODE="symlink" ;;
+  esac
+fi
+case "$LINK_MODE" in
+  copy|symlink) ;;
+  *) echo "FORCE_LINK_MODE inválido: $LINK_MODE (use copy ou symlink)" >&2; exit 1 ;;
+esac
+
 sync_claude() {
   local target_dir="$HOME/.claude/skills"
   [ "$MODE" = "apply" ] && mkdir -p "$target_dir"
@@ -33,16 +51,27 @@ sync_claude() {
     local name; name="$(basename "$skill_dir")"
     names+=("$name")
     local dest="$target_dir/$name"
-    echo "$MODE: recria $dest <- $skill_dir"
-    if [ "$MODE" = "apply" ]; then
-      rm -rf "$dest"
-      cp -R "$skill_dir" "$dest"
+    local src="${skill_dir%/}"
+    if [ "$LINK_MODE" = "symlink" ]; then
+      echo "$MODE ($LINK_MODE): $dest -> $src"
+      if [ "$MODE" = "apply" ]; then
+        rm -rf "$dest"
+        ln -s "$src" "$dest"
+      fi
+    else
+      echo "$MODE ($LINK_MODE): recria $dest <- $skill_dir"
+      if [ "$MODE" = "apply" ]; then
+        rm -rf "$dest"
+        cp -R "$skill_dir" "$dest"
+      fi
     fi
   done
 
   [ -d "$target_dir" ] || return 0
-  for existing in "$target_dir"/*/; do
-    [ -d "$existing" ] || continue
+  for existing in "$target_dir"/*; do
+    # -d segue symlink (pega diretórios e symlinks válidos para diretório);
+    # -L pega symlink quebrado (repo renomeou/removeu a skill) — sem isso o órfão fica preso.
+    [ -d "$existing" ] || [ -L "$existing" ] || continue
     local name; name="$(basename "$existing")"
     local found=0
     for n in "${names[@]:-}"; do [ "$n" = "$name" ] && found=1 && break; done
