@@ -119,6 +119,14 @@ diferença é só o passo 2: como a própria sessão main é quem decide, ela po
 (tool nativa da tabela acima) diretamente com a lista consolidada, sem precisar "devolver" a
 pergunta para si mesma.
 
+**Modo silencioso/autônomo (agente responde sem o usuário):** quando uma instrução explícita manda
+resolver as clarificações sem consultar ninguém, o registro padrão `- Q: ... → A: ...` fica
+indistinguível de uma resposta que veio de fato do usuário — enganoso meses depois, na leitura do
+repositório. Marcar cada bullet do `## Clarifications` com a autoria e a base da decisão, ex.:
+`- Q: ... → A: ... (resolvida pelo agente, base: <precedente/arquivo/convenção>)`. Um registro de
+decisão que não distingue quem decidiu perde a informação mais importante para quem lê depois — a
+confiança que se pode depositar nela.
+
 ## Regras de ouro
 
 1. **Nunca pular `clarify` com spec ambíguo.** Ambiguidade não resolvida no spec vira decisão
@@ -129,6 +137,11 @@ pergunta para si mesma.
    `.specify/memory/`; um diretório `specs/NNN-*/` por feature.
 4. **Artefato é fonte da verdade, não o chat.** Se a decisão não está no `spec.md`/`plan.md`, ela não
    existe para o próximo passo.
+5. **`caminho:símbolo` citado em artefato de design vem de busca no código, não do nome plausível do
+   arquivo.** Verificar por grep antes de escrever a primeira vez — e sobretudo antes de repetir o
+   mesmo fato num segundo artefato (`plan.md`, `contracts/*`, `data-model.md` frequentemente citam a
+   mesma constante/função). O custo de verificar é constante; o custo de corrigir cresce com o número
+   de artefatos que já repetiram o palpite.
 
 ## Referências
 
