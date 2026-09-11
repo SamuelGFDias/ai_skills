@@ -55,6 +55,13 @@ Criação pontual:
                                                        Cria uma role num client. Idempotente. Aceita
                                                        também um realmAlias (modo automático acima).
 
+Mapeamento pontual:
+  assign-group-roles <credAlias|realmAlias> <groupPath> <clientIdName> <roleName> [<roleName> ...]
+                                                       Mapeia uma ou mais roles de um client a um
+                                                       group já existente no mesmo ambiente. Idempotente
+                                                       (roles já mapeadas são reportadas, não duplicadas).
+                                                       Aceita também um realmAlias (modo automático).
+
 Alteração pontual:
   set-client-attr <credAlias|realmAlias> <clientId> <atributo>=<valor> [<atributo>=<valor> ...] [--apply] [realmDestino]
                                                        Altera atributos de um client. Dry-run por
@@ -76,6 +83,7 @@ Exemplos:
   kc setup-realm
   kc setup-client
   kc client-roles realm-dev-meu-app meu-app
+  kc assign-group-roles realm-dev-meu-app "/MeuApp/Administrador" meu-app Recurso_Listar
   kc set-client-attr realm-dev-meu-app meu-app client.session.idle.timeout=7200
   kc mirror-client-roles realm-dev-meu-app realm-stg-meu-app meu-app
   kc mirror-group-roles realm-dev-meu-app realm-stg-meu-app "/MeuApp" meu-app --recursive
@@ -117,6 +125,7 @@ case "$SUBCOMMAND" in
   group-detail)          exec "$SCRIPT_DIR/kc-group-detail.sh" "$@" ;;
   client-roles)          exec "$SCRIPT_DIR/kc-client-roles.sh" "$@" ;;
   create-client-role)    exec "$SCRIPT_DIR/kc-create-client-role.sh" "$@" ;;
+  assign-group-roles)    exec "$SCRIPT_DIR/kc-assign-group-roles.sh" "$@" ;;
   set-client-attr)       exec "$SCRIPT_DIR/kc-set-client-attr.sh" "$@" ;;
   mirror-client-roles)   exec "$SCRIPT_DIR/kc-mirror-client-roles.sh" "$@" ;;
   mirror-group-roles)    exec "$SCRIPT_DIR/kc-mirror-group-roles.sh" "$@" ;;
