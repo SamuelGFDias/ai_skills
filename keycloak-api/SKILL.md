@@ -142,6 +142,11 @@ Todos aceitam qualquer `<credAlias>` — de um client ou de um user cadastrado, 
 - `kc list-groups <credAlias> [realmDestino]` — lista os groups do realm (árvore completa).
 - `kc group-detail <credAlias> <groupId> [realmDestino]` — detalha um group: subgrupos,
   membros, role mappings (realm + client).
+- `kc group-roles <credAlias|realmAlias> <groupPath> [clientIdName]` — alternativa mais
+  simples e legível a `group-detail` quando só se quer ver as roles mapeadas de um group (sem
+  members nem subgrupos): resolve o group por **path** (ex: `/Biae/Administrador`), não por
+  id como `group-detail` exige. Com `clientIdName` opcional, filtra a saída só pras roles
+  desse client. Ex: `kc group-roles sesrj-dev "/Biae/Administrador" biae`.
 
 `realmDestino` (opcional, nesses 5 comandos): consulta outro realm da **mesma instância**
 Keycloak da credencial, usando o token dela — cobre o padrão de admin do realm `master`, que
