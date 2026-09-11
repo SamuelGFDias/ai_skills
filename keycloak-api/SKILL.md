@@ -189,6 +189,22 @@ sugestão de usar o modo automático com um usuário master) em vez de só "Forb
   realmAlias no lugar do credAlias — modo automático por realm (credencial de master), como
   os comandos de consulta acima.
 
+### Mapeamento pontual
+
+- `kc assign-group-roles <credAlias|realmAlias> <groupPath> <clientIdName> <roleName> [<roleName> ...]`
+  — mapeia uma ou mais roles de um client a um group **dentro do mesmo ambiente**, dada uma
+  lista explícita de `roleName`. Diferente de `kc mirror-group-roles` (que copia
+  client-role-mappings de um ambiente de origem para outro): aqui não há origem, é uso direto
+  no ambiente indicado. O group **precisa já existir** — ao contrário do mirror, este comando
+  não cria hierarquia automaticamente; se o group não existir, falha com mensagem clara em vez
+  de criá-lo (não há um ambiente de origem confiável que garanta que o group deveria existir).
+  Idempotente (roles já mapeadas são reportadas como "JÁ MAPEADA", não duplicadas). Aceita
+  também um realmAlias no lugar do credAlias — mesmo modo automático dos demais comandos.
+
+```
+kc assign-group-roles sesrj-dev "/Biae/Administrador" biae Subsecretaria_Listar Administracao_Subsecretaria_Criar Administracao_Subsecretaria_Excluir
+```
+
 ### Alteração pontual
 
 - `kc set-client-attr <credAlias|realmAlias> <clientId> <atributo>=<valor> [<atributo>=<valor> ...] [--apply] [realmDestino]`
