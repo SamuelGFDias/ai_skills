@@ -28,6 +28,7 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
    - Quebrar em subtarefas claras, com escopo e critério de conclusão bem definidos.
    - Quando as subtarefas forem independentes entre si, disparar os `Agent` correspondentes em paralelo (múltiplos blocos de chamada na mesma resposta).
    - Quando houver dependência real entre subtarefas, delegar sequencialmente, usando o resultado de uma para escrever o prompt da próxima.
+   - **Args citando "padrão/modelo de outro projeto" têm escopo ambíguo por apontamento, não por conteúdo** — pode significar o processo inteiro (instalação, versão, convenção de commit, constitution) ou um único artefato. Antes de aprofundar o levantamento, listar em uma linha os artefatos candidatos que o padrão poderia cobrir e confirmar com o usuário qual subconjunto vale. Sem usuário disponível, declarar a interpretação adotada no primeiro relato de progresso para que a correção chegue cedo — o custo de confirmar é uma linha, o custo de assumir errado é o levantamento inteiro do subconjunto errado.
 
 3. **Modelo e esforço mínimos por subtarefa.**
    - **Duas famílias de subagentes, dimensões ortogonais:** *executores* (escrevem, isolados por área de arquivo — regra 9) e *investigadores* (read-only, nunca alteram arquivo). Investigação não é "executor que ainda não decidiu": é um tipo próprio, livre para paralelizar sem limite porque não gera conflito nem efeito colateral.

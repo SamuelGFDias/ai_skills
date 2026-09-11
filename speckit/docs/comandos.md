@@ -48,6 +48,14 @@ primeira vez.
 Armadilha: rodar com spec ainda ambíguo — o plan preenche a lacuna com um chute plausível e o chute
 some dentro de um documento que parece decidido.
 
+Armadilha: na seção "Project Structure", listar arquivo novo que usa símbolo de outro arquivo sem
+confirmar o mecanismo de linkagem/import contra o build system real (ex.: diretório de teste sem
+target de biblioteca para importar). Uma estrutura de arquivos planejada é uma afirmação sobre o
+grafo de dependências do build, não só sobre nomes de diretório — confirmar com um comando de
+metadados do build (não leitura de código) antes de dar a seção como pronta; se exigir mudança
+estrutural (criar target, alargar visibilidade, mover módulo), isso vira task explícita, não
+pressuposto implícito.
+
 ### `/speckit.checklist`
 Gera checklists de qualidade sob medida para validar completude dos requisitos. `requirements.md` é
 mantido automaticamente; checklists extras são do revisor.
@@ -65,6 +73,15 @@ tarefa sem requisito, plan contradizendo spec. **Não altera arquivo**: é gate,
 
 Armadilha: tratar o relatório como informativo. Apontou inconsistência → corrigir o artefato de
 origem e rodar de novo.
+
+Armadilha: o gate padrão compara `spec.md`/`plan.md`/`tasks.md`, mas `tasks.md` também é gerado a
+partir de `data-model.md`/`contracts/` — dois arquivos que o `analyze` não cobre por padrão. Cada
+documento pode ser internamente consistente e ainda divergir do outro (ex.: `tasks.md` tratando um
+campo como propriedade do objeto todo enquanto `data-model.md` o define por item da lista).
+Consistência interna de um artefato não implica consistência entre artefatos gerados um do outro:
+incluir explicitamente `data-model.md`/`contracts/` na varredura — todo nome de campo/tipo citado em
+`tasks.md` precisa existir com o mesmo nome e tipo dono ali, e todo tipo/decisão desses dois precisa
+ter task correspondente.
 
 ### `/speckit.implement`
 Executa o `tasks.md`. Em modo arquiteto, **não usar** — ver a seção "Implementação" do `SKILL.md`:
