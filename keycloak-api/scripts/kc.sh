@@ -38,6 +38,10 @@ comandos abaixo também aceita <realmAlias> — ver modo automático mais abaixo
   list-groups <credAlias|realmAlias> [realmDestino]   Lista os groups do realm (árvore completa).
   group-detail <credAlias|realmAlias> <groupId> [realmDestino]
                                                        Detalha um group: subgrupos, membros, role mappings.
+  group-roles <credAlias|realmAlias> <groupPath> [clientIdName]
+                                                       Lista de forma simples as roles mapeadas
+                                                       de um group/subgroup (por path, não id).
+                                                       Com clientIdName, filtra só esse client.
   client-roles <credAlias|realmAlias> <clientId> [realmDestino]
                                                        Lista as roles de um client pelo nome (ex: meu-app).
 
@@ -84,6 +88,7 @@ Exemplos:
   kc setup-client
   kc client-roles realm-dev-meu-app meu-app
   kc assign-group-roles realm-dev-meu-app "/MeuApp/Administrador" meu-app Recurso_Listar
+  kc group-roles realm-dev-meu-app "/MeuApp/Administrador" meu-app
   kc set-client-attr realm-dev-meu-app meu-app client.session.idle.timeout=7200
   kc mirror-client-roles realm-dev-meu-app realm-stg-meu-app meu-app
   kc mirror-group-roles realm-dev-meu-app realm-stg-meu-app "/MeuApp" meu-app --recursive
@@ -123,6 +128,7 @@ case "$SUBCOMMAND" in
   realm-roles)           exec "$SCRIPT_DIR/kc-realm-roles.sh" "$@" ;;
   list-groups)           exec "$SCRIPT_DIR/kc-list-groups.sh" "$@" ;;
   group-detail)          exec "$SCRIPT_DIR/kc-group-detail.sh" "$@" ;;
+  group-roles)           exec "$SCRIPT_DIR/kc-group-roles.sh" "$@" ;;
   client-roles)          exec "$SCRIPT_DIR/kc-client-roles.sh" "$@" ;;
   create-client-role)    exec "$SCRIPT_DIR/kc-create-client-role.sh" "$@" ;;
   assign-group-roles)    exec "$SCRIPT_DIR/kc-assign-group-roles.sh" "$@" ;;
