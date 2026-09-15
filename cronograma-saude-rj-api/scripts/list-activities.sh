@@ -29,7 +29,8 @@ import json, sys
 categoryId = sys.argv[1]
 data = json.load(sys.stdin)
 items = data if isinstance(data, list) else data.get("data", data)
-filtered = [item for item in items if item.get("categoryId") == categoryId]
+# A API retorna o campo em snake_case (category_id), não camelCase.
+filtered = [item for item in items if item.get("category_id") == categoryId]
 print(json.dumps(filtered, indent=2, ensure_ascii=False))
 ' "$CATEGORY_ID"
 else

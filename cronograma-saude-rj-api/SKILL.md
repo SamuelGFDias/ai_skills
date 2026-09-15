@@ -84,6 +84,26 @@ Isso também confirma `forbidNonWhitelisted`: mandar um campo que não existe no
 
 Para os demais DTOs (Projects, Categories, Activities, ActivityDays, Snapshots), essa técnica exige estar autenticado primeiro — reaproveitar o cookie de sessão do login.
 
+**`UpdateNotesDto`** (body de `PATCH /activities/{id}/notes`) — descoberto via `probe-dto.sh PATCH /activities/<id>/notes '{}'`:
+```json
+{ "notes": "string (máx. 1000 caracteres)" }
+```
+Único campo. `forbidNonWhitelisted` confirmado (`"property X should not exist"` em campo inventado).
+
+**`UpdateActivityDayDto`** (body de `PUT /activity-days`) — descoberto via `probe-dto.sh PUT /activity-days '{}'` e variações:
+```json
+{
+  "activityId": "string",
+  "date": "string (YYYY-MM-DD)",
+  "status": "F | A | C | \"\" (opcional)"
+}
+```
+`activityId` e `date` são obrigatórios (erro no `{}`); `status` é opcional — omitido, a chamada retorna `200 {"success":true}` sem criar/alterar registro (no-op quando não há registro prévio naquela data). O enum de `status` foi revelado mandando um valor inválido (`"status":"X"`): `"status must be one of the following values: F, A, C, "` — os valores são as mesmas siglas visuais do sistema (F = A Fazer, A = Em andamento, C = Concluído) mais string vazia (`""`), que remove o registro do dia (bate com a descrição do endpoint na tabela acima: "Atualizar ou remover um registro").
+
+**Armadilha:** `PUT /activities/{id}` (`update-activity.sh`) faz *replace* completo do registro — inclusive zera `notes` (e `responsible`) para `null`, mesmo eles não fazendo parte do `UpdateActivityDto` enviado. Ao editar descrição **e** notas da mesma atividade, sempre rodar `update-notes.sh` **depois** de `update-activity.sh` (nunca antes), senão o `PUT` sobrescreve as notas recém-gravadas.
+
+**Atenção — nomenclatura de campos na resposta:** os bodies de request (`CreateActivityDto` etc.) usam `camelCase` (`projectId`, `categoryId`), mas os objetos retornados pela API usam `snake_case` (`project_id`, `category_id`). Confirmado batendo direto em `GET /api/activities?projectId=...` e inspecionando as chaves do JSON. Qualquer filtro client-side sobre a resposta precisa usar `category_id`/`project_id`, não `categoryId`/`projectId` — foi exatamente esse descompasso que causava o bug descrito na nota de correção do `list-activities.sh` abaixo.
+
 ## Endpoints
 
 Tags conforme a spec (`/api/docs-json`). Todos exigem sessão autenticada exceto `GET /api/health`.
@@ -189,9 +209,49 @@ o corpo do erro) se a API responder 4xx/5xx.
 | `list-categories.sh` | `list-categories.sh <projectId>` | Lista categorias de um projeto (`GET /api/categories?projectId=...`). |
 | `create-activity.sh` | `create-activity.sh <projectId> <categoryId> <number> <description>` | Cria atividade (`POST /api/activities`); mesma convenção de saída do `create-category.sh`. |
 | `update-activity.sh` | `update-activity.sh <activityId> <categoryId> <number> <description>` | Atualiza atividade (`PUT /api/activities/{id}`) — os 3 campos são obrigatórios juntos, sem `projectId`. |
-| `list-activities.sh` | `list-activities.sh <projectId> [categoryId]` | Lista atividades de um projeto; com o segundo argumento, filtra client-side (via `python3`) só as da categoria informada. |
+| `list-activities.sh` | `list-activities.sh <projectId> [categoryId]` | Lista atividades de um projeto; com o segundo argumento, filtra client-side (via `python3`) só as da categoria informada. **Correção aplicada em 2026-09-15:** o filtro comparava `item.get("categoryId")`, mas a API retorna o campo em snake_case (`category_id`) — o filtro nunca casava e sempre retornava `[]`. Corrigido para usar `category_id` (ver nota "Atenção — nomenclatura de campos na resposta" acima). |
 | `delete-activity.sh` | `delete-activity.sh <activityId>` | Exclui atividade (`DELETE /api/activities/{id}`). |
+| `update-notes.sh` | `update-notes.sh <activityId> <notes>` | Atualiza a observação/nota de uma atividade (`PATCH /api/activities/{id}/notes`) — **rodar sempre depois** de `update-activity.sh` na mesma atividade (ver armadilha acima). |
+| `update-activity-day.sh` | `update-activity-day.sh <activityId> <date YYYY-MM-DD> <status>` | Atualiza (ou remove, com `status` vazio) o status de um dia de atividade no calendário (`PUT /api/activity-days`); `status` aceita `F`\|`A`\|`C`\|`""`. |
+| `mark-status-range.sh` | `mark-status-range.sh <activityId> <startDate YYYY-MM-DD> <endDate YYYY-MM-DD> <status>` | Marca um intervalo de dias (inclusive nas duas pontas) com o mesmo `status`, chamando `update-activity-day.sh` uma vez por data (gera as datas via `python3`, sem depender de `date -d`); valida `startDate <= endDate` antes de qualquer chamada. Ver seção "Semântica de status por intervalo" abaixo para a regra de negócio por trás disso. |
+| `apply-plan.sh` | `apply-plan.sh <projectId> <plan.json> [--dry-run]` | Aplica um "plano" (categorias + atividades, com `notes` opcionais) de uma vez, reaproveitando `create-category.sh`/`create-activity.sh`/`update-notes.sh` na ordem correta (notes sempre depois da criação da atividade). Com `--dry-run`, só valida o `plan.json` e imprime uma prévia, sem tocar a API. Sem `--dry-run`, cria tudo e imprime em stdout um resumo JSON com os ids criados; se algo falhar no meio, para, reporta em stderr o que já foi criado (para limpeza manual) e sai com código != 0 — sem rollback automático. Ver seção "Schema do plan.json" abaixo. |
 | `probe-dto.sh` | `probe-dto.sh <METHOD> <path> [json_body]` | Sondagem genérica autenticada — envia `json_body` (default `{}`) ao endpoint informado e imprime a resposta, útil para descobrir campos de DTOs não documentados via erro 400 (ver técnica acima). Ex: `probe-dto.sh POST /projects '{}'`. |
+
+### Schema do `plan.json` (`apply-plan.sh`)
+
+```json
+{
+  "categories": [
+    {
+      "name": "Nome da categoria",
+      "activities": [
+        {
+          "number": 1,
+          "description": "Descrição da atividade",
+          "notes": "Observação opcional (omitir ou string vazia = não seta)"
+        }
+      ]
+    }
+  ]
+}
+```
+
+`categories` é obrigatório e precisa ser uma lista não vazia; cada categoria precisa de `name`
+(string não vazia). `activities` é opcional por categoria (default `[]`); cada atividade precisa
+de `number` (inteiro) e `description` (string não vazia). `notes` é opcional — omitido, `null` ou
+`""` significa que `update-notes.sh` não é chamado para aquela atividade (a atividade fica sem
+notas, comportamento padrão da API). O `apply-plan.sh` valida esse schema inteiro (com `python3`,
+sem `jq`) antes de fazer qualquer chamada à API, inclusive no modo `--dry-run`.
+
+### Semântica de status por intervalo (`ActivityDays` / calendário)
+
+Regra de negócio: o status de uma atividade no calendário é marcado por dia (`ActivityDay`), mas
+quando uma atividade leva N dias corridos até ser concluída, **os dias marcados vão do início até
+a conclusão real, todos com o mesmo status final — não há status parcial por dia dentro do
+intervalo.** Ex.: se uma atividade começou hoje e levou 5 dias até ser concluída, os 5 dias (hoje +
+os 4 seguintes) são marcados com status `C`, não só o último dia. Isso é o que `mark-status-range.sh`
+automatiza: ele repete o mesmo `status` em cada dia do intervalo informado, chamando
+`update-activity-day.sh` uma vez por data.
 
 Exemplo de fluxo completo:
 
@@ -210,6 +270,13 @@ ACTIVITY_ID=$(./scripts/create-activity.sh "$PROJECT_ID" "$CATEGORY_ID" 1 "Minha
 ./scripts/list-activities.sh "$PROJECT_ID" "$CATEGORY_ID"
 ./scripts/update-activity.sh "$ACTIVITY_ID" "$CATEGORY_ID" 2 "Descrição atualizada"
 ./scripts/delete-activity.sh "$ACTIVITY_ID"
+
+# Aplicar um plano inteiro (categorias + atividades + notes) de uma vez:
+./scripts/apply-plan.sh "$PROJECT_ID" plan.json --dry-run   # só valida e mostra a prévia
+./scripts/apply-plan.sh "$PROJECT_ID" plan.json             # cria de verdade; stdout = JSON com os ids
+
+# Marcar um intervalo de dias com o mesmo status final (ver "Semântica de status por intervalo"):
+./scripts/mark-status-range.sh "$ACTIVITY_ID" 2026-09-15 2026-09-19 C
 ```
 
 ## Como atualizar esta skill
