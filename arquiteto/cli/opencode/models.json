@@ -1,0 +1,10 @@
+{
+  "_comment": "opencode — subagentes em ~/.config/opencode/agent/<papel>.md; o NOME do agente vem do NOME DO ARQUIVO (a doc oficial afirma que não há campo 'name' no frontmatter — 'The markdown file name becomes the agent name'), por isso build_opencode não escreve 'name:' no header. Model IDs no formato 'provider/model-id'; DeepSeek é o provider padrão nesta máquina (o Kilo já usa DeepSeek) e os IDs abaixo foram confirmados no catálogo models.dev (chave 'deepseek'): deepseek-v4-flash e deepseek-v4-pro — os mesmos dois tiers já usados em cli/kilo/models.json, sem o prefixo 'kilo/' (aqui o provider já é 'deepseek' diretamente, formato nativo do opencode). Bloqueio de sub-delegação via permission.task=deny (documentado oficialmente); bloqueio de edição via permission.edit=deny só nos papéis readonly (mesmo padrão do Kilo).",
+  "executor-mecanico": { "model": "deepseek/deepseek-v4-flash" },
+  "executor-padrao": { "model": "deepseek/deepseek-v4-flash" },
+  "executor-complexo": { "model": "deepseek/deepseek-v4-pro" },
+  "executor-critico": { "model": "deepseek/deepseek-v4-pro" },
+  "investigador-padrao": { "model": "deepseek/deepseek-v4-flash" },
+  "investigador-critico": { "model": "deepseek/deepseek-v4-pro" },
+  "speckit-master": { "model": "deepseek/deepseek-v4-pro" }
+}
