@@ -182,8 +182,50 @@ def build_codex(meta, body, cfg, role_path):
     return toml
 
 
-BUILDERS = {"claude": build_claude, "kilo": build_kilo, "codex": build_codex}
-EXT = {"claude": ".md", "kilo": ".md", "codex": ".toml"}
+# A Gemini CLI usa `tools` como uma ALLOWLIST de nomes internos de ferramenta — nomes
+# esses que não foram confirmados com certeza suficiente na documentação consultada, e um
+# nome errado quebraria o subagente. Por isso build_gemini NÃO adiciona campo `tools` nem
+# qualquer bloqueio de ferramentas, mesmo para papéis readonly. Além disso, subagentes do
+# Gemini CLI estruturalmente não conseguem invocar outros subagentes mesmo com acesso total
+# a ferramentas (restrição própria do produto, confirmada via doc oficial) — isso já cobre a
+# exigência de "proibir sub-delegação" sem precisar de bloqueio explícito. O enforcement de
+# "somente leitura" para papéis readonly fica só na instrução do prompt (mesmo padrão já
+# aceito hoje para build_codex, que também não tem bloqueio técnico de ferramentas).
+def build_gemini(meta, body, cfg, role_path):
+    header = (
+        "---\n"
+        f"name: {meta['name']}\n"
+        f"description: {quote_str(meta['description'])}\n"
+        "kind: local\n"
+        f"model: {cfg['model']}\n"
+        "---\n\n"
+    )
+    return header + body + "\n"
+
+
+def build_opencode(meta, body, cfg, role_path):
+    perm_lines = ["  task: deny"]
+    if is_readonly(meta):
+        perm_lines.append("  edit: deny")
+    header = (
+        "---\n"
+        f"description: {quote_str(meta['description'])}\n"
+        "mode: subagent\n"
+        f"model: {cfg['model']}\n"
+        "permission:\n" + "\n".join(perm_lines) + "\n"
+        "---\n\n"
+    )
+    return header + body + "\n"
+
+
+BUILDERS = {
+    "claude": build_claude,
+    "kilo": build_kilo,
+    "codex": build_codex,
+    "gemini": build_gemini,
+    "opencode": build_opencode,
+}
+EXT = {"claude": ".md", "kilo": ".md", "codex": ".toml", "gemini": ".md", "opencode": ".md"}
 
 
 def build_cli(cli):

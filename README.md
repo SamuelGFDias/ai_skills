@@ -9,6 +9,9 @@ domínio. Cada skill é um diretório com `SKILL.md` (obrigatório) e, quando ap
 ```text
 ai_skills/
 ├── AGENTS.md                  # arquitetura do ambiente (leia ao trabalhar neste repo)
+├── bin/install.sh             # instala tudo que as skills precisam nos CLIs instalados na
+│                               # máquina — claude/kilo/codex/gemini/opencode (Linux/macOS/WSL)
+├── bin/install.ps1            # idem, para Windows
 ├── bin/sync-skills.sh         # (re)cria as skills em claude/kilo (Linux/macOS/WSL)
 ├── bin/sync-skills.ps1        # idem, para Windows
 ├── providers/                 # referência de plataformas (NÃO é skill carregável)
@@ -75,7 +78,9 @@ vivem em vaults (`vault-factory`).
    Linux/macOS/WSL, ou é **copiada** no Windows/Git Bash — o destino é recriado a cada run em
    ambos os casos. Para o Kilo, o script só garante que o caminho do repo esteja em
    `skills.paths` de `~/.config/kilo/kilo.jsonc` — ele lê os `SKILL.md` direto da fonte, sem
-   cópia nem symlink (ver `AGENTS.md`).
+   cópia nem symlink (ver `AGENTS.md`). Atalho: `bin/install.sh` / `bin/install.ps1` (sem
+   argumento) já cobre isso para todos os CLIs detectados na máquina, sem precisar escolher o
+   alvo manualmente.
 
 ## Publicação
 
