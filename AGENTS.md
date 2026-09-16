@@ -19,6 +19,14 @@ trabalhar aqui, siga estas regras para manter o ambiente sem ruído e sem débit
   vez só.
 - **Remotes (ambos privados):** GitHub `git@github.com:SamuelGFDias/ai_skills.git` e GitLab SES
   `git@gitlab-prod.saude.rj.gov.br:ses-rj/desenvolvimento/ai/skills.git`. `git push` envia aos dois.
+- **Codex:** lê skills de `$HOME/.agents/skills/<nome>` (symlink/cópia, mecanismo nativo de skills
+  do Codex CLI) — populado por `bin/sync-skills.sh codex` / `bin/sync-skills.ps1 -Cli codex`.
+- **Gemini CLI:** só descobre skills dentro de uma *extension* — o repo publica a sua própria em
+  `~/.gemini/extensions/ai-skills/skills/<nome>`, mantida por `bin/sync-skills.sh gemini` /
+  `bin/sync-skills.ps1 -Cli gemini`.
+- **opencode:** não tem destino próprio de skills — lê `~/.claude/skills` nativamente (compat
+  documentada com Claude Code). Basta o alvo `claude` do sync já estar em dia; não precisa do
+  binário `claude` instalado.
 
 ## Sincronização
 
@@ -29,7 +37,37 @@ Duas coisas independentes precisam ser sincronizadas — alterar uma não sincro
 | **Skills** (`<nome>/SKILL.md`) | este repo | `~/.claude/skills/<nome>` (symlink no Linux/macOS/WSL, cópia no Windows) | `bin/sync-skills.sh` / `bin/sync-skills.ps1` |
 | **Subagentes do `arquiteto`** | `arquiteto/roles/` + `arquiteto/cli/<cli>/models.json` | `~/.claude/agents/`, `~/.config/kilo/agent/`, `~/.codex/agents/` | `arquiteto/bin/build-agents.py` → `arquiteto/bin/sync-agents.sh` |
 
-### Sequência completa
+`bin/install.sh` / `bin/install.ps1` cobrem as duas linhas da tabela de uma vez só, para cada CLI
+detectado na máquina — ver "Caminho recomendado" logo abaixo.
+
+### Caminho recomendado: install.sh / install.ps1
+
+`bin/install.sh` (bash/WSL/Git Bash) e `bin/install.ps1` (PowerShell) detectam quais CLIs de IA
+suportados (`claude`, `kilo`, `codex`, `gemini`, `opencode`) estão instalados nesta máquina (via
+`command -v`/`Get-Command`) e rodam automaticamente, para cada um, o `sync-skills` + `sync-agents`
+correspondentes — inclusive para `codex` e `gemini`, que antes exigiam passos manuais, e para
+`opencode`, que só lê skills (via compat nativa com `~/.claude/skills`) e ganha DeepSeek como
+modelo default se ainda não tiver nenhum configurado. Idempotente, pode rodar quantas vezes quiser.
+Aceita `--dry-run`/`-DryRun` para só mostrar o que faria.
+
+```bash
+cd ~/.config/ai/skills
+bin/install.sh              # ou --dry-run para só ver o que faria
+```
+
+```powershell
+cd $HOME\.config\ai\skills
+pwsh bin/install.ps1        # ou -DryRun para só ver o que faria
+```
+
+`install.sh`/`install.ps1` NÃO regeneram `arquiteto/dist/` (isso continua manual, passo de
+manutenção do repo — ver "Quando rodar o quê" abaixo) e não instalam dependências de skills
+individuais (jq, glab, oc etc.).
+
+A sequência abaixo é o que o `install.sh`/`.ps1` roda por baixo dos panos, útil para rodar um
+passo isolado ou entender exatamente o que aconteceu:
+
+### Sequência completa (manual)
 
 bash / WSL / **Git Bash (MINGW64)**:
 
@@ -81,6 +119,9 @@ bash arquiteto/bin/sync-agents.sh              # barras normais aqui: o argument
 - `bin/sync-skills.sh` / `bin/sync-skills.ps1` — recria o destino em `~/.claude/skills` (symlink no
   Linux/macOS/WSL via `.sh`; cópia no Windows, seja via `.sh` no Git Bash ou via `.ps1`) e garante
   a config do Kilo (`-Cli claude|kilo`, default os dois).
+- `bin/install.sh` / `bin/install.ps1` — detecta quais CLIs (`claude`, `kilo`, `codex`, `gemini`,
+  `opencode`) estão instalados na máquina e roda `sync-skills` + `sync-agents` para cada um
+  automaticamente (ver "Caminho recomendado" em "Sincronização").
 - `arquiteto/bin/build-agents.py` — gera `arquiteto/dist/<cli>/` a partir de `roles/` + `models.json`
   (`--check` valida drift). `arquiteto/bin/sync-agents.sh` — instala o `dist/` no diretório de cada CLI.
 - Diretório sem `SKILL.md` na raiz é **ruído** — não é carregado por nenhum agente e deve ser

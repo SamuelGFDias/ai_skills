@@ -1,0 +1,140 @@
+#!/usr/bin/env pwsh
+# install.ps1 -- configura tudo que e necessario para as skills deste repo funcionarem
+# em qualquer CLI de IA instalado nesta maquina (claude, kilo, codex, gemini, opencode).
+#
+# Mesma logica do install.sh (ver comentarios la para detalhes completos por CLI).
+# sync-agents.sh e bash-only (ver AGENTS.md, secao "Armadilhas no Windows") -- por isso
+# e sempre chamado via `bash`, mesmo neste script PowerShell.
+#
+# Uso:
+#   pwsh bin/install.ps1
+#   pwsh bin/install.ps1 -DryRun
+param(
+    [switch]$DryRun
+)
+
+$ErrorActionPreference = "Stop"
+$RepoDir = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$Mode = if ($DryRun) { "dry-run" } else { "apply" }
+
+$AllClis = @("claude", "kilo", "codex", "gemini", "opencode")
+$Found = @()
+$Missing = @()
+$ClaudeSkillsSynced = $false
+
+function Test-CliExists([string]$Name) {
+    return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue)
+}
+
+function Sync-SkillsFor([string]$Cli) {
+    if ($DryRun) {
+        Write-Output ">> bin\sync-skills.ps1 -Cli $Cli -DryRun"
+        pwsh (Join-Path $RepoDir "bin\sync-skills.ps1") -Cli $Cli -DryRun
+    } else {
+        Write-Output ">> bin\sync-skills.ps1 -Cli $Cli"
+        pwsh (Join-Path $RepoDir "bin\sync-skills.ps1") -Cli $Cli
+    }
+    if ($Cli -eq "claude") { $script:ClaudeSkillsSynced = $true }
+}
+
+function Sync-AgentsFor([string]$Cli) {
+    if ($DryRun) {
+        Write-Output ">> bash arquiteto/bin/sync-agents.sh $Cli --dry-run"
+        bash "arquiteto/bin/sync-agents.sh" $Cli --dry-run
+    } else {
+        Write-Output ">> bash arquiteto/bin/sync-agents.sh $Cli"
+        bash "arquiteto/bin/sync-agents.sh" $Cli
+    }
+}
+
+function Set-OpencodeDeepseekDefault {
+    $configDir = Join-Path $HOME ".config\opencode"
+    $configPath = Join-Path $configDir "opencode.jsonc"
+
+    if (-not (Test-Path $configPath)) {
+        Write-Output ">> opencode: criando $configPath com modelo default DeepSeek"
+        if ($Mode -eq "apply") {
+            if (-not (Test-Path $configDir)) { New-Item -ItemType Directory -Path $configDir -Force | Out-Null }
+            $content = @'
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "deepseek/deepseek-v4-flash"
+}
+'@
+            Set-Content -Path $configPath -Value $content -Encoding utf8
+        }
+        return
+    }
+
+    try {
+        $config = Get-Content $configPath -Raw | ConvertFrom-Json
+    } catch {
+        Write-Warning "  Nao foi possivel interpretar $configPath como JSON (pode ter comentarios JSONC) -- nao foi possivel checar/definir o modelo default. Edite manualmente se necessario."
+        return
+    }
+
+    if ($null -ne $config.model) {
+        Write-Output ">> opencode: $configPath ja tem `"model`" definido -- nao sobrescrevendo."
+        return
+    }
+
+    Write-Output ">> opencode: adicionando `"model`": `"deepseek/deepseek-v4-flash`" em $configPath"
+    if ($Mode -ne "apply") { return }
+
+    $config | Add-Member -MemberType NoteProperty -Name "model" -Value "deepseek/deepseek-v4-flash"
+    $tmp = New-TemporaryFile
+    try {
+        $config | ConvertTo-Json -Depth 10 | Set-Content -Path $tmp -Encoding utf8
+        Copy-Item -Path $tmp -Destination $configPath -Force
+    } finally {
+        Remove-Item -Path $tmp -Force -ErrorAction SilentlyContinue
+    }
+}
+
+Write-Output "=== install.ps1 -- detectando CLIs instalados ==="
+foreach ($cli in $AllClis) {
+    if (Test-CliExists $cli) { $Found += $cli } else { $Missing += $cli }
+}
+
+$foundText = if ($Found.Count -gt 0) { $Found -join ", " } else { "nenhum" }
+$missingText = if ($Missing.Count -gt 0) { $Missing -join ", " } else { "nenhum" }
+Write-Output "Detectados: $foundText"
+Write-Output "Nao encontrados: $missingText"
+Write-Output ""
+
+if ($Found.Count -eq 0) {
+    Write-Output "Nenhum CLI de IA suportado (claude|kilo|codex|gemini|opencode) encontrado no PATH. Nada a fazer."
+    exit 0
+}
+
+foreach ($cli in $Found) {
+    Write-Output "--- $cli ---"
+    switch ($cli) {
+        { $_ -in "claude", "kilo", "codex", "gemini" } {
+            Sync-SkillsFor $cli
+            Sync-AgentsFor $cli
+        }
+        "opencode" {
+            Sync-AgentsFor "opencode"
+            if (-not $ClaudeSkillsSynced) {
+                Write-Output ">> opencode le skills nativamente de ~/.claude/skills (compat Claude Code) -- sincronizando esse diretorio mesmo sem o binario claude instalado"
+                Sync-SkillsFor "claude"
+            }
+            Set-OpencodeDeepseekDefault
+        }
+    }
+    Write-Output ""
+}
+
+Write-Output "=== dist/ dos subagentes (informativo -- nao regenerado por este script) ==="
+if (Test-CliExists "python3") {
+    python3 (Join-Path $RepoDir "arquiteto\bin\build-agents.py") --check
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "arquiteto/dist/ esta desatualizado em relacao a roles/+models.json. Isso e responsabilidade de quem mantem o repo (rodar build-agents.py e commitar dist/), nao deste install.ps1."
+    }
+} else {
+    Write-Warning "python3 nao encontrado -- nao foi possivel checar drift de arquiteto/dist/."
+}
+
+Write-Output ""
+Write-Output "Feito ($Mode). CLIs configurados: $($Found -join ', ')."

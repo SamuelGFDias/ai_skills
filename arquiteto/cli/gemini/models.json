@@ -1,0 +1,10 @@
+{
+  "_comment": "Gemini CLI — subagentes em ~/.gemini/agents/<papel>.md (frontmatter name/description/kind/model), formato oficial documentado em docs/core/subagents.md do repositório google-gemini/gemini-cli. Model IDs confirmados no catálogo models.dev (provider 'google'): gemini-2.5-flash (papéis baratos) e gemini-2.5-pro (papéis caros) — ambos estáveis, sem sufixo '-preview'. A Gemini CLI não expõe um campo de 'reasoning effort'; a única alavanca de custo disponível é a escolha do modelo. Subagentes do Gemini CLI não conseguem invocar outros subagentes mesmo com acesso total a ferramentas (restrição estrutural do próprio produto, confirmada em documentação oficial) — por isso build_gemini não aplica nenhum bloqueio técnico de delegação. Como os nomes exatos das ferramentas internas (read_file, grep_search etc.) não foram confirmados com certeza suficiente, os papéis somente-leitura (investigador-padrao, investigador-critico, speckit-master) também NÃO recebem um allowlist restrito de 'tools' nesta primeira versão — o enforcement de somente-leitura fica só na instrução do prompt, o mesmo padrão já aceito hoje para o Codex.",
+  "executor-mecanico": { "model": "gemini-2.5-flash" },
+  "executor-padrao": { "model": "gemini-2.5-flash" },
+  "executor-complexo": { "model": "gemini-2.5-pro" },
+  "executor-critico": { "model": "gemini-2.5-pro" },
+  "investigador-padrao": { "model": "gemini-2.5-flash" },
+  "investigador-critico": { "model": "gemini-2.5-pro" },
+  "speckit-master": { "model": "gemini-2.5-pro" }
+}
