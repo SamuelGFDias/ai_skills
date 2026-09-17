@@ -104,9 +104,15 @@ Fluxo correto:
 
    | CLI | Tool nativa |
    |---|---|
-   | Claude Code | `AskUserQuestion` |
-   | Kilo Code | `ask_followup_question` (uma pergunta por chamada — repetir por pergunta da lista) |
+   | Claude Code | `AskUserQuestion` (aceita várias perguntas numa chamada) |
+   | Kilo Code | `question` (recebe um array de perguntas — mandar a lista consolidada numa chamada só) |
    | Codex CLI | nenhuma nativa ainda (feature em aberto) — perguntar em texto livre no chat |
+
+   **Confira o nome antes de usar.** A tabela é um instantâneo datado — nome de tool muda entre versões do
+   CLI. Liste o toolset da sessão e use a tool de pergunta interativa que existir de fato; se não houver
+   correspondência exata, use a genérica de pergunta disponível. Texto livre no chat é o último recurso
+   (só quando não existe mecanismo interativo), nunca o primeiro: é justamente o modo degradado que este
+   passo existe para evitar.
 
 4. Com as respostas, a sessão principal decide o próximo passo: atualiza o `spec.md` com as decisões
    (fecha o `clarify`) e então segue a árvore de decisão normalmente — ou re-delega ao subagente se
@@ -127,6 +133,12 @@ repositório. Marcar cada bullet do `## Clarifications` com a autoria e a base d
 decisão que não distingue quem decidiu perde a informação mais importante para quem lê depois — a
 confiança que se pode depositar nela.
 
+Regra de escolha nesse modo: cada pergunta auto-respondida recebe a opção **conservadora / de status quo**
+— a que menos altera comportamento observável e é mais fácil de reverter. A opção que amplia escopo nunca
+é default. E o relatório de retorno ganha uma seção própria, separada do `## Clarifications`, listando
+cada pergunta auto-respondida e a base da escolha: sem essa lista, "confirmar com humano" vira uma
+releitura atenta do spec em vez de um passo explícito do fluxo.
+
 ## Regras de ouro
 
 1. **Nunca pular `clarify` com spec ambíguo.** Ambiguidade não resolvida no spec vira decisão
@@ -142,6 +154,36 @@ confiança que se pode depositar nela.
    mesmo fato num segundo artefato (`plan.md`, `contracts/*`, `data-model.md` frequentemente citam a
    mesma constante/função). O custo de verificar é constante; o custo de corrigir cresce com o número
    de artefatos que já repetiram o palpite.
+6. **Superfície "configurável" citada em artefato precisa existir no contrato, não só na prosa.** Se
+   `data-model.md`/`contracts/` mandam um diagnóstico ou comportamento respeitar um valor configurável
+   (limite, default, modo), confirme que esse valor tem propriedade correspondente no tipo público que o
+   consumidor realmente toca, por design e não por descrição. Prosa que promete configuração sem
+   superfície de configuração é requisito que não pode ser satisfeito — e isso só aparece na
+   implementação, depois de virar tarefa.
+7. **Tensão lógica entre casos irmãos é sinal de artefato inconsistente, não detalhe de implementação.**
+   Quando a leitura literal de um artefato torna um dos seus próprios casos inalcançável (ex.: uma cadeia
+   de precedência com fallback "sempre resolve" e um diagnóstico cuja condição de disparo depende de a
+   resolução falhar), trate como contradição a resolver NO artefato — com uma nota curta em
+   `data-model.md`/contrato — antes de gerar tarefas contra ele. As dependências entre tarefas do
+   `tasks.md` são pista legítima para reconciliar a intenção, mas reconciliar só no código deixa um
+   julgamento que o revisor tem de refazer a partir de vários documentos.
+8. **Tarefa gerada não pode estreitar o acceptance scenario que diz satisfazer.** Ao gerar/validar
+   `tasks.md`, confronte cada tarefa com o texto LITERAL do cenário de aceitação de origem — não com o
+   resumo do checkpoint dela. Cenário cujo teste atravessa dois eixos de configuração (dois enums/políticas
+   que interagem) é onde a paráfrase mais estreita: ou a tarefa reafirma a condição completa, ou declara
+   explicitamente a redução e aponta a tarefa que fecha a lacuna. Um executor mandado seguir `tasks.md` ao
+   pé da letra não tem caminho para corrigir isso sem violar o escopo autorizado.
+
+## Verificação antes de concluir
+
+Releia esta skill contra o artefato que você acabou de produzir — ou antes de delegar a implementação:
+
+- Todo `caminho:símbolo` citado foi verificado por grep, não inferido do nome plausível do arquivo?
+- Toda superfície citada como "configurável" existe no tipo de contrato público, e não apenas em prosa?
+- Cada tarefa foi confrontada com o texto literal do acceptance scenario que diz satisfazer?
+- Se houve decisão tomada pelo agente, ela está marcada com autoria e base, e listada no relatório de retorno?
+- Se o repo tem `data-model.md`/`contracts/`, eles entraram na varredura do `analyze` (ver
+  `docs/comandos.md`), e não só `spec.md`/`plan.md`/`tasks.md`?
 
 ## Referências
 

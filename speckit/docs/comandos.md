@@ -48,6 +48,12 @@ primeira vez.
 Armadilha: rodar com spec ainda ambíguo — o plan preenche a lacuna com um chute plausível e o chute
 some dentro de um documento que parece decidido.
 
+Armadilha: prometer em prosa uma superfície "configurável" (um limite, um default, um modo) sem que
+exista propriedade correspondente no tipo público que o consumidor toca. `data-model.md`/`contracts/`
+citando "configurável, ver Clarifications" quando o `spec.md` não registra valor e o tipo de contrato
+não tem onde receber esse valor gera tarefa impossível de satisfazer literalmente. Toda configuração
+prometida precisa de superfície real no contrato antes de virar tarefa.
+
 Armadilha: na seção "Project Structure", listar arquivo novo que usa símbolo de outro arquivo sem
 confirmar o mecanismo de linkagem/import contra o build system real (ex.: diretório de teste sem
 target de biblioteca para importar). Uma estrutura de arquivos planejada é uma afirmação sobre o
@@ -67,6 +73,14 @@ pequena e bem entendida dispensa.
 Quebra o plan em tarefas acionáveis ordenadas por dependência. É a entrada natural para a delegação
 em mini-tarefas da skill `arquiteto`.
 
+Armadilha: a tarefa parafrasear o acceptance scenario de origem e silenciosamente estreitá-lo. O caso
+pior é cenário cujo teste atravessa dois eixos de configuração que interagem (ex.: `SyncMode` ×
+`OnBreakingChange`): "computar o resultado e aplicar a política, mas nunca gravar" não é o mesmo que
+"falha em QUALQUER divergência, e nada é escrito". Confronte cada tarefa com o texto literal do
+cenário, não com o resumo do checkpoint — o executor mandado seguir o `tasks.md` ao pé da letra não
+consegue corrigir isso sem sair do escopo autorizado. Ou a tarefa reafirma a condição completa, ou
+declara a redução como deliberada e aponta a tarefa que fecha a lacuna.
+
 ### `/speckit.analyze`
 Consistência e cobertura cruzada entre `spec.md`, `plan.md` e `tasks.md` — requisito sem tarefa,
 tarefa sem requisito, plan contradizendo spec. **Não altera arquivo**: é gate, roda antes de codar.
@@ -82,6 +96,12 @@ Consistência interna de um artefato não implica consistência entre artefatos 
 incluir explicitamente `data-model.md`/`contracts/` na varredura — todo nome de campo/tipo citado em
 `tasks.md` precisa existir com o mesmo nome e tipo dono ali, e todo tipo/decisão desses dois precisa
 ter task correspondente.
+
+Armadilha: comparar a tarefa com o resumo do próprio checkpoint em vez do texto literal do acceptance
+scenario que ela diz satisfazer. Cenário cuja condição atravessa dois eixos de configuração é onde a
+paráfrase estreita mais. Quando o teste do cenário depender de um fallback "sempre resolve" que a
+própria tarefa torna inalcançável, isso é contradição entre artefatos: reporte e corrija o artefato de
+origem com uma nota curta, não deixe para o implementador reconciliar lendo três documentos.
 
 ### `/speckit.implement`
 Executa o `tasks.md`. Em modo arquiteto, **não usar** — ver a seção "Implementação" do `SKILL.md`:
