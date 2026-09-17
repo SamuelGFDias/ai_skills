@@ -107,6 +107,20 @@ Depois de agrupado, decidir por tema:
 | ≥ ~5 commits | **Issue core** (o tema/objetivo) + **1 Task filha nativa por commit ou por pequeno cluster**, cada uma com sha curto + link + data no corpo (ver provider — hierarquia nativa via GraphQL, disponível mesmo em GitLab CE sem licença). |
 | < ~5 commits | **1 issue única**, com checklist de commits (sha curto + link) no corpo — sem Task filha separada. |
 
+**Corpo da issue core (core+tasks) NÃO repete a lista de commits.** Os commits já aparecem
+granularmente como Tasks filhas (widget "Child items" do GitLab) — repetir a lista no corpo da
+issue core é redundância pura, não redundância de segurança. O corpo da issue core traz só:
+objetivo (o que o tema entrega) e escopo (subitens/US cobertos), terminando com algo como
+"Detalhamento por commit nas Tasks abaixo." Só a issue **única** (sem Tasks) leva o checklist
+de commits no corpo — ali é a única evidência granular que ela tem.
+
+**Tasks filhas nascem abertas — fechar explicitamente é passo obrigatório, não implícito.**
+`stateEvent: CLOSE` na issue core não fecha os work items filhos (achado real: numa execução
+com 7 issues core+tasks, 3 delas deixaram 28 Tasks filhas abertas por a instrução de fechamento
+ter sido lida como aplicável só à issue core). Depois de fechar a issue core, iterar sobre cada
+Task filha e fechar via GraphQL `workItemUpdate(stateEvent: CLOSE)` individualmente (mesmo
+mecanismo do "Fechar uma Task" no provider) — nunca assumir que o fechamento é recursivo.
+
 Quando o grupo já tem cobertura parcial por uma issue **já existente (aberta OU
 fechada)**, **não criar issue nova**: linkar como "relates_to" (ver provider) e registrar a
 sobreposição para o usuário decidir se reaproveita a existente. Quando o grupo tem cobertura
@@ -144,6 +158,9 @@ retroativo, não backlog futuro:**
    que ela representa.
 4. Adicionar comentário de solução (fluxo `issue-factory`) resumindo o que foi entregue.
 5. Fechar a issue (fluxo `issue-factory`) — o trabalho já está pronto, não fica em `Backlog`.
+6. **Se o grupo for core+tasks: fechar CADA Task filha individualmente.** Fechar a issue core
+   não fecha os work items filhos — ver "Fechar as Tasks filhas" no provider. Sem este passo,
+   as Tasks ficam abertas sob uma issue core já fechada, quebrando a leitura de "tudo concluído".
 
 Para a hierarquia de Tasks e os links "relates_to", usar os scripts desta skill.
 
