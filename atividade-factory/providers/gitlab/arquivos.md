@@ -41,7 +41,7 @@ python3 scripts/collect_commits.py \
   --emails samuel.dias@ses.rj.gov.br,samudias48@gmail.com,samuel.dias@extreme.digital \
   --out-dir "$RUN_DIR"
 
-python3 scripts/collect_open_issues.py --out-dir "$RUN_DIR"
+python3 scripts/collect_user_issues.py --out-dir "$RUN_DIR"
 ```
 
 Sem `--projects`, `collect_commits.py` descobre projetos tocados no período via
@@ -107,9 +107,9 @@ Se a issue de destino já estiver fechada (ex.: rodando o script de novo depois 
 o script detecta e faz `REOPEN` → define datas → `CLOSE` automaticamente — não precisa reabrir
 manualmente antes de chamar.
 
-## Linkar issue core a uma issue aberta já existente (sobreposição parcial)
+## Linkar issue core a uma issue já existente (sobreposição parcial, aberta ou fechada)
 
-Quando o tema já tem issue aberta cobrindo parte do trabalho (não é duplicata total, mas
+Quando o tema já tem issue (aberta ou fechada) cobrindo parte do trabalho (não é duplicata total, mas
 também não é candidato a issue nova) — ex.: aih-apac #38 cobre um levantamento mais amplo de
 SQL injection que um dos commits corrigiu pontualmente:
 
