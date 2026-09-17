@@ -1,0 +1,92 @@
+// EXEMPLO ILUSTRATIVO — não testado contra Redis/banco real; adapte à sua
+// infraestrutura. Sketch da Estratégia 2 descrita na seção 3.5 do SKILL.md
+// (chave "push:subscriptions:{userId}" guardando um JSON serializado da
+// lista de subscriptions daquele usuário).
+
+using System.Text.Json;
+using StackExchange.Redis;
+
+public class RedisPushSubscriptionStore : IPushSubscriptionStore
+{
+    private readonly IConnectionMultiplexer _connectionMultiplexer;
+
+    public RedisPushSubscriptionStore(IConnectionMultiplexer connectionMultiplexer)
+    {
+        _connectionMultiplexer = connectionMultiplexer;
+    }
+
+    private IDatabase Db => _connectionMultiplexer.GetDatabase();
+
+    private static string KeyFor(string userId) => $"push:subscriptions:{userId}";
+
+    public void AddOrUpdate(string userId, PushSubscriptionDto subscription)
+    {
+        var key = KeyFor(userId);
+        var subscriptions = ReadList(key);
+
+        subscriptions.RemoveAll(s => s.Endpoint == subscription.Endpoint);
+        subscriptions.Add(subscription);
+
+        Db.StringSet(key, JsonSerializer.Serialize(subscriptions));
+    }
+
+    public IReadOnlyList<PushSubscriptionDto> GetByUser(string userId)
+    {
+        return ReadList(KeyFor(userId));
+    }
+
+    public IReadOnlyList<PushSubscriptionDto> GetAll()
+    {
+        // Requer varrer as chaves "push:subscriptions:*" via SCAN (KEYS é
+        // desencorajado em produção por bloquear o servidor). Em volume alto,
+        // considerar manter um índice separado (ex.: um SET com todos os
+        // userIds ativos) em vez de depender de SCAN aqui.
+        var server = _connectionMultiplexer.GetServer(_connectionMultiplexer.GetEndPoints()[0]);
+        var all = new List<PushSubscriptionDto>();
+
+        foreach (var key in server.Keys(pattern: "push:subscriptions:*"))
+        {
+            all.AddRange(ReadList(key.ToString()));
+        }
+
+        return all;
+    }
+
+    public void Remove(string endpoint)
+    {
+        // LIMITAÇÃO CONHECIDA: Redis, ao contrário do EF Core (índice único em
+        // Endpoint) ou da versão in-memory (dicionário único percorrido em
+        // memória), não tem um índice reverso nativo endpoint -> userId. Sem
+        // manter esse índice separado (ex.: um Hash "push:endpoint-owner"
+        // mapeando endpoint -> userId, atualizado junto com AddOrUpdate), a
+        // única forma de remover por endpoint é escanear todas as chaves de
+        // usuário e reescrever a lista filtrada — operação O(usuários), mais
+        // cara que nas outras duas estratégias. Se Remove(endpoint) for
+        // chamado com frequência (ex.: toda subscription expirada no
+        // WebPushNotificationService), considerar manter esse índice reverso.
+        var server = _connectionMultiplexer.GetServer(_connectionMultiplexer.GetEndPoints()[0]);
+
+        foreach (var key in server.Keys(pattern: "push:subscriptions:*"))
+        {
+            var keyStr = key.ToString();
+            var subscriptions = ReadList(keyStr);
+
+            var removedCount = subscriptions.RemoveAll(s => s.Endpoint == endpoint);
+            if (removedCount > 0)
+            {
+                Db.StringSet(keyStr, JsonSerializer.Serialize(subscriptions));
+            }
+        }
+    }
+
+    private List<PushSubscriptionDto> ReadList(string key)
+    {
+        var json = Db.StringGet(key);
+        if (json.IsNullOrEmpty)
+        {
+            return new List<PushSubscriptionDto>();
+        }
+
+        return JsonSerializer.Deserialize<List<PushSubscriptionDto>>(json!) ?? new List<PushSubscriptionDto>();
+    }
+}

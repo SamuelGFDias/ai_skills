@@ -1,0 +1,99 @@
+// EXEMPLO ILUSTRATIVO — não testado contra Redis/banco real; adapte à sua
+// infraestrutura. Sketch da Estratégia 3 descrita na seção 3.5 do SKILL.md
+// (entidade PushSubscriptionEntity com índice único em Endpoint e índice em
+// UserId).
+
+using Microsoft.EntityFrameworkCore;
+
+public class PushSubscriptionEntity
+{
+    public int Id { get; set; }
+    public string UserId { get; set; } = default!;
+    public string Endpoint { get; set; } = default!;
+    public string P256dh { get; set; } = default!;
+    public string Auth { get; set; } = default!;
+    public DateTime CreatedAt { get; set; }
+}
+
+// Configuração de índices — no OnModelCreating do DbContext do projeto
+// consumidor (ou num IEntityTypeConfiguration<PushSubscriptionEntity>
+// separado):
+//
+// modelBuilder.Entity<PushSubscriptionEntity>(entity =>
+// {
+//     entity.HasIndex(e => e.Endpoint).IsUnique();
+//     entity.HasIndex(e => e.UserId);
+// });
+
+public class EfCorePushSubscriptionStore : IPushSubscriptionStore
+{
+    private readonly DbContext _dbContext;
+
+    public EfCorePushSubscriptionStore(DbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
+    private DbSet<PushSubscriptionEntity> Subscriptions => _dbContext.Set<PushSubscriptionEntity>();
+
+    public void AddOrUpdate(string userId, PushSubscriptionDto subscription)
+    {
+        // Upsert síncrono por simplicidade de assinatura (a interface
+        // IPushSubscriptionStore não é async — ver observação na seção 3.5).
+        // Numa implementação real, prefira expor uma versão async e ajustar
+        // o contrato de IPushSubscriptionStore/consumidores de acordo.
+        var existing = Subscriptions
+            .FirstOrDefault(e => e.Endpoint == subscription.Endpoint);
+
+        if (existing is not null)
+        {
+            existing.UserId = userId;
+            existing.P256dh = subscription.Keys.P256dh;
+            existing.Auth = subscription.Keys.Auth;
+        }
+        else
+        {
+            Subscriptions.Add(new PushSubscriptionEntity
+            {
+                UserId = userId,
+                Endpoint = subscription.Endpoint,
+                P256dh = subscription.Keys.P256dh,
+                Auth = subscription.Keys.Auth,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
+
+        _dbContext.SaveChanges();
+    }
+
+    public IReadOnlyList<PushSubscriptionDto> GetByUser(string userId)
+    {
+        return Subscriptions
+            .Where(e => e.UserId == userId)
+            .Select(e => new PushSubscriptionDto(e.Endpoint, new PushSubscriptionKeysDto(e.P256dh, e.Auth)))
+            .ToList();
+    }
+
+    public IReadOnlyList<PushSubscriptionDto> GetAll()
+    {
+        return Subscriptions
+            .Select(e => new PushSubscriptionDto(e.Endpoint, new PushSubscriptionKeysDto(e.P256dh, e.Auth)))
+            .ToList();
+    }
+
+    public void Remove(string endpoint)
+    {
+        var existing = Subscriptions.FirstOrDefault(e => e.Endpoint == endpoint);
+        if (existing is not null)
+        {
+            Subscriptions.Remove(existing);
+            _dbContext.SaveChanges();
+        }
+    }
+
+    // Versões assíncronas equivalentes (AddOrUpdateAsync, GetByUserAsync,
+    // GetAllAsync, RemoveAsync usando FirstOrDefaultAsync/ToListAsync/
+    // SaveChangesAsync) são preferíveis num projeto real — mantidas
+    // síncronas aqui só para casar exatamente com a assinatura de
+    // IPushSubscriptionStore da seção 3.5 do SKILL.md.
+}
