@@ -111,8 +111,33 @@ Depois de agrupado, decidir por tema:
 granularmente como Tasks filhas (widget "Child items" do GitLab) — repetir a lista no corpo da
 issue core é redundância pura, não redundância de segurança. O corpo da issue core traz só:
 objetivo (o que o tema entrega) e escopo (subitens/US cobertos), terminando com algo como
-"Detalhamento por commit nas Tasks abaixo." Só a issue **única** (sem Tasks) leva o checklist
-de commits no corpo — ali é a única evidência granular que ela tem.
+"Detalhamento por commit nas Tasks abaixo."
+
+**Issue única (sem Tasks) leva DESCRIÇÃO + checklist — nunca só o checklist.** O checklist de
+commits (sha curto + link + data) é a evidência granular, mas sozinho não diz o que foi feito
+nem por quê — quem abre a issue não deveria precisar inferir o objetivo lendo títulos de commit
+um por um. O corpo da issue única tem duas partes: (1) um parágrafo curto de objetivo/escopo,
+igual ao da issue core; (2) o checklist de commits logo abaixo, como evidência.
+
+**Formato único de corpo — não deixar cada execução (ou subagente) inventar o próprio
+formato.** Achado real: em uma rodada com 6 subagentes criando issues em paralelo, cada um
+formatou o checklist de commits de um jeito (uns sem sintaxe de checklist, um com `- [x]`
+gerando a barra de progresso nativa do GitLab) — o usuário notou a inconsistência ao comparar
+issues lado a lado. Formato fixo, sempre:
+
+```
+<parágrafo de objetivo/escopo>
+
+**Commits:**
+- [x] [`<sha curto>`](<web_url>) <título do commit> — <DD/MM/YYYY>
+- [x] [`<sha curto>`](<web_url>) <título do commit> — <DD/MM/YYYY>
+```
+
+O `- [x]` (checkbox já marcado) é proposital: GitLab renderiza como checklist nativo com barra
+de progresso "N de N concluídos" — reforça visualmente que é trabalho já feito, não backlog.
+Nunca usar bullet simples (`-`) nem checkbox vazio (`- [ ]`) para os commits de uma issue desta
+skill. Para a issue **core** (core+tasks), o corpo não tem o bloco "**Commits:**" — só o
+parágrafo de objetivo/escopo seguido de "Detalhamento por commit nas Tasks abaixo."
 
 **Tasks filhas nascem abertas — fechar explicitamente é passo obrigatório, não implícito.**
 `stateEvent: CLOSE` na issue core não fecha os work items filhos (achado real: numa execução
