@@ -1,6 +1,6 @@
 ---
 name: atividade-factory
-description: Coleta a atividade de commits (GitLab, via glab) de um projeto ou de todos os repositórios autenticados num período, agrupa por funcionalidade (ou outro critério pedido), cruza com issues abertas do usuário para não duplicar, e abre issues no padrão da issue-factory — usando hierarquia nativa (issue core + Tasks filhas por commit) para servir como comprovação de serviço auditável. Use quando o usuário pedir para registrar/documentar o que já foi trabalhado, levantar atividade de commits para virar issue, ou comparar commits feitos com issues abertas.
+description: Coleta a atividade de commits (GitLab, via glab) de um projeto ou de todos os repositórios autenticados num período, agrupa por funcionalidade (ou outro critério pedido), cruza com TODO o histórico de issues do usuário (qualquer estado — abertas e fechadas) para não duplicar, e abre issues no padrão da issue-factory — usando hierarquia nativa (issue core + Tasks filhas por commit) para servir como comprovação de serviço auditável. Use quando o usuário pedir para registrar/documentar o que já foi trabalhado, levantar atividade de commits para virar issue, ou comparar commits feitos com issues já existentes (mesmo fechadas).
 ---
 
 # Skill: atividade-factory
@@ -11,7 +11,7 @@ description: Coleta a atividade de commits (GitLab, via glab) de um projeto ou d
 
 Quando o usuário pedir para:
 - Levantar/registrar a atividade de commits de um período (própria ou de um projeto) para virar issue.
-- Saber "o que já fiz" antes de abrir issues, comparando com as issues abertas para não duplicar.
+- Saber "o que já fiz" antes de abrir issues, comparando com TODAS as issues do usuário (abertas e fechadas) para não duplicar.
 - Gerar comprovação de serviço a partir do histórico de commits (auditoria de trabalho executado).
 
 Roda em dois modos:
@@ -34,9 +34,9 @@ de disparar a coleta.
 ```
 1. Resolver identidade do autor (e-mails)         → scripts/scan_author_identities.py
 2. Coletar commits brutos (determinístico)        → scripts/collect_commits.py
-3. Coletar issues abertas do usuário (determinístico) → scripts/collect_open_issues.py
+3. Coletar TODAS as issues do usuário, qualquer estado (determinístico) → scripts/collect_user_issues.py
 4. Agrupar por critério (padrão: funcionalidade), excluir fora de escopo/config,
-   cruzar com issues abertas — DELEGADO por projeto, ver "Delegação via arquiteto"
+   cruzar com todas as issues (qualquer estado) — DELEGADO por projeto, ver "Delegação via arquiteto"
 5. Decidir granularidade por tema (core+tasks vs. issue única) — ver regra abaixo
 6. Criar as issues — ENCADEIA a skill issue-factory (anti-duplicata, título, labels)
 ```
@@ -50,7 +50,7 @@ silencioso (projeto aparece com zero commits do autor, sem erro nenhum).
 
 ### Passo 2 e 3 — Coleta bruta
 
-Rodar `collect_commits.py` e `collect_open_issues.py` apontando para uma pasta de trabalho
+Rodar `collect_commits.py` e `collect_user_issues.py` apontando para uma pasta de trabalho
 temporária **interna a esta skill** (nunca fora dela, nunca no repo do usuário):
 
 ```
@@ -78,7 +78,11 @@ Regras de agrupamento (não negociáveis, independente do critério escolhido):
 - **Não abstrair a granularidade do commit para dentro do nome do grupo.** O objetivo é
   comprovação de serviço: cada commit (sha curto + link + data) precisa continuar
   identificável dentro do grupo, não virar só uma frase-resumo que apaga a autoria pontual.
-- Cruzar cada grupo com as issues abertas do projeto (arquivo `issues/<project_id>.json`):
+- Cruzar cada grupo com TODAS as issues do usuário nesse projeto, qualquer estado (arquivo
+  `issues/<project_id>.json`) — **issue fechada que já documentou o mesmo trabalho é
+  duplicata do mesmo jeito que uma aberta.** Esta skill audita trabalho já feito; as issues
+  que ela cria nascem fechadas (Passo 6), então filtrar só por abertas no cruzamento
+  reintroduz exatamente a duplicata que a skill existe para evitar.
   correspondência clara → apontar `#iid` + URL; correspondência parcial → registrar como
   observação, não como cobertura; nenhuma correspondência → candidato a nova issue.
 
@@ -103,12 +107,15 @@ Depois de agrupado, decidir por tema:
 | ≥ ~5 commits | **Issue core** (o tema/objetivo) + **1 Task filha nativa por commit ou por pequeno cluster**, cada uma com sha curto + link + data no corpo (ver provider — hierarquia nativa via GraphQL, disponível mesmo em GitLab CE sem licença). |
 | < ~5 commits | **1 issue única**, com checklist de commits (sha curto + link) no corpo — sem Task filha separada. |
 
-Quando o grupo já tem cobertura parcial por uma issue aberta existente, **não criar issue
-nova**: linkar como "relates_to" (ver provider) e registrar a sobreposição para o usuário
-decidir se reaproveita a existente. Quando o grupo tem cobertura **total** por uma issue já
-aberta, também não criar issue nova — em vez disso, adicionar um comentário de solução na
-issue existente (fluxo "Adicionar Comentário com Solução" da `issue-factory`) com a evidência
-dos commits.
+Quando o grupo já tem cobertura parcial por uma issue **já existente (aberta OU
+fechada)**, **não criar issue nova**: linkar como "relates_to" (ver provider) e registrar a
+sobreposição para o usuário decidir se reaproveita a existente. Quando o grupo tem cobertura
+**total** por uma issue já existente — **fechada é o caso mais comum**, já que esta skill
+audita trabalho já feito e outras issues do mesmo trabalho tendem a já estar fechadas também
+—, também não criar issue nova: em vez disso, adicionar um comentário de solução na issue
+existente (fluxo "Adicionar Comentário com Solução" da `issue-factory`) com a evidência dos
+commits, e usar `set_issue_dates.py` para preencher `start_date`/`due_date` nela se ainda não
+tiver (reabre/fecha automaticamente se necessário).
 
 **Datas obrigatórias — sempre a partir dos commits, nunca da data de criação da issue.** Toda
 issue criada por esta skill (core ou única) leva `start_date` = data do commit mais antigo do
@@ -146,7 +153,8 @@ Ficam em `scripts/` (ver docstring de cada um para uso completo):
 
 - `scan_author_identities.py` — descobre e-mails de autor distintos usados pela mesma pessoa.
 - `collect_commits.py` — coleta bruta de commits por projeto/período/autor (determinístico).
-- `collect_open_issues.py` — coleta bruta de issues abertas (assigned + created), por projeto.
+- `collect_user_issues.py` — coleta bruta de TODAS as issues do usuário (assigned + created,
+  qualquer estado), por projeto.
 - `create_child_tasks.py` — cria Tasks filhas nativas sob uma issue core via GraphQL.
 - `link_related_issue.py` — cria link "relates_to" entre issues via REST.
 - `set_issue_dates.py` — define `start_date`/`due_date` a partir do range de datas dos
