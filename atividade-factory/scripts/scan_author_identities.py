@@ -20,6 +20,7 @@ import json
 import subprocess
 import sys
 from collections import Counter
+from datetime import datetime, timedelta
 
 
 def glab_api(path, host=None, paginate=False):
@@ -49,7 +50,10 @@ def load_multi_json(raw):
 
 
 def discover_projects(since, host):
-    events = glab_api(f"events?action=pushed&after={since}&per_page=100", host=host, paginate=True)
+    # `after` da API de events é EXCLUSIVO (não inclui o próprio dia) — subtrai 1 dia para não
+    # perder projetos cujo único push do período caiu exatamente em `since`.
+    day_before = (datetime.strptime(since, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d")
+    events = glab_api(f"events?action=pushed&after={day_before}&per_page=100", host=host, paginate=True)
     return sorted({e["project_id"] for e in events})
 
 

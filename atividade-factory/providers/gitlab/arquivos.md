@@ -88,6 +88,25 @@ mutation {
 }'
 ```
 
+## Definir datas a partir dos commits (start_date/due_date)
+
+Sempre feito **com a issue ainda aberta**, antes do comentário de solução e do fechamento
+(ver ordem no Passo 6 do `SKILL.md`):
+
+```bash
+python3 scripts/set_issue_dates.py \
+  --project ses-rj/desenvolvimento/biae/biae --iid 90 \
+  --start-date 2026-09-01 --due-date 2026-09-17
+```
+
+`--start-date` = data do commit mais antigo do grupo; `--due-date` = data do mais recente
+(mesmo dia, se o grupo tiver 1 commit só). Repetir para cada Task filha, com a data do commit
+que ela representa (`--iid` = iid da Task, retornado por `create_child_tasks.py`).
+
+Se a issue de destino já estiver fechada (ex.: rodando o script de novo depois do Passo 6.5),
+o script detecta e faz `REOPEN` → define datas → `CLOSE` automaticamente — não precisa reabrir
+manualmente antes de chamar.
+
 ## Linkar issue core a uma issue aberta já existente (sobreposição parcial)
 
 Quando o tema já tem issue aberta cobrindo parte do trabalho (não é duplicata total, mas

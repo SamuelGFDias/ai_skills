@@ -106,14 +106,38 @@ Depois de agrupado, decidir por tema:
 
 Quando o grupo já tem cobertura parcial por uma issue aberta existente, **não criar issue
 nova**: linkar como "relates_to" (ver provider) e registrar a sobreposição para o usuário
-decidir se reaproveita a existente.
+decidir se reaproveita a existente. Quando o grupo tem cobertura **total** por uma issue já
+aberta, também não criar issue nova — em vez disso, adicionar um comentário de solução na
+issue existente (fluxo "Adicionar Comentário com Solução" da `issue-factory`) com a evidência
+dos commits.
+
+**Datas obrigatórias — sempre a partir dos commits, nunca da data de criação da issue.** Toda
+issue criada por esta skill (core ou única) leva `start_date` = data do commit mais antigo do
+grupo e `due_date` = data do commit mais recente do grupo (mesmo dia, em grupos de 1 commit).
+Isso é o que torna a issue uma comprovação de serviço real — a data tem que refletir quando o
+trabalho foi feito, não quando a issue foi registrada no tracker. Usar
+`scripts/set_issue_dates.py` (GraphQL `workItemUpdate`, único método que funciona no GitLab
+18.x — REST não suporta `start_date`). Cada Task filha, se o grupo virar core+tasks, leva sua
+própria data (a do commit que ela representa) via o mesmo script.
 
 ### Passo 6 — Criação das issues
 
 Encadear a skill **`issue-factory`** (ler `issue-factory/SKILL.md` e o provider do tracker em
 uso, ex. `issue-factory/providers/gitlab/arquivos.md`) para: verificar duplicata, formato de
 título (`Módulo - Ação`, nunca mensagem de commit crua), labels de status + projeto, coleta de
-assignee/milestone junto ao usuário. A issue core segue esse fluxo normal.
+assignee/milestone junto ao usuário.
+
+**Ordem de execução por issue (core ou única) — o trabalho já foi feito, isso é registro
+retroativo, não backlog futuro:**
+
+1. Criar a issue (`glab issue create`, aberta).
+2. Criar as Tasks filhas, se o grupo for core+tasks (`create_child_tasks.py`).
+3. Definir `start_date`/`due_date` **enquanto a issue ainda está aberta**
+   (`set_issue_dates.py`) — fazer isso antes de fechar evita o ciclo REOPEN→CLOSE do GitLab
+   para alterar data em issue fechada. O mesmo vale para cada Task filha, com a data do commit
+   que ela representa.
+4. Adicionar comentário de solução (fluxo `issue-factory`) resumindo o que foi entregue.
+5. Fechar a issue (fluxo `issue-factory`) — o trabalho já está pronto, não fica em `Backlog`.
 
 Para a hierarquia de Tasks e os links "relates_to", usar os comandos concretos e scripts desta
 skill em `providers/gitlab/arquivos.md`.
@@ -127,6 +151,8 @@ Ficam em `scripts/` (ver docstring de cada um para uso completo):
 - `collect_open_issues.py` — coleta bruta de issues abertas (assigned + created), por projeto.
 - `create_child_tasks.py` — cria Tasks filhas nativas sob uma issue core via GraphQL.
 - `link_related_issue.py` — cria link "relates_to" entre issues via REST.
+- `set_issue_dates.py` — define `start_date`/`due_date` a partir do range de datas dos
+  commits do grupo (GraphQL, único método que funciona em GitLab 18.x).
 
 Nenhum desses scripts decide "o que é funcionalidade" — isso é sempre julgamento delegado
 (Passo 4). Eles existem só para tirar do modelo o trabalho mecânico de chamar API e parsear
