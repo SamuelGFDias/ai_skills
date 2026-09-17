@@ -79,13 +79,26 @@ Cada Task criada aparece no widget "Tasks"/"Child items" da issue core no GitLab
 marcar cada uma como concluída (`stateEvent: CLOSE` via GraphQL, ou pela UI) conforme o
 trabalho é validado, sem perder o link para o commit de origem.
 
-### Fechar uma Task (opcional, quando já validada)
+### Fechar as Tasks filhas — obrigatório no fluxo desta skill, não opcional
+
+Fechar a issue core **não fecha as Tasks filhas** — são work items independentes. No fluxo de
+comprovação de serviço (Passo 6 do `SKILL.md`), depois de fechar a issue core, fechar CADA
+Task filha individualmente:
 
 ```bash
 glab api graphql -f query='
 mutation {
   workItemUpdate(input: { id: "<gid da task retornado por create_child_tasks.py>", stateEvent: CLOSE }) { errors }
 }'
+```
+
+Em lote (uma iid por linha, obtendo o gid via REST antes de cada mutação):
+
+```bash
+for iid in 44 45 46 47 48; do
+  wid=$(glab api "projects/272/issues/$iid" | python3 -c "import json,sys;print(json.load(sys.stdin)['id'])")
+  glab api graphql -f query="mutation { workItemUpdate(input: { id: \"gid://gitlab/WorkItem/$wid\", stateEvent: CLOSE }) { errors } }"
+done
 ```
 
 ## Definir datas a partir dos commits (start_date/due_date)
