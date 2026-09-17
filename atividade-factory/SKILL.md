@@ -107,17 +107,51 @@ Depois de agrupado, decidir por tema:
 | ≥ ~5 commits | **Issue core** (o tema/objetivo) + **1 Task filha nativa por commit ou por pequeno cluster**, cada uma com sha curto + link + data no corpo (ver provider — hierarquia nativa via GraphQL, disponível mesmo em GitLab CE sem licença). |
 | < ~5 commits | **1 issue única**, com checklist de commits (sha curto + link) no corpo — sem Task filha separada. |
 
-**Corpo da issue core (core+tasks) NÃO repete a lista de commits.** Os commits já aparecem
-granularmente como Tasks filhas (widget "Child items" do GitLab) — repetir a lista no corpo da
-issue core é redundância pura, não redundância de segurança. O corpo da issue core traz só:
-objetivo (o que o tema entrega) e escopo (subitens/US cobertos), terminando com algo como
-"Detalhamento por commit nas Tasks abaixo."
+**Template de corpo — fixo, os dois tipos, sem variação entre execuções/subagentes.** Regra
+descrita só em prosa gera divergência quando múltiplos subagentes rodam em paralelo sem ver o
+trabalho um do outro (achado real, ver Observação 27 do log de skill-observations: numa rodada
+de 6 subagentes, cada um formatou o checklist de um jeito). Por isso o template abaixo é
+literal, não uma sugestão — copiar a sintaxe exata.
 
-**Issue única (sem Tasks) leva DESCRIÇÃO + checklist — nunca só o checklist.** O checklist de
-commits (sha curto + link + data) é a evidência granular, mas sozinho não diz o que foi feito
-nem por quê — quem abre a issue não deveria precisar inferir o objetivo lendo títulos de commit
-um por um. O corpo da issue única tem duas partes: (1) um parágrafo curto de objetivo/escopo,
-igual ao da issue core; (2) o checklist de commits logo abaixo, como evidência.
+**Issue core (core+tasks) — NUNCA repete a lista de commits no corpo.** Os commits já aparecem
+granularmente como Tasks filhas (widget "Child items" do GitLab); repetir a lista no corpo da
+issue-mãe é redundância pura, não redundância de segurança. Template:
+
+```
+<parágrafo de objetivo/escopo — o que o tema entrega e quais subitens/US cobre>
+
+Detalhamento por commit nas Tasks abaixo.
+```
+
+**Issue única (sem Tasks) — SEMPRE descrição + checklist, nunca só um dos dois.** O checklist
+sozinho não diz o que foi feito nem por quê; a descrição sozinha perde a evidência granular
+auditável. Template:
+
+```
+<parágrafo de objetivo/escopo — igual em espírito ao da issue core>
+
+**Commits:**
+- [x] [`<sha curto>`](<web_url>) <título do commit> — <DD/MM/YYYY>
+- [x] [`<sha curto>`](<web_url>) <título do commit> — <DD/MM/YYYY>
+```
+
+O `- [x]` (checkbox já marcado, não `- [ ]` nem bullet simples `-`) é proposital: GitLab
+renderiza como checklist nativo com barra de progresso "N de N concluídos", reforçando
+visualmente que é trabalho já feito, não backlog. Nunca variar essa sintaxe entre issues da
+mesma rodada.
+
+**Task filha (dentro de core+tasks) — descrição também segue template fixo, não é chumbado
+pelo script.** `create_child_tasks.py` só transporta o `description` que a chamada fornece —
+quem chama decide o texto. Template de descrição de cada Task:
+
+```
+Commit <sha curto> (<DD/MM/YYYY>)
+<web_url>
+
+<trecho relevante da mensagem do commit, se agregar contexto além do título>
+```
+
+E o título da Task, sempre: `<sha curto> <título do commit>` (mesma convenção em toda a skill).
 
 **Formato único de corpo — não deixar cada execução (ou subagente) inventar o próprio
 formato.** Achado real: em uma rodada com 6 subagentes criando issues em paralelo, cada um
