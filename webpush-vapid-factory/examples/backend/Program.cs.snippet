@@ -1,0 +1,87 @@
+// EXEMPLO ILUSTRATIVO — trecho extraído de um Program.cs real e testado
+// ponta-a-ponta (projeto de referência histórico). NÃO é o arquivo completo:
+// faltam using, configuração de ambiente etc. — copie os pedaços relevantes
+// e adapte nomes de rotas/política de CORS/nomes de tipos ao projeto atual.
+
+// --- Registro de DI --------------------------------------------------------
+
+builder.Services.AddSingleton<IPushSubscriptionStore, InMemoryPushSubscriptionStore>();
+builder.Services.AddSingleton<IWebPushNotificationService, WebPushNotificationService>();
+builder.Services.AddSingleton<IPushNotificationDispatcher, PushNotificationDispatcher>();
+
+// --- CORS (liberar exatamente a origem do frontend) ------------------------
+
+const string AngularCorsPolicy = "AngularCorsPolicy";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(AngularCorsPolicy, policy =>
+    {
+        policy.WithOrigins("http://localhost:4200")
+            .AllowAnyHeader()
+            .WithMethods("GET", "POST");
+    });
+});
+
+// ... app = builder.Build(); app.UseCors(AngularCorsPolicy); etc.
+
+// --- Endpoints mínimos (seção 3.6 do SKILL.md) ------------------------------
+
+app.MapGet("/api/push/vapid-public-key", (IConfiguration configuration) =>
+{
+    var publicKey = configuration["Vapid:PublicKey"];
+    return Results.Ok(new { publicKey });
+})
+.WithName("GetVapidPublicKey");
+
+app.MapPost("/api/push/register", (PushSubscriptionDto subscription, IPushSubscriptionStore store, HttpRequest request) =>
+{
+    // Numa aplicação real com autenticação, o userId viria de HttpContext.User
+    // (claims do JWT) via um endpoint autenticado. Aqui é simulado por um
+    // header simples para não precisar montar um pipeline de auth completo
+    // nesta prova de conceito — NÃO reproduzir esse atalho em produção.
+    var userId = request.Headers["X-User-Id"].ToString();
+    if (string.IsNullOrWhiteSpace(userId))
+    {
+        return Results.BadRequest(new { message = "Header 'X-User-Id' é obrigatório." });
+    }
+
+    store.AddOrUpdate(userId, subscription);
+    return Results.Ok(new { message = "Inscrição salva com sucesso." });
+})
+.WithName("RegisterPushSubscription");
+
+// --- Endpoints de demonstração de negócio (seção 5 do SKILL.md) ------------
+// Mostram o padrão: o endpoint persiste o efeito de domínio e, como efeito
+// colateral, chama IPushNotificationDispatcher.NotifyUserAsync — nunca é a
+// única coisa que o endpoint faz.
+
+app.MapPost("/api/demo/tickets/{ticketId}/assign", async (string ticketId, AssignTicketRequest request, IPushNotificationDispatcher dispatcher) =>
+{
+    // Aqui entraria a persistência real da atribuição do chamado.
+    var result = await dispatcher.NotifyUserAsync(
+        request.AnalystUserId,
+        new VisiblePushMessage(
+            "Novo chamado atribuído",
+            $"O chamado {ticketId} foi atribuído a você.",
+            Data: new { url = $"/chamados/{ticketId}" }
+        ));
+
+    return Results.Ok(result);
+})
+.WithName("AssignTicket");
+
+app.MapPost("/api/demo/users/{userId}/permissions/revoke", async (string userId, IPushNotificationDispatcher dispatcher, RevokePermissionRequest? request) =>
+{
+    // Aqui entraria a revogação real da permissão.
+    var result = await dispatcher.NotifyUserAsync(
+        userId,
+        new SilentPushMessage("permissions-changed", new { reason = "revoked-by-admin" }));
+
+    return Results.Ok(result);
+})
+.WithName("RevokeUserPermissions");
+
+// app.Run();
+
+public record AssignTicketRequest(string AnalystUserId);
+public record RevokePermissionRequest(string? Reason = null);
