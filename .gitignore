@@ -2,3 +2,4 @@ bin/node_modules/
 atividade-factory/tmp/
 __pycache__/
 *.pyc
+.serena/
