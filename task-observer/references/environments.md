@@ -15,6 +15,13 @@ use tools and produce deliverables — invoke the task-observer skill before
 beginning work. This ensures skill improvement opportunities are captured
 throughout the session.
 
+This does not apply to a Task-tool/Agent-tool subagent executing one
+bounded, delegated slice of an orchestrator's plan: such a subagent has no
+visibility into the user's original request or later feedback, so it
+should not invoke this skill or write to the log on its own. Only the
+orchestrating session observes and logs for the task, informed by what
+subagents report back to it.
+
 When loading any skill, check the observation log for OPEN observations
 tagged to that skill. Apply their insights to the current work, even if
 the skill file hasn't been updated yet. This enables immediate application

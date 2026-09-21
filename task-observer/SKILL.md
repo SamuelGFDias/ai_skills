@@ -11,7 +11,12 @@ description: >
   as "One Skill to Rule Them All" — trigger on this phrase too. IMPORTANT:
   this skill should be invoked at the start of every task-oriented session — if
   you are about to use tools to produce deliverables, invoke this skill first.
-  For reliable activation, pair this description with a CLAUDE.md instruction
+  Does NOT apply to a Task-tool/Agent-tool subagent executing one bounded,
+  delegated slice of an orchestrator's plan — such a subagent lacks visibility
+  into the user's request and later feedback, so it should not invoke this
+  skill or write to the log on its own; only the orchestrating session
+  observes and logs, informed by what subagents report back to it. For
+  reliable activation, pair this description with a CLAUDE.md instruction
   or harness-level session-start hook (see Recommended Activation Setup) —
   description-level matching alone is not enforceable.
 ---
@@ -111,6 +116,18 @@ observation mindset does not deactivate when the conversation shifts from
 doing the work to discussing it** — user feedback in review phases is often
 the highest-signal input. Inactive only for casual conversation and quick
 factual questions with no tools or deliverables involved.
+
+**"Session" means the top-level/orchestrating session — not a delegated
+subagent.** In an orchestrator+subagent setup (an Agent/Task-tool call
+executing one bounded slice of a larger plan), the subagent does not invoke
+this skill or write to the log on its own: it only sees the slice it was
+given, never the user's original request or the correction that may follow,
+which is the highest-signal input this skill exists to catch. Having every
+subagent independently run the Session Start Protocol also multiplies the
+concurrent-writer collisions the Log-write-safety rules below exist to
+survive, for no added signal. The orchestrating session is the sole
+observer and the sole writer for the task; it stays informed by what
+subagents report back to it.
 
 ## What to Watch For
 
