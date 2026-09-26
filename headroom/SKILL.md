@@ -1,6 +1,6 @@
 ---
 name: headroom
-description: Instala, configura e verifica o Headroom (proxy local de compressão de contexto para agentes de IA) no ambiente local. Cobre o deploy v0.37.0+, onde o roteamento é injetado em rc files de shell (e não no settings.json), a interpretação correta do headroom doctor e como restringir o roteamento ao Claude Code. Use quando o usuário pedir para instalar, configurar, atualizar, diagnosticar ou desinstalar o Headroom.
+description: Instala, configura e verifica o Headroom (proxy local de compressão de contexto para agentes de IA) no ambiente local. Cobre o deploy v0.37.0+, onde o roteamento é injetado em rc files de shell (e não no settings.json), a interpretação correta do headroom doctor, o modo docker-native (wrapper install.sh) com cache do Kompress, e por que o Kilo CLI não deve ser roteado pelo proxy (gateway multi-provedor). Use quando o usuário pedir para instalar, configurar, atualizar, diagnosticar ou desinstalar o Headroom.
 ---
 
 # Skill: headroom
@@ -9,7 +9,7 @@ description: Instala, configura e verifica o Headroom (proxy local de compressã
 
 ## O que é
 
-O Headroom é um proxy local de compressão de contexto para agentes de IA (Claude Code, Codex, etc.). Reduz de 10% a 20% dos tokens em sessões de codificação. Proxy principal na porta **8787** (Claude Code); proxy secundário na **8788** (Kilo CLI).
+O Headroom é um proxy local de compressão de contexto para agentes de IA (Claude Code, Codex, etc.). Reduz de 10% a 20% dos tokens em sessões de codificação. Proxy na porta **8787** (Claude Code). **O Kilo CLI não é roteado** — o gateway dele é multi-provedor e incompatível com o proxy (ver seção própria).
 
 > **IMPORTANTE:** não instalar o `claude-mem` junto com o Headroom — ambos fazem memória persistente entre sessões e vão duplicar contexto e criar duas fontes da verdade divergentes.
 
@@ -61,6 +61,32 @@ Flags principais:
 
 Para **atualizar** uma instalação existente (trocar `--mode`, adicionar `--memory`), rodar o mesmo comando com o mesmo `--profile`.
 
+### Wrapper docker-native (`install.sh`): o `deploy` não funciona
+
+O subcomando `deploy` é do CLI Python-native. Com o wrapper docker-native (o que o `install.sh`
+instala em `~/.local/bin/headroom`) ele roda **dentro** do container e falha ao mutar o rc do
+`HOME` (raiz): `[Errno 13] Permission denied: '/tmp/headroom-home/..bashrc...'`. Nesse modo,
+instalar com `install apply` e adicionar o bloco de `export`s acima **manualmente**:
+
+```bash
+headroom install apply --profile default --port 8787 --backend anthropic \
+  --mode cache --memory --no-telemetry --image headroom-ai-local:0.39.0
+# + bloco de exports (HEADROOM_*/ANTHROPIC_BASE_URL) em ~/.bashrc (e ~/.profile, ~/.zshrc)
+```
+
+`start`/`restart`/`status` reusam a imagem gravada no state. **Não** rodar `install apply` sem
+`--image`: ele reverte para `ghcr.io/headroomlabs-ai/headroom:latest` e o Kompress quebra de novo.
+
+### Kompress: validar a compressão de verdade, não só o health
+
+Proxy "healthy" com `"kompress":{"ready":false,"backend":null}` **não** comprime — o modelo
+`chopratejas/kompress-v2-base` (HuggingFace) não baixou. Causa típica: o cache de `$HOME` do
+container não é gravável (mesmo problema do rc acima). Correção desta máquina: imagem derivada
+(`~/headroom-image/Dockerfile`) que torna `/tmp/headroom-home` gravável e aponta `HF_HOME` e
+`XDG_CACHE_HOME` para submounts de `~/.headroom` (mount persistente) — o modelo (~350 MB) baixa uma
+vez e fica. Conferir compressão de verdade nos headers de uma requisição (e.g. `curl` no `/v1` sem
+auth → 401, mas com `x-headroom-tokens-before/after/saved` diferente): `x-headroom-tokens-saved > 0`.
+
 ## Interpretando o `headroom doctor` (não confiar às cegas)
 
 ```bash
@@ -77,47 +103,50 @@ O doctor reporta `claude ⚠ warn "not routed (no ANTHROPIC_BASE_URL in settings
 
 O `claude ⚠ warn` isolado não é sinal de problema se o item 3 confirma o roteamento.
 
+**Modo docker-native:** o `headroom doctor` roda dentro de um container efêmero (sem o proxy no seu
+próprio localhost e sem o socket do docker), então `proxy ✗ fail` e `deployments ✗ fail down` são
+**falsos-negativos** esperados. O check válido nesse modo é `headroom install status --profile default`
+(running/ready) + `curl -fsS http://127.0.0.1:8787/readyz`.
+
 Outros avisos conhecidos do doctor (benignos ou informativos): `budget ⚠ warn` (sem budget configurado), `claude remote control ⚠ warn` (Remote Control do Claude desabilitado quando `ANTHROPIC_BASE_URL` aponta para endpoint custom), `claude desktop ⚠ warn` (sessões do Desktop bypassam o proxy).
 
-## Roteando o Kilo CLI pelo proxy (porta 8788)
+## Kilo CLI: NÃO rotear pelo proxy (incompatível — gateway multi-provedor)
 
-O Kilo usa gateway próprio (`https://api.kilo.ai/api/gateway`, protocolo OpenAI-compatible), então precisa de um **segundo proxy** Headroom — NÃO rodar `headroom deploy` para isso (reconfiguraria o Claude para a porta nova). Subir container separado:
+O Kilo (7.4.22+, fork do opencode) fala com o gateway próprio `https://api.kilo.ai/api/gateway`, mas
+**roteia por provedor dentro de um único endpoint**: o cliente manda para sub-rotas do tipo
+`/v1/api/openrouter/chat/completions` (um path por provedor upstream). O proxy Headroom só conhece
+`/v1/chat/completions` e `/v1/responses`, então remonta o upstream errado e o gateway responde:
+
+```
+Bad Request: This endpoint only accepts the path `/chat/completions`.
+{"error":"Invalid path","error_type":"invalid_path", ...}
+```
+
+**Conclusão:** não configurar `provider.kilo.options.baseURL` apontando para o proxy — o tráfego do
+Kilo não é OpenAI-plain. A receita antiga (porta 8788 + `--backend anyllm --openai-api-url
+https://api.kilo.ai/api/gateway`) deixou de funcionar e foi removida desta skill.
+
+Para **reverter** um ambiente que já tenha sido roteado:
 
 ```bash
-docker run -d \
-  --name headroom-kilo \
-  --restart unless-stopped \
-  -p 127.0.0.1:8788:8788 \
-  --health-cmd "curl --fail --silent http://127.0.0.1:8788/readyz" \
-  --health-interval 30s --health-timeout 5s --health-start-period 20s --health-retries 3 \
-  -e HOME=/tmp/headroom-home \
-  -e HEADROOM_WORKSPACE_DIR=/tmp/headroom-home/.headroom \
-  -e HEADROOM_CONFIG_DIR=/tmp/headroom-home/.headroom/config \
-  -v ~/.headroom:/tmp/headroom-home/.headroom \
-  ghcr.io/headroomlabs-ai/headroom:latest \
-  --host 0.0.0.0 --port 8788 --mode cache \
-  --backend anyllm --anyllm-provider openai \
-  --openai-api-url https://api.kilo.ai/api/gateway \
-  --no-telemetry --memory
+docker rm -f headroom-kilo                  # container da 8788, se existir
+# remover do ~/.config/kilo/kilo.jsonc o bloco "provider": {"kilo": {...}}
+kilo config check                           # valida que a config ficou consistente
 ```
 
-Depois apontar o Kilo para o proxy no config global (`~/.config/kilo/kilo.jsonc`):
+## Claude Code sem o proxy (Remote Control)
 
-```jsonc
-{
-  "provider": {
-    "kilo": {
-      "options": {
-        "baseURL": "http://127.0.0.1:8788/v1"
-      }
-    }
-  }
-}
+O proxy desativa o Remote Control do Claude (`claude remote control ⚠ warn` no doctor). Para abrir o
+Claude **direto** (sem proxy), um override `--settings` zera a `ANTHROPIC_BASE_URL` só naquele
+processo — verificado empiricamente: o contador `requests` de `/stats` do proxy não incrementa.
+
+```bash
+# ~/.claude/settings-direct.json
+{ "env": { "ANTHROPIC_BASE_URL": "" } }
 ```
-
-- O token OAuth do Kilo (em `~/.local/share/kilo/auth.json`) passa direto pelo proxy — nada a configurar de auth.
-- **Novas sessões do Kilo** passam pelo proxy (a sessão atual continua direto até reiniciar).
-- Se o container `headroom-kilo` cair, o Kilo falha — verificar com `docker ps | grep headroom-kilo`.
+```bash
+alias claude-direct='claude --settings "$HOME/.claude/settings-direct.json"'
+```
 
 ## Uso no dia a dia
 
