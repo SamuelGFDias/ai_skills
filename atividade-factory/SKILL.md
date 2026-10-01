@@ -33,7 +33,7 @@ de disparar a coleta.
 
 ```
 1. Resolver identidade do autor (e-mails)         → scripts/scan_author_identities.py
-2. Coletar commits brutos (determinístico)        → scripts/collect_commits.py
+2. Coletar commits brutos + marcar elegibilidade por branch (determinístico) → scripts/collect_commits.py
 3. Coletar TODAS as issues do usuário, qualquer estado (determinístico) → scripts/collect_user_issues.py
 4. Agrupar por critério (padrão: funcionalidade), excluir fora de escopo/config,
    cruzar com todas as issues (qualquer estado) — DELEGADO por projeto, ver "Delegação via arquiteto"
@@ -51,6 +51,16 @@ silencioso (projeto aparece com zero commits do autor, sem erro nenhum).
 
 ### Passo 2 e 3 — Coleta bruta
 
+**Antes de coletar/delegar, perguntar ao usuário a regra de elegibilidade por branch:** só
+commits que já estão na **branch padrão** do projeto, ou também commits de **branches ainda
+abertas** (sem merge). Sem essa resposta o agrupamento mistura trabalho integrado com trabalho
+em andamento e o usuário só nota quando a issue "comprova" algo que nem foi mergeado.
+
+`collect_commits.py` marca cada commit com `na_default_branch` (bool) e `branches` (onde ele
+está, via `/projects/:id/repository/commits/:sha/refs?type=branch`); `null` nos dois = a
+consulta falhou, tratar como não verificado, nunca como elegível. O critério é aplicado **aqui,
+na coleta determinística, antes do agrupamento** — não é julgamento do subagente.
+
 Rodar `collect_commits.py` e `collect_user_issues.py` apontando para uma pasta de trabalho
 temporária **interna a esta skill** (nunca fora dela, nunca no repo do usuário):
 
@@ -66,6 +76,14 @@ para o repositório de skills nem para o projeto do usuário. Ao final do fluxo 
 e conferidas), apagar a pasta da rodada.
 
 ### Passo 4 — Agrupamento e cruzamento com issues (critério do usuário)
+
+**Só os commits elegíveis (regra do Passo 2) vão para os subagentes** — filtrar os JSONs de
+`commits/` pelos campos `na_default_branch`/`branches` antes de delegar, para o subagente nem
+ver os demais. Os excluídos pela regra
+de branch ficam fora do agrupamento e são listados **à parte** para o usuário, cada um com a
+branch onde está e o estado do MR dessa branch (`glab api "projects/<id>/merge_requests?source_branch=<branch>&state=all"`:
+sem MR, aberto, mergeado, fechado) — assim ele decide se amplia a regra, em vez de o trabalho
+sumir em silêncio.
 
 **Padrão: agrupar por funcionalidade/tema de trabalho** (não por data, não por projeto isolado
 sem tema). Se o usuário pedir outro critério no momento da execução (ex.: por sprint, por

@@ -34,6 +34,10 @@ tabela: isso é `plan`. Cria o diretório `specs/NNN-nome-da-feature/` numerado.
 Armadilha: escrever solução disfarçada de requisito ("criar tabela X com colunas Y"). Se a frase cita
 tecnologia, provavelmente pertence ao `plan`.
 
+Armadilha: o script `create-new-feature.sh` faz `git checkout -b` implícito e, em worktree paralela,
+erra o próximo número — ver a seção "Working tree compartilhada e worktrees paralelas" do `SKILL.md`
+(anunciar o checkout; sempre passar `--number`).
+
 ### `/speckit.clarify`
 Varre o spec por áreas subespecificadas e resolve, marcando `[NEEDS CLARIFICATION]` onde não conseguir.
 **Recomendado sempre antes do `plan`** — é o passo mais barato de todo o ciclo e o que mais evita
@@ -44,6 +48,11 @@ Armadilha: pular por pressa. Ambiguidade não resolvida aqui vira decisão arbit
 ### `/speckit.plan`
 Estratégia técnica: stack, arquitetura, contratos, modelo de dados. É onde a tecnologia entra pela
 primeira vez.
+
+Armadilha: quando a feature nasce de "seguir o padrão do projeto X" e X usa dependência nomeada
+(pacote, SDK), descartá-la por "ainda não instalada" e reimplementar. A dependência é requisito a
+validar (target framework, versão transitiva); incompatibilidade vira risco/pergunta ao usuário, não
+decisão silenciosa em `research.md` (regra de ouro 9 do `SKILL.md`).
 
 Armadilha: rodar com spec ainda ambíguo — o plan preenche a lacuna com um chute plausível e o chute
 some dentro de um documento que parece decidido.
@@ -68,6 +77,12 @@ mantido automaticamente; checklists extras são do revisor.
 
 Quando vale: feature de risco alto, requisito regulatório, integração com sistema externo. Feature
 pequena e bem entendida dispensa.
+
+Armadilha: checklist que audita outro artefato é snapshot — fica stale quando o `spec.md` evolui (ex.:
+afirma marcadores abertos que um `clarify` posterior já resolveu). Nunca usá-lo como fonte de verdade
+sobre o estado do `spec.md`: confirmar por `grep` e `mtime`; divergência = regenerar o checklist. Item
+que afirma estado deve registrar o estado auditado (data/hora ou hash). Em subagente, ver "Checklist (e
+outros comandos interativos) em subagente" no `SKILL.md`.
 
 ### `/speckit.tasks`
 Quebra o plan em tarefas acionáveis ordenadas por dependência. É a entrada natural para a delegação

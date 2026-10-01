@@ -1,6 +1,6 @@
 ---
 name: angular-testes
-description: "Use ao escrever ou revisar teste unitário Angular em projeto da SES-RJ (ex.: `<NomeDoProjeto>.ClientApp`) — Karma/Jasmine, TestBed, teste de classe pura sem Angular, e como rodar ng test com Chrome headless."
+description: "Use ao escrever ou revisar teste unitário Angular em projeto da SES-RJ (ex.: `<NomeDoProjeto>.ClientApp`) — Karma/Jasmine ou vitest, TestBed, teste de classe pura sem Angular, e como rodar ng test (Chrome headless no Karma)."
 ---
 
 # Skill: angular-testes
@@ -10,6 +10,31 @@ da leitura completa dos 6 `.spec.ts` reais do projeto e da execução real de `n
 máquina (seção 4).
 
 ## 1. Stack de teste e como rodar
+
+**Antes de prescrever qualquer flag, detectar o runner do projeto alvo** em `angular.json`
+(projeto → `architect` → `test` → `builder`) — o conjunto de flags que funciona é outro em cada
+cenário:
+
+| `builder` do alvo `test` | Runner | Como rodar |
+|---|---|---|
+| `@angular-devkit/build-angular:karma` (ou `@angular/build:karma`) | Karma + Jasmine | Cenário A abaixo |
+| `@angular/build:unit-test` | vitest | Cenário B abaixo |
+
+### Cenário B — vitest (`@angular/build:unit-test`)
+
+O runner é o vitest, não o Karma: não há Chrome/`CHROME_BIN` a configurar (seção 2 não se
+aplica) e o código de teste usa a API do vitest (`vi.fn()`, `vi.spyOn()`), não `jasmine.*`. Rodar
+single run filtrando por arquivo, **sem `--browsers`**:
+
+```bash
+ng test --watch=false --include=<glob>      # ex.: --include='**/browser-storage.service.spec.ts'
+```
+
+`--browsers=ChromeHeadless` aqui **falha** com `requires @vitest/browser-*` (pede o provider de
+browser do vitest, que o projeto não instalou) — é o sintoma de ter aplicado a receita do Karma
+num projeto vitest. Se aparecer, remover `--browsers` em vez de instalar o pacote.
+
+### Cenário A — Karma/Jasmine (o projeto de origem desta skill)
 
 Confirmado em `package.json`: `"test": "ng test"`, com `karma` `~6.4.0`, `karma-chrome-launcher`
 `~3.2.0`, `karma-jasmine` `~5.1.0`, `karma-jasmine-html-reporter` `~2.1.0`, `karma-coverage`
@@ -33,7 +58,7 @@ npm run test                                              # modo watch, abre Chr
 npm run test -- --watch=false --browsers=ChromeHeadless    # single run, sem watch — o que se usa em CI/verificação
 ```
 
-## 2. Pegadinha real confirmada nesta máquina: binário do Chrome
+## 2. Pegadinha real confirmada nesta máquina: binário do Chrome (só Cenário A — Karma)
 
 Sem `CHROME_BIN` configurado, `karma-chrome-launcher` procura o binário padrão do Chrome/Chromium
 no `PATH` e pode falhar com `No binary for ChromeHeadless browser on your platform` se não
@@ -203,6 +228,9 @@ corrigir silenciosamente.
 
 ## 5. Checklist de revisão
 
+- [ ] Conferiu o runner em `angular.json` (builder do alvo `test`) antes de passar flags? Karma
+      aceita `--browsers=ChromeHeadless`; vitest (`@angular/build:unit-test`) não — use
+      `ng test --watch=false --include=<glob>` (seção 1).
 - [ ] Testando uma classe/factory sem dependência de DI do Angular? Instancie com `new` direto
       (seção 3.1) — não adicione `TestBed.configureTestingModule` desnecessário.
 - [ ] Testando um `@Component`? Use `TestBed.configureTestingModule({imports: [Componente]})` +
@@ -210,7 +238,7 @@ corrigir silenciosamente.
       porque os componentes do projeto são standalone.
 - [ ] `describe`/`it` em inglês, estilo Jasmine idiomático — não confundir com a convenção
       obrigatória em português do backend .NET (`dotnet-unit-tests`).
-- [ ] Antes de rodar os testes numa máquina nova, confirme o binário do Chrome disponível
+- [ ] (Karma) Antes de rodar os testes numa máquina nova, confirme o binário do Chrome disponível
       (`which google-chrome || which chromium-browser || which chromium`) e passe via `CHROME_BIN`
       — não assuma que `/usr/bin/chromium-browser` (o que funcionou nesta máquina) existe em
       qualquer ambiente.

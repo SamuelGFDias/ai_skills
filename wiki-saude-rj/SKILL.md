@@ -63,7 +63,7 @@ node "$SCRIPTS/list-pages.js"                                   # lista todas as
 node "$SCRIPTS/page.js <id|path>"                               # detalhes completos de uma página (conteúdo + tags)
 node "$SCRIPTS/page.js 24"
 node "$SCRIPTS/page.js desenvolvimento/gitlab/runbook/configurar-ssh"
-node "$SCRIPTS/search.js <termo>"                               # busca full-text em páginas
+node "$SCRIPTS/search.js <termo>"                               # busca só em título/path (NÃO no conteúdo) — ver aviso abaixo
 node "$SCRIPTS/move.js <id> <destinationPath>"                  # move página (locale en implícito)
 node "$SCRIPTS/update.js <id> [--content <texto>] [--content-file <arquivo>] [--title <titulo>] [--published true|false] [--tags '<json>']"
 node "$SCRIPTS/replace.js <texto> <substituto> [ids...]"        # substitui texto no conteúdo das páginas (todas ou só os ids)
@@ -80,6 +80,10 @@ node "$SCRIPTS/replace.js desenvovolvimento desenvolvimento"       # corrigir li
 node "$SCRIPTS/move.js 18 desenvolvimento/gitlab/runbook/configurar-ssh"
 node "$SCRIPTS/gql.js '{ system { info { currentVersion } } }'"
 ```
+
+**`search.js` NÃO busca no conteúdo:** `pages.search` casa só **título/path**, não o corpo da página — um termo que só aparece no `content` retorna `totalHits: 0`. Resultado vazio **não prova ausência**. Quando "não existe na wiki" for uma conclusão importante (decisão, auditoria, anti-duplicata), confirmar por dump antes de reportar: `list-pages.js` (ids) + `page.js <id>` por página + grep no campo `content` (ou `find.js <texto>`, que faz esse varrimento e conta ocorrências). Só então afirmar que não existe.
+
+**Melhoria possível (não implementada):** a API GraphQL (introspecção, `PageQuery`) não tem query de full-text separada — `pages.search(query, path, locale)` é a busca nativa e já é a que `search.js` usa; os argumentos `path`/`locale` só restringem o escopo. A cobertura do corpo depende do **search engine configurado na instância** (Administration → Search Engine; a query `search.searchEngines` existe no schema para listá-los). Trocar o engine por um que indexe conteúdo resolveria na origem; até lá, vale o dump acima.
 
 **Atenção (descoberto em 2026-08-12):** a mutation `pages.update` exige que `content` **e** `tags` sejam passados juntos — sem um deles o servidor retorna erro (`PageEmptyContent 6004` ou `Cannot read properties of undefined (reading 'map')`). Os scripts `update.js` e `replace.js` já tratam isso automaticamente (lêem os tags atuais e preservam).
 
@@ -389,7 +393,7 @@ const { gql } = require('./lib');
 | Query | Público | Observação |
 |---|---|---|
 | `pages.list` | ✅ Sim | Lista todas as páginas com metadados |
-| `pages.search` | ✅ Sim | Busca full-text |
+| `pages.search` | ✅ Sim | Busca título/path (não o conteúdo) |
 | `authentication.activeStrategies` | ✅ Sim | Estratégias SSO ativas |
 | `localization.locales` | ✅ Sim | Locais disponíveis |
 | Introspecção `__schema`/`__type` | ✅ Sim | Schema completo |
