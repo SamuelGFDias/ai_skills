@@ -100,7 +100,9 @@ Para os demais DTOs (Projects, Categories, Activities, ActivityDays, Snapshots),
 ```
 `activityId` e `date` são obrigatórios (erro no `{}`); `status` é opcional — omitido, a chamada retorna `200 {"success":true}` sem criar/alterar registro (no-op quando não há registro prévio naquela data). O enum de `status` foi revelado mandando um valor inválido (`"status":"X"`): `"status must be one of the following values: F, A, C, "` — os valores são as mesmas siglas visuais do sistema (F = A Fazer, A = Em andamento, C = Concluído) mais string vazia (`""`), que remove o registro do dia (bate com a descrição do endpoint na tabela acima: "Atualizar ou remover um registro").
 
-**Armadilha:** `PUT /activities/{id}` (`update-activity.sh`) faz *replace* completo do registro — inclusive zera `notes` (e `responsible`) para `null`, mesmo eles não fazendo parte do `UpdateActivityDto` enviado. Ao editar descrição **e** notas da mesma atividade, sempre rodar `update-notes.sh` **depois** de `update-activity.sh` (nunca antes), senão o `PUT` sobrescreve as notas recém-gravadas.
+**`UpdateActivityDto`** (body de `PUT /activities/{id}`): `categoryId`, `number` (inteiro) e `description` obrigatórios; `responsible` (string) opcional — confirmado em 2026-10-01. `projectId` e `notes` não fazem parte dele.
+
+**Armadilha:** `PUT /activities/{id}` (`update-activity.sh`) faz *replace* completo do registro — inclusive zera `notes` e `responsible` para `null` quando não enviados. Ao editar a atividade, sempre passar o `responsible` (5º argumento do `update-activity.sh`) e rodar `update-notes.sh` **depois** de `update-activity.sh` (nunca antes), senão o `PUT` sobrescreve as notas recém-gravadas.
 
 **Atenção — nomenclatura de campos na resposta:** os bodies de request (`CreateActivityDto` etc.) usam `camelCase` (`projectId`, `categoryId`), mas os objetos retornados pela API usam `snake_case` (`project_id`, `category_id`). Confirmado batendo direto em `GET /api/activities?projectId=...` e inspecionando as chaves do JSON. Qualquer filtro client-side sobre a resposta precisa usar `category_id`/`project_id`, não `categoryId`/`projectId` — foi exatamente esse descompasso que causava o bug descrito na nota de correção do `list-activities.sh` abaixo.
 
@@ -208,11 +210,11 @@ o corpo do erro) se a API responder 4xx/5xx.
 | `create-category.sh` | `create-category.sh <projectId> <name>` | Cria categoria (`POST /api/categories`); imprime o `id` criado em stdout (para capturar com `$(...)`) e o JSON completo em stderr. |
 | `list-categories.sh` | `list-categories.sh <projectId>` | Lista categorias de um projeto (`GET /api/categories?projectId=...`). |
 | `create-activity.sh` | `create-activity.sh <projectId> <categoryId> <number> <description>` | Cria atividade (`POST /api/activities`); mesma convenção de saída do `create-category.sh`. |
-| `update-activity.sh` | `update-activity.sh <activityId> <categoryId> <number> <description>` | Atualiza atividade (`PUT /api/activities/{id}`) — os 3 campos são obrigatórios juntos, sem `projectId`. |
+| `update-activity.sh` | `update-activity.sh <activityId> <categoryId> <number> <description> [responsible]` | Atualiza atividade (`PUT /api/activities/{id}`) — categoria, número e descrição são obrigatórios juntos, sem `projectId`. O `responsible` é opcional, mas **deve ser sempre informado**: omitido, o `PUT` zera o responsável. |
 | `list-activities.sh` | `list-activities.sh <projectId> [categoryId]` | Lista atividades de um projeto; com o segundo argumento, filtra client-side (via `python3`) só as da categoria informada. **Correção aplicada em 2026-09-15:** o filtro comparava `item.get("categoryId")`, mas a API retorna o campo em snake_case (`category_id`) — o filtro nunca casava e sempre retornava `[]`. Corrigido para usar `category_id` (ver nota "Atenção — nomenclatura de campos na resposta" acima). |
 | `delete-activity.sh` | `delete-activity.sh <activityId>` | Exclui atividade (`DELETE /api/activities/{id}`). |
 | `update-notes.sh` | `update-notes.sh <activityId> <notes>` | Atualiza a observação/nota de uma atividade (`PATCH /api/activities/{id}/notes`) — **rodar sempre depois** de `update-activity.sh` na mesma atividade (ver armadilha acima). |
-| `update-activity-day.sh` | `update-activity-day.sh <activityId> <date YYYY-MM-DD> <status>` | Atualiza (ou remove, com `status` vazio) o status de um dia de atividade no calendário (`PUT /api/activity-days`); `status` aceita `F`\|`A`\|`C`\|`""`. |
+| `update-activity-day.sh` | `update-activity-day.sh <activityId> <date YYYY-MM-DD> <status>` | Atualiza (ou remove, com `status` vazio) o status de um dia de atividade no calendário (`PUT /api/activity-days`); `status` aceita `F`\|`A`\|`C`\|`""`. Com `""` o script omite o campo `status` do body, porque a API rejeita `"status":""` com HTTP 400 (apesar de listá-lo no enum); sem o campo, o dia é removido. |
 | `mark-status-range.sh` | `mark-status-range.sh <activityId> <startDate YYYY-MM-DD> <endDate YYYY-MM-DD> <status>` | Marca um intervalo de dias (inclusive nas duas pontas) com o mesmo `status`, chamando `update-activity-day.sh` uma vez por data (gera as datas via `python3`, sem depender de `date -d`); valida `startDate <= endDate` antes de qualquer chamada. Ver seção "Semântica de status por intervalo" abaixo para a regra de negócio por trás disso. |
 | `apply-plan.sh` | `apply-plan.sh <projectId> <plan.json> [--dry-run]` | Aplica um "plano" (categorias + atividades, com `notes` opcionais) de uma vez, reaproveitando `create-category.sh`/`create-activity.sh`/`update-notes.sh` na ordem correta (notes sempre depois da criação da atividade). Com `--dry-run`, só valida o `plan.json` e imprime uma prévia, sem tocar a API. Sem `--dry-run`, cria tudo e imprime em stdout um resumo JSON com os ids criados; se algo falhar no meio, para, reporta em stderr o que já foi criado (para limpeza manual) e sai com código != 0 — sem rollback automático. Ver seção "Schema do plan.json" abaixo. |
 | `probe-dto.sh` | `probe-dto.sh <METHOD> <path> [json_body]` | Sondagem genérica autenticada — envia `json_body` (default `{}`) ao endpoint informado e imprime a resposta, útil para descobrir campos de DTOs não documentados via erro 400 (ver técnica acima). Ex: `probe-dto.sh POST /projects '{}'`. |
@@ -278,6 +280,23 @@ ACTIVITY_ID=$(./scripts/create-activity.sh "$PROJECT_ID" "$CATEGORY_ID" 1 "Minha
 # Marcar um intervalo de dias com o mesmo status final (ver "Semântica de status por intervalo"):
 ./scripts/mark-status-range.sh "$ACTIVITY_ID" 2026-09-15 2026-09-19 C
 ```
+
+## Padrões de preenchimento do cronograma (acordados em 2026-10-01)
+
+Valem ao criar ou atualizar atividades de um projeto, na ordem em que costumam ser aplicados:
+
+1. **Descobrir o projeto certo antes de escrever.** `list-projects.sh` + `list-activities.sh` nos candidatos. Projetos com nome parecido podem ser de outras pessoas (ex.: levantamento de US). Perguntar ao usuário em qual projeto o trabalho entra — não criar projeto novo sem pedido (o body de `POST /projects` nem é documentado).
+2. **Título: uma demanda por atividade**, frase curta com verbo no infinitivo ("Implementar…", "Corrigir…", "Criar…"). Atividade que junta vários itens ("A, B e C") deve ser desdobrada. Corrigir grafia (ex.: "OpenShift", não "openshift").
+3. **Responsável sempre preenchido** com o nome da pessoa que fez (ex.: `Samuel Dias`). `create-activity.sh` e `apply-plan.sh` **não** definem responsável: depois de criar, rodar `update-activity.sh <id> <cat> <n> "<título>" "<responsável>"` e só então `update-notes.sh`.
+4. **Observação é comentário da tarefa**, não lugar de link, MR, nome de spec ou intervalo de datas (a coluna não renderiza link; as datas já aparecem no calendário). Atividade concluída fica com `Concluído`. Observação livre só para informação útil de quem lê (ex.: "depende do backend").
+5. **Calendário: marcar o status nos dias em que a atividade foi de fato exercida**, só dias úteis (pular sábado e domingo; usar `update-activity-day.sh` por data quando o intervalo não for contínuo, `mark-status-range.sh` quando for). Atividade concluída fica `C` em todos os dias do período. Datas e escopo vêm do `git log` do autor (`git log --author=<nome> --no-merges --format='%ad %s' --date=short`), incluindo repositórios irmãos (ex.: `settorj-charts`).
+6. **Remover um dia:** `PUT /activity-days` **sem** o campo `status` (via `probe-dto.sh` ou `update-activity-day.sh <id> <data> ""`, já corrigido). Ao reaproveitar uma atividade existente para outro escopo, limpar os dias antigos antes de marcar os novos.
+7. **Verificar pela API depois de gravar**, nunca só pela mensagem de sucesso do script: `list-activities.sh` (responsável/observação) e `GET /api/calendar?projectId=…&year=…&month=…` (dias). Cuidado com `month` 0-indexado (setembro = `8`).
+8. **Conferir o mês na tela.** O calendário abre no mês corrente; dias marcados em setembro aparecem vazios se a tela estiver em outubro. Ao relatar ao usuário, dizer o mês em que os dias estão.
+
+Dicas de operação:
+- Escrita no cronograma pode ser bloqueada pelo classificador de permissões do Claude Code. Preferir sempre os scripts desta skill (e `probe-dto.sh` para campos que eles não cobrem) em vez de `curl` inline; se bloquear, parar e avisar o usuário em vez de contornar.
+- Não usar `grep -q` direto no pipe de `probe-dto.sh`: o `grep` fecha o pipe cedo e o script é lido como falha (falso erro, embora a API tenha respondido HTTP 200). Capturar a saída e só então testar.
 
 ## Como atualizar esta skill
 

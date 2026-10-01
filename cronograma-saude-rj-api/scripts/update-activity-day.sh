@@ -19,11 +19,11 @@ mkdir -p "$(dirname "$COOKIE_JAR")"
 BODY=$(python3 -c '
 import json, sys
 activityId, date, status = sys.argv[1:4]
-print(json.dumps({
-    "activityId": activityId,
-    "date": date,
-    "status": status,
-}))
+body = {"activityId": activityId, "date": date}
+# status "" é rejeitado (HTTP 400); para remover o dia, omite-se o campo status.
+if status:
+    body["status"] = status
+print(json.dumps(body))
 ' "$ACTIVITY_ID" "$DATE" "$STATUS")
 
 echo "Enviando PUT /api/activity-days com body: $BODY" >&2

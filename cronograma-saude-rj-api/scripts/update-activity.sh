@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Uso: update-activity.sh <activityId> <categoryId> <number> <description>
+# Uso: update-activity.sh <activityId> <categoryId> <number> <description> [responsible]
 set -euo pipefail
 
 if [[ $# -lt 4 ]]; then
-  echo "Uso: update-activity.sh <activityId> <categoryId> <number> <description>" >&2
+  echo "Uso: update-activity.sh <activityId> <categoryId> <number> <description> [responsible]" >&2
   exit 1
 fi
 
@@ -11,19 +11,19 @@ ACTIVITY_ID="$1"
 CATEGORY_ID="$2"
 NUMBER="$3"
 DESCRIPTION="$4"
+RESPONSIBLE="${5:-}"
 BASE_URL="https://cronograma.saude.rj.gov.br/api"
 COOKIE_JAR="${CRONOGRAMA_COOKIE_JAR:-$HOME/.cache/cronograma-cookies.txt}"
 mkdir -p "$(dirname "$COOKIE_JAR")"
 
 BODY=$(python3 -c '
 import json, sys
-categoryId, number, description = sys.argv[1:4]
-print(json.dumps({
-    "categoryId": categoryId,
-    "number": int(number),
-    "description": description,
-}))
-' "$CATEGORY_ID" "$NUMBER" "$DESCRIPTION")
+categoryId, number, description, responsible = sys.argv[1:5]
+body = {"categoryId": categoryId, "number": int(number), "description": description}
+if responsible:
+    body["responsible"] = responsible
+print(json.dumps(body))
+' "$CATEGORY_ID" "$NUMBER" "$DESCRIPTION" "$RESPONSIBLE")
 
 echo "Enviando PUT /api/activities/$ACTIVITY_ID com body: $BODY" >&2
 
