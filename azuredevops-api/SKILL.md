@@ -132,47 +132,63 @@ só então rode `export-workitems --ids` com os ids exatos daquele cluster — n
 
 ### Exportação de work items para Markdown
 
-- `ado epics <apelido>` — lista os Epics do projeto (`ID | ESTADO | TÍTULO | nº de US`). Um
-  projeto Azure DevOps costuma reunir vários sistemas (cada um um Epic).
-- **Antes de exportar, SEMPRE perguntar ao usuário qual Epic exportar** (rodar `ado epics` e
-  mostrar a lista). Nunca exportar o projeto inteiro por padrão nem inferir o Epic sozinho;
-  exportar tudo só se o usuário pedir explicitamente. (Erro real: foram exportadas 776 US de
-  todos os sistemas quando o usuário só queria as 143 do Meu-projeto.)
-- Flags do export: `--layout docs` (`.md` em `<destino>/docs/<Feature>/`, assets em
-  `<destino>/assets/`), `--clean` (remove arquivos de export anterior não regravados, via
-  manifesto `.ado-export.json`), `--dry-run` (mostra pastas/contagens sem baixar nem gravar),
-  `--all` (projeto inteiro, só se o usuário pedir). Sem `--epic/--ids/--title-contains/--all` o
-  comando não exporta: lista os Epics e sai com erro. Ao fim valida os links de imagem e lista
-  anexos não baixados — anexo de **outra organização** (ex.: `dev.azure.com/<outra-org>/...` em item
-  migrado) dá 401 com o PAT atual e o link original é mantido no `.md`.
-- `--top`/`--all` em `ado work-items`: resultado acima de `--top` (200) é cortado **com aviso**.
-- **Armadilha WIQL já tratada:** a consulta de descendentes (`WorkItemLinks ... MODE
-  (Recursive)`) devolve também os nós intermediários (Features), mesmo filtrando o tipo no
-  `WHERE`. `--epic` e a contagem do `ado epics` filtram o `System.WorkItemType` depois, em lote.
-  Sintoma de regressão: `.md` de `Tipo: Feature` soltos na raiz do destino, com o mesmo nome
-  das pastas de Feature, e contagem de US maior que a real. Conferir com
-  `grep -L 'Tipo: User Story'` nos `.md` exportados.
-- `ado export-workitems <apelido> <destino> --epic <id> [--type TIPO]` — exporta todas as US
-  descendentes do Epic; o destino já é o Epic (a pasta do Epic é omitida): `<destino>/<Feature>/...`.
-  O `<destino>` relativo é resolvido a partir do diretório onde o comando foi chamado.
-- `ado export-workitems <apelido> <destino> --ids <id1,id2,...>` — exporta uma lista
-  explícita de ids: um `.md` por item na hierarquia de pastas do Azure DevOps,
-  `<destino>/<Epic>/<Feature>/<id>-<slug-do-título>.md` (pais buscados via `System.Parent`;
-  irmãos com título igual ganham ` (<id>)` no nome da pasta; item sem pai vai para
-  `<destino>/Sem Feature/`), com
-  título, tipo, estado, responsável, link, Descrição e Critérios de Aceitação já convertidos
-  de HTML para texto), e baixa as imagens referenciadas nesses campos (anexos do work item)
-  para `<destino>/assets/` (única, na raiz), com os links do markdown reescritos para o
-  caminho relativo certo (`../../assets/<arquivo>` etc., conforme a profundidade).
-  Uso recomendado depois de já ter desambiguado quais ids exportar (ver caixa acima sobre
-  título duplicado entre Features).
-- `ado export-workitems <apelido> <destino> --title-contains <texto> [--type TIPO] [--state
-  ESTADO] [--top N]` — atalho que já resolve os ids via WIQL antes de exportar; só usar
-  quando o filtro não for ambíguo (poucos resultados, sem título repetido entre Features
-  diferentes).
+**Fluxo obrigatório (nunca exportar sem escolher o Epic):**
+1. `ado epics <apelido>` — lista os Epics (`ID | ESTADO | TÍTULO | nº de US`). Um projeto Azure
+   DevOps costuma reunir vários sistemas, cada um um Epic.
+2. **Perguntar ao usuário qual Epic exportar**, mostrando a lista. Nunca inferir o Epic sozinho
+   nem exportar o projeto inteiro por padrão — só com `--all`, se o usuário pedir. (Erro real:
+   foram exportadas 776 US de todos os sistemas quando o usuário só queria as 143 do Meu-projeto.)
+3. (Opcional) `--dry-run` para ver pastas e contagens antes de baixar.
+4. `ado export-workitems <apelido> <destino> --epic <id> --layout docs --clean`.
+
+`ado export-workitems <apelido> <destino> <seletor> [opções]` — sem seletor o comando não
+exporta: lista os Epics e sai com erro.
+
+- **Seletores:** `--epic <id>` (todas as US descendentes; a pasta do Epic é omitida, o destino
+  já é o Epic); `--ids <id1,id2,...>` (lista explícita, depois de desambiguar com `ado tree`);
+  `--title-contains <texto>` (só se o filtro não for ambíguo); `--all`. `--type`/`--state`
+  restringem; padrão `--type "User Story"`. O `<destino>` relativo é resolvido a partir do
+  diretório onde o comando foi chamado.
+- **Hierarquia de pastas do Azure:** `<destino>/<Epic>/<Feature>/<id>-<slug>.md` (pais via
+  `System.Parent`; irmãos com título igual ganham ` (<id>)`; item sem pai vai para
+  `Sem Feature/`). Com `--epic` a pasta do Epic some: `<destino>/<Feature>/...`.
+- **Ordem = a do backlog do Azure:** cada pasta recebe índice `NNN_` pelo `StackRank` (mesma
+  ordem da tela de backlog, desempate por id; numeração contígua entre as pastas exportadas,
+  Features sem item exportado não ocupam número). `--no-order-prefix` desliga. Os arquivos
+  dentro da Feature seguem a ordem do id no nome, não a do backlog.
+- **`--layout docs`:** `.md` em `<destino>/docs/<Feature>/`, assets em `<destino>/assets/`
+  (padrão `flat`: `.md` direto em `<destino>/`). Os links de imagem são relativos ao arquivo
+  (`../../assets/<arquivo>`, conforme a profundidade).
+- **`--clean`:** remove o que o export anterior gravou e este não regravou (US renomeada,
+  movida ou removida), via manifesto `<destino>/.ado-export.json`.
+- **`--dry-run`:** mostra pastas e contagens (itens, imagens) sem baixar anexos nem gravar.
+- **Conteúdo:** título, tipo, estado, responsável, link, Descrição e Critérios de Aceitação.
+  O HTML é convertido por `scripts/html_md.py` (parser real, não regex): listas aninhadas com a
+  numeração do Azure (`1.` / `- a.` / `- i.`, vindas de `list-style`), negrito, itálico, links,
+  quebras de linha e tabelas Markdown. O HTML do Azure põe `<ol>` direto dentro de `<ol>`
+  (depois do `</li>`) — tratado como sublista do item anterior. Markdown não tem lista `a.`/`i.`
+  nativa, por isso a letra/romano vai como texto de um item `- `.
+- **Validação ao fim:** confere todos os links de imagem locais (`N links, 0 quebrados`) e lista
+  os anexos não baixados. Anexo de **outra organização** (ex.: `dev.azure.com/<outra-org>/...` em
+  item migrado) dá 401 com o PAT da organização do apelido; o link original é mantido no `.md`.
+- **Busca em lote:** itens vêm por `workitemsbatch` (200 por chamada), não um GET por item. O
+  GET simples de um work item **não** traz `System.Parent` em `fields`; só o batch com
+  `fields` explícito traz.
+
+**Armadilha WIQL já tratada:** a consulta de descendentes (`WorkItemLinks ... MODE
+(Recursive)`) devolve também os nós intermediários (Features), mesmo filtrando o tipo no
+`WHERE`. `--epic` e a contagem do `ado epics` filtram o `System.WorkItemType` depois, em lote.
+Sintoma de regressão: `.md` de `Tipo: Feature` soltos na raiz do destino, com o mesmo nome das
+pastas de Feature, e contagem de US maior que a real. Conferir com `grep -L 'Tipo: User Story'`
+nos `.md` exportados.
+
+**Tetos:** `ado work-items` corta em `--top` (200) **com aviso** (`--all` traz tudo);
+`ado tree` não tem mais teto de Features.
 
 ```bash
-ado export-workitems meu-projeto ~/dev/meu-projeto --ids 766254,766255,766256,767274,770363,770364,770365,786581,787627
+ado epics meu-projeto
+ado export-workitems meu-projeto US --epic 765941 --layout docs --dry-run
+ado export-workitems meu-projeto US --epic 765941 --layout docs --clean
 ```
 
 ### Exportação de documentação (wiki)
