@@ -2,9 +2,10 @@
 """Conversor HTML (campos de work item do Azure DevOps) -> Markdown, usado por
 export_workitems_helper.py (não é chamado diretamente).
 
-Preserva o que o editor do Azure mostra: listas aninhadas com a numeração do estilo original
-(`list-style: decimal | lower-alpha | lower-roman`), negrito/itálico, links, imagens, tabelas e
-quebras de linha. O HTML do Azure costuma ter `<ol>` filho direto de `<ol>` (depois do `</li>`
+Preserva o que o editor do Azure mostra: listas aninhadas, negrito/itálico, links, imagens,
+tabelas e quebras de linha. A numeração é hierárquica por caminho (1. -> 1.1 -> 1.1.1),
+independente do `list-style` do Azure (a./i./1.): letras e romanos não ordenam nem se
+referenciam bem em texto, o caminho numérico sim. O HTML do Azure costuma ter `<ol>` filho direto de `<ol>` (depois do `</li>`
 anterior) — tratado como sublista do item anterior, que é como o Azure renderiza.
 """
 import re
@@ -46,34 +47,11 @@ class _Tree(HTMLParser):
         self.stack[-1].children.append(data)
 
 
-def _list_style(node):
-    style = node.attrs.get("style", "") or ""
-    m = re.search(r"list-style(?:-type)?:\s*([a-z-]+)", style)
-    if m:
-        return m.group(1)
-    return "disc" if node.tag == "ul" else "decimal"
-
-
-def _label(style, n):
-    if style == "decimal":
-        return f"{n}. "
-    if style in ("lower-alpha", "lower-latin"):
-        return f"- {chr(96 + (n - 1) % 26 + 1)}. "
-    if style == "upper-alpha":
-        return f"- {chr(64 + (n - 1) % 26 + 1)}. "
-    if style in ("lower-roman", "upper-roman"):
-        r = _roman(n)
-        return f"- {r if style == 'lower-roman' else r.upper()}. "
-    return "- "
-
-
-def _roman(n):
-    out = ""
-    for v, s in ((10, "x"), (9, "ix"), (5, "v"), (4, "iv"), (1, "i")):
-        while n >= v:
-            out += s
-            n -= v
-    return out
+def _label(path):
+    """1. no nível raiz; 1.1, 1.1.1... (item de lista com marcador) nos níveis internos."""
+    if len(path) == 1:
+        return f"{path[0]}. "
+    return "- " + ".".join(map(str, path)) + " "
 
 
 def _wrap(marker, s):
@@ -121,7 +99,7 @@ class _Renderer:
         return s
 
     # ---- blocos: devolve lista de linhas
-    def blocks(self, nodes, level):
+    def blocks(self, nodes, level, base=()):
         lines, run = [], []
 
         def flush():
@@ -145,7 +123,7 @@ class _Renderer:
             flush()
             t = n.tag
             if t in ("ol", "ul"):
-                lines += self.list_(n, level)
+                lines += self.list_(n, level, base)
             elif t == "table":
                 lines += [""] + self.table(n) + [""]
             elif t == "hr":
@@ -155,26 +133,27 @@ class _Renderer:
                 if txt:
                     lines += ["", "#" * int(t[1]) + " " + txt, ""]
             elif t == "li":  # <li> fora de lista: trata como item simples
-                lines += self.blocks(n.children, level)
+                lines += self.blocks(n.children, level, base)
             else:  # p, div, blockquote, pre, ...
-                lines += self.blocks(n.children, level)
+                lines += self.blocks(n.children, level, base)
         flush()
         return lines
 
-    def list_(self, node, level):
-        style, count, lines = _list_style(node), 0, []
+    def list_(self, node, level, base=()):
+        count, lines = 0, []
         pad = INDENT * level
         for ch in node.children:
             if isinstance(ch, str):
                 continue
             if ch.tag in ("ol", "ul"):  # sublista filha direta da lista (HTML do Azure)
-                lines += self.list_(ch, level + 1)
+                lines += self.list_(ch, level + 1, base + (count,))
                 continue
             if ch.tag != "li":
                 continue
             count += 1
-            label = _label(style, count)
-            inner = self.blocks(ch.children, level + 1)
+            path = base + (count,)
+            label = _label(path)
+            inner = self.blocks(ch.children, level + 1, path)
             first = True
             for ln in inner:
                 if first and not re.match(r"\s*(\d+\. |- )", ln) is None and ln.startswith(INDENT * (level + 1)):
@@ -229,7 +208,7 @@ def html_to_markdown(raw, image_map=None):
     tree = _Tree()
     tree.feed(raw)
     tree.close()
-    lines = _Renderer(image_map or {}).blocks(tree.root.children, 0)
+    lines = _Renderer(image_map or {}).blocks(tree.root.children, 0, ())
     text = "\n".join(lines)
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text or "(vazio)"
