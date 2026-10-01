@@ -9,7 +9,7 @@
 #   scripts/export-workitems.sh <apelido> <destino-local> --title-contains "<texto>" [opções]
 #   scripts/export-workitems.sh <apelido> <destino-local> --all [opções]   (projeto inteiro)
 # Opções: [--type "User Story"] [--state <estado>] [--top N] [--layout flat|docs]
-#         [--clean] [--dry-run]
+#         [--clean] [--dry-run] [--no-order-prefix]
 #
 # Sem --epic/--ids/--title-contains/--all NADA é exportado: o script lista os Epics do projeto
 # (um projeto costuma reunir vários sistemas) e sai com erro — pergunte ao usuário qual Epic.
@@ -19,6 +19,7 @@
 #   .md direto em <destino>/).
 # --clean: remove arquivos gravados por exportação anterior (manifesto .ado-export.json) que
 #   esta não regravou (US renomeada/movida/removida).
+# Pastas recebem índice NNN_ na ordem do backlog do Azure (StackRank); --no-order-prefix desliga.
 # --dry-run: mostra pastas e contagens (itens, imagens) sem baixar anexos nem gravar nada.
 # --ids: lista explícita (ver "System.Parent" de cada item se houver Features duplicadas).
 # --title-contains: gera ruído em backlogs com título repetido entre Features; prefira --epic.
@@ -31,7 +32,7 @@ source ./lib.sh
 
 ALIAS="${1:-}"; DEST="${2:-}"
 if [ -z "$ALIAS" ] || [ -z "$DEST" ]; then
-    echo "Uso: $0 <apelido> <destino-local> --epic <id> | --ids <id1,...> | --title-contains <texto> | --all [--type TIPO] [--state ESTADO] [--top N] [--layout flat|docs] [--clean] [--dry-run]" >&2
+    echo "Uso: $0 <apelido> <destino-local> --epic <id> | --ids <id1,...> | --title-contains <texto> | --all [--type TIPO] [--state ESTADO] [--top N] [--layout flat|docs] [--clean] [--dry-run] [--no-order-prefix]" >&2
     exit 1
 fi
 shift 2
@@ -47,6 +48,7 @@ ALL=0
 LAYOUT=flat
 CLEAN=0
 DRY_RUN=0
+ORDER_PREFIX=1
 while [ $# -gt 0 ]; do
     case "$1" in
         --epic) EPIC="$2"; shift 2 ;;
@@ -59,6 +61,7 @@ while [ $# -gt 0 ]; do
         --layout) LAYOUT="$2"; shift 2 ;;
         --clean) CLEAN=1; shift ;;
         --dry-run) DRY_RUN=1; shift ;;
+        --no-order-prefix) ORDER_PREFIX=0; shift ;;
         *) echo "Opção desconhecida: $1" >&2; exit 1 ;;
     esac
 done
@@ -105,4 +108,4 @@ ado_batch_all "$BASE_URL" "$IDS" '{"$expand":"all"}' | jq -c '.value[]' | while 
 done
 echo "Baixados $(ls "$TMPDIR"/*.json | wc -l) work item(ns), convertendo..."
 
-ADO_LAYOUT="$LAYOUT" ADO_CLEAN="$CLEAN" ADO_DRY_RUN="$DRY_RUN" ADO_STRIP_EPIC="${EPIC//[^0-9]/}" ADO_PAT="$ADO_PAT" python3 "$(dirname "$0")/export_workitems_helper.py" "$TMPDIR" "$DEST" "$BASE_URL"
+ADO_ORDER_PREFIX="$ORDER_PREFIX" ADO_LAYOUT="$LAYOUT" ADO_CLEAN="$CLEAN" ADO_DRY_RUN="$DRY_RUN" ADO_STRIP_EPIC="${EPIC//[^0-9]/}" ADO_PAT="$ADO_PAT" python3 "$(dirname "$0")/export_workitems_helper.py" "$TMPDIR" "$DEST" "$BASE_URL"

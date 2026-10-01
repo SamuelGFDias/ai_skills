@@ -53,7 +53,8 @@ def fetch_batch(base_url, ids, pat):
     out, ids = {}, list(ids)
     for k in range(0, len(ids), 200):
         body = json.dumps({"ids": ids[k:k + 200],
-                           "fields": ["System.Id", "System.Title", "System.WorkItemType", "System.Parent"]})
+                           "fields": ["System.Id", "System.Title", "System.WorkItemType", "System.Parent",
+                                    "Microsoft.VSTS.Common.StackRank"]})
         req = urllib.request.Request(
             f"{base_url}/_apis/wit/workitemsbatch?api-version=7.1", data=body.encode(),
             headers={"Authorization": f"Basic {token}", "Content-Type": "application/json"})
@@ -72,19 +73,30 @@ def resolve_ancestors(items, base_url, pat):
         todo = {f.get("System.Parent") for f in items.values()} - {None}
 
 
-def folder_names(items):
-    """Nome de pasta por container (não-US); irmãos com o mesmo título ganham o id no nome."""
+def folder_names(items, order_prefix=True):
+    """Nome de pasta por container (itens que são pai de outro).
+
+    Irmãos com o mesmo título ganham o id no nome. Com order_prefix, cada pasta recebe um
+    índice `NNN_` pela ordem do backlog no Azure (Microsoft.VSTS.Common.StackRank, desempate
+    por id) entre as pastas irmãs exportadas — a numeração é contígua, sem lacunas para
+    Features sem itens exportados.
+    """
+    parents = {f.get("System.Parent") for f in items.values()} - {None}
     siblings = {}
     for i, f in items.items():
-        siblings.setdefault(f.get("System.Parent"), []).append(i)
+        if i in parents:
+            siblings.setdefault(f.get("System.Parent"), []).append(i)
     names = {}
     for ids in siblings.values():
         counts = {}
         for i in ids:
-            counts[folder_name(items[i]["System.Title"])] = counts.get(folder_name(items[i]["System.Title"]), 0) + 1
-        for i in ids:
             n = folder_name(items[i]["System.Title"])
-            names[i] = f"{n} ({i})" if counts[n] > 1 else n
+            counts[n] = counts.get(n, 0) + 1
+        ordered = sorted(ids, key=lambda i: (items[i].get("Microsoft.VSTS.Common.StackRank") or float("inf"), i))
+        for pos, i in enumerate(ordered, 1):
+            n = folder_name(items[i]["System.Title"])
+            n = f"{n} ({i})" if counts[n] > 1 else n
+            names[i] = f"{pos:03d}_{n}" if order_prefix else n
     return names
 
 
@@ -114,7 +126,7 @@ def main():
             tree_items[int(d["id"])] = d["fields"]
     exported_ids = set(tree_items)
     resolve_ancestors(tree_items, base_url, pat)
-    names = folder_names(tree_items)
+    names = folder_names(tree_items, os.environ.get("ADO_ORDER_PREFIX", "1") == "1")
 
     if not dry_run:
         dest.mkdir(parents=True, exist_ok=True)
