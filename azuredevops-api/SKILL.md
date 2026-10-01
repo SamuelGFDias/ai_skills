@@ -163,11 +163,12 @@ exporta: lista os Epics e sai com erro.
   movida ou removida), via manifesto `<destino>/.ado-export.json`.
 - **`--dry-run`:** mostra pastas e contagens (itens, imagens) sem baixar anexos nem gravar.
 - **Conteúdo:** título, tipo, estado, responsável, link, Descrição e Critérios de Aceitação.
-  O HTML é convertido por `scripts/html_md.py` (parser real, não regex): listas aninhadas com a
-  numeração do Azure (`1.` / `- a.` / `- i.`, vindas de `list-style`), negrito, itálico, links,
-  quebras de linha e tabelas Markdown. O HTML do Azure põe `<ol>` direto dentro de `<ol>`
-  (depois do `</li>`) — tratado como sublista do item anterior. Markdown não tem lista `a.`/`i.`
-  nativa, por isso a letra/romano vai como texto de um item `- `.
+  O HTML é convertido por `scripts/html_md.py` (parser real, não regex): listas aninhadas com
+  numeração **hierárquica por caminho** (`1.` na raiz, `- 1.1`, `- 1.1.1`...), negrito, itálico,
+  links, quebras de linha e tabelas Markdown. O `list-style` do Azure (`a.`/`i.`/`1.`) é
+  ignorado de propósito: letras e romanos não ordenam nem se citam bem em texto; o caminho
+  numérico sim. O HTML do Azure põe `<ol>` direto dentro de `<ol>` (depois do `</li>`) —
+  tratado como sublista do item anterior, herdando o caminho dele.
 - **Validação ao fim:** confere todos os links de imagem locais (`N links, 0 quebrados`) e lista
   os anexos não baixados. Anexo de **outra organização** (ex.: `dev.azure.com/SES-RJ/...` em
   item migrado) dá 401 com o PAT da organização do apelido; o link original é mantido no `.md`.
