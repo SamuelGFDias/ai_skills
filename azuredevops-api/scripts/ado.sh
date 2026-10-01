@@ -14,6 +14,7 @@ case "$SUB" in
   alias)            exec "$DIR/aliases.sh" "$@" ;;
   work-items)       exec "$DIR/query-workitems.sh" "$@" ;;
   work-item)        exec "$DIR/get-workitem.sh" "$@" ;;
+  epics)            exec "$DIR/list-epics.sh" "$@" ;;
   tree)             exec "$DIR/list-tree.sh" "$@" ;;
   export-workitems) exec "$DIR/export-workitems.sh" "$@" ;;
   wikis)            exec "$DIR/list-wikis.sh" "$@" ;;
@@ -27,10 +28,11 @@ Uso: ado <subcomando> [args...]
   alias list
   alias remove <apelido>
   alias resolve <apelido>
-  work-items <apelido> [--type TIPO] [--state ESTADO] [--title-contains TEXTO] [--top N] [--json]
+  work-items <apelido> [--type TIPO] [--state ESTADO] [--title-contains TEXTO] [--top N|--all] [--json]
   work-item <apelido> <id> [--json]
+  epics <apelido>
   tree <apelido> [--type TIPO-FILHO] [--feature-contains TEXTO]
-  export-workitems <apelido> <destino> --ids <id1,id2,...> | --title-contains <texto> [--type TIPO] [--state ESTADO]
+  export-workitems <apelido> <destino> --epic <id> | --ids <id1,...> | --title-contains <texto> | --all [--type TIPO] [--state ESTADO] [--layout flat|docs] [--clean] [--dry-run]
   wikis <apelido>
   export-wiki <apelido> <path-da-wiki> <destino> [--wiki <NOME>]
 EOF

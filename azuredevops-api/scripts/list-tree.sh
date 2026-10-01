@@ -26,7 +26,7 @@ ado_resolve_alias "$ALIAS"
 ado_load_pat "$ADO_ORG"
 BASE_URL="$(ado_project_url)"
 
-FEATURE_IDS="$(ado_wiql_ids "$BASE_URL" "Feature" "" "$FEATURE_CONTAINS" 200)"
+FEATURE_IDS="$(ado_wiql_ids "$BASE_URL" "Feature" "" "$FEATURE_CONTAINS" 100000)"
 if [ -z "$FEATURE_IDS" ]; then
     echo "Nenhuma Feature encontrada${FEATURE_CONTAINS:+ com título contendo '$FEATURE_CONTAINS'} em $ADO_PROJECT."
     exit 0
@@ -51,7 +51,6 @@ if [ ! -s "$TMPDIR/pairs.tsv" ]; then
 fi
 
 ALL_IDS="$(cut -f1,2 "$TMPDIR/pairs.tsv" | tr '\t' '\n' | sort -un | paste -sd, -)"
-BATCH_BODY="$(jq -n --arg ids "$ALL_IDS" '{ids: ($ids | split(",") | map(tonumber)), fields: ["System.Id","System.Title","System.WorkItemType","System.State"]}')"
-ado_post "${BASE_URL}/_apis/wit/workitemsbatch?api-version=${ADO_API_VERSION}" "$BATCH_BODY" > "$TMPDIR/items.json"
+ado_batch_all "$BASE_URL" "$ALL_IDS" '{"fields":["System.Id","System.Title","System.WorkItemType","System.State"]}' > "$TMPDIR/items.json"
 
 python3 "$(dirname "$0")/print_tree_helper.py" "$TMPDIR/pairs.tsv" "$TMPDIR/items.json" "$CHILD_TYPE"
