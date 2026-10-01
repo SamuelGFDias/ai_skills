@@ -128,6 +128,15 @@ Entidades devem proteger invariantes:
 - Use value objects para isolar um conceito composto que pertence a entidade, mas nao precisa de identidade nem tabela separada, como endereco, contato, coordenada, intervalo ou configuracao embutida.
 - Use collections privadas com exposicao read-only quando a entidade controlar itens filhos.
 
+Metodo de atualizacao parcial (`Apply()`, `Atualizar` etc.) que mistura campos obrigatorios e opcionais: o guard de cada campo codifica "este campo pode ser esvaziado?", nao e decoracao. Classifique cada campo de proposito:
+
+- Obrigatorio: guard `!string.IsNullOrWhiteSpace(x)` — `""` nunca sobrescreve o valor atual.
+- Opcional-limpavel: guard `is not null` — `""` e valor valido e limpa o campo (normalize/`OnlyNumbers()` depois do guard, nao antes).
+
+Copiar o guard de obrigatorio para um campo opcional e bug silencioso: sem excecao, sem erro de validacao, a API devolve 200 e o banco fica inalterado — so o diff contra a linha do banco revela. Ao escrever ou revisar um `Apply()`, nao default em um unico guard para todo campo string.
+
+Diagnostico de "campo editado nao persiste" / "salvou com sucesso mas o valor antigo continua": primeiro confirme a fiacao do request ponta a ponta (nome do `FormControl` -> chave do FormData -> `[FromForm]`/`[FromBody]` -> Command -> parametro da entidade); depois, com a fiacao correta, confira o guard daquele campo no `Apply()`. Fiacao certa e condicao necessaria, nao suficiente.
+
 Nao deixe o dominio ser moldado por necessidades de tela, endpoint ou banco.
 
 ## Infra e persistencia

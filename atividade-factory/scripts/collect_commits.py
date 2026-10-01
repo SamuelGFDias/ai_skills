@@ -15,6 +15,11 @@ usuário autenticado.
 Saída: um arquivo <out-dir>/commits/<project_id>.json por projeto com commits (deduplicados
 por sha, sem merge commit trivial), mais <out-dir>/commits/_index.json com nome do projeto,
 contagem e a lista de projetos sem nenhum commit do autor (para não silenciar falso-negativo).
+
+Cada commit leva também `na_default_branch` (bool: o commit já está na branch padrão do projeto)
+e `branches` (lista das branches que o contêm, via /commits/:sha/refs?type=branch), para a
+elegibilidade ser decidida aqui, de forma determinística, antes do agrupamento. Se a consulta de
+refs falhar para um commit, `branches` e `na_default_branch` ficam null (nunca assumir true).
 """
 import argparse
 import json
@@ -58,8 +63,19 @@ def discover_projects(since, host):
     return sorted({e["project_id"] for e in events})
 
 
-def project_name(pid, host):
-    return glab_api(f"projects/{pid}", host=host)[0].get("path_with_namespace", str(pid))
+def project_info(pid, host):
+    info = glab_api(f"projects/{pid}", host=host)[0]
+    return info.get("path_with_namespace", str(pid)), info.get("default_branch")
+
+
+def commit_branches(pid, sha, host):
+    """Branches que contêm o commit; None se a API falhar (não silenciar como 'em nenhuma')."""
+    try:
+        refs = glab_api(f"projects/{pid}/repository/commits/{sha}/refs?type=branch&per_page=100",
+                        host=host, paginate=True)
+    except subprocess.CalledProcessError:
+        return None
+    return sorted(r["name"] for r in refs)
 
 
 def main():
@@ -88,6 +104,7 @@ def main():
     index = {}
     empty_projects = []
     for pid in project_ids:
+        name, default_branch = project_info(pid, args.host)
         commits = glab_api(
             f"projects/{pid}/repository/commits?since={since_iso}{until_param}&all=true&per_page=100",
             host=args.host, paginate=True,
@@ -101,30 +118,35 @@ def main():
             if c["id"] in seen:
                 continue
             seen.add(c["id"])
+            branches = commit_branches(pid, c["id"], args.host)
             deduped.append({
                 "id": c["short_id"],
                 "date": c["created_at"],
                 "title": c["title"],
                 "message": c.get("message", "").strip(),
                 "web_url": c.get("web_url"),
+                "na_default_branch": None if branches is None else default_branch in branches,
+                "branches": branches,
             })
         deduped.sort(key=lambda c: c["date"])
 
-        name = project_name(pid, args.host)
         if not deduped:
             empty_projects.append({"project_id": pid, "name": name})
             continue
 
         with open(os.path.join(out_dir, f"{pid}.json"), "w", encoding="utf-8") as f:
-            json.dump({"project_id": pid, "name": name, "commits": deduped}, f, ensure_ascii=False, indent=2)
-        index[str(pid)] = {"name": name, "commit_count": len(deduped)}
+            json.dump({"project_id": pid, "name": name, "default_branch": default_branch, "commits": deduped},
+                      f, ensure_ascii=False, indent=2)
+        index[str(pid)] = {"name": name, "commit_count": len(deduped),
+                           "fora_da_default_branch": sum(1 for c in deduped if c["na_default_branch"] is not True)}
 
     with open(os.path.join(out_dir, "_index.json"), "w", encoding="utf-8") as f:
         json.dump({"projects_com_commits": index, "projects_sem_commits_do_autor": empty_projects},
                    f, ensure_ascii=False, indent=2)
 
     total = sum(v["commit_count"] for v in index.values())
-    print(f"Total: {total} commits em {len(index)} projeto(s). "
+    fora = sum(v["fora_da_default_branch"] for v in index.values())
+    print(f"Total: {total} commits em {len(index)} projeto(s) ({fora} fora da branch padrão ou sem refs). "
           f"{len(empty_projects)} projeto(s) tocado(s) no período sem commit desse autor "
           f"(ver _index.json — pode indicar e-mail de autor faltando em --emails).")
 

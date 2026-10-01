@@ -56,6 +56,14 @@ Percorra de cima para baixo e pare na primeira linha que casar.
 Evidências para constatar cada estado: `ls .specify specs`, `git status --short`,
 `grep -n 'NEEDS CLARIFICATION\|TODO' specs/*/spec.md`, `specify --version`.
 
+**Checklist é snapshot, não fonte de verdade.** Um `checklists/*.md` audita outro artefato e fica obsoleto
+quando o alvo evolui (ex.: `clarify` rodou depois e resolveu os marcadores, mas o item "sem
+`[NEEDS CLARIFICATION]`" segue desmarcado). Ao constatar o estado do ciclo, nunca ler marcador de
+ambiguidade do checklist: confirmar com o `grep` acima no `spec.md` e comparar `mtime` (`stat -c '%y %n'
+specs/*/spec.md specs/*/checklists/*.md`). Divergiu: o artefato auditado é a verdade e o checklist é stale
+— regenerar com `/speckit.checklist`. Todo item de checklist que afirma estado de outro artefato deve
+registrar o estado auditado (data/hora ou hash do `spec.md` no momento da geração).
+
 ## Caminho curto vs completo
 
 - **Completo (9 passos)** — feature grande, nova área do sistema, mais de uma pessoa envolvida:
@@ -139,6 +147,40 @@ Regra de escolha nesse modo: cada pergunta auto-respondida recebe a opção **co
 cada pergunta auto-respondida e a base da escolha: sem essa lista, "confirmar com humano" vira uma
 releitura atenta do spec em vez de um passo explícito do fluxo.
 
+## Checklist (e outros comandos interativos) em subagente
+
+`/speckit.checklist` abre com perguntas de foco, profundidade e audiência — pressupõe usuário na sessão.
+Subagente sem usuário não deve decidir sozinho se pode pular a etapa:
+
+1. O prompt do orquestrador declara de antemão as respostas previsíveis (foco, profundidade, audiência).
+2. Se o subagente mesmo assim pular a pergunta, registra a decisão e os defaults assumidos de forma
+   visível no cabeçalho do artefato gerado.
+
+Para `clarify`, que tem fluxo próprio, vale a seção anterior.
+
+## Working tree compartilhada e worktrees paralelas
+
+Sem instrução explícita de isolamento, o subagente roda no working tree principal, compartilhado com
+outros subagentes. Regras de segurança desse cenário (nunca `stash`/`reset`/`clean`/`checkout --`/`restore`
+para "limpar" estado sujo) classificam por **efeito** — destrutivo, ou aditivo porém mutante do estado
+git compartilhado —, não pelo nome do subcomando.
+
+- **`/speckit.specify` faz `git checkout -b` implícito** (via `.specify/scripts/bash/create-new-feature.sh`):
+  não perde trabalho, mas troca o HEAD de todo o working tree. Em working tree não isolada, anunciar ao
+  orquestrador/usuário antes de rodar e considerar quem mais está usando a pasta; preferir worktree
+  isolada para criar a spec.
+- **Em worktree paralela, sempre passar `--number` explícito** ao `create-new-feature.sh`. Sem ele o
+  script erra o próximo número: `git branch -a` marca com `+ ` a branch em uso por outra worktree, o
+  `sed` do script não remove esse prefixo e a branch fica fora da contagem — sai `001-*` duplicado em vez
+  de `002-*`. O orquestrador calcula o número a partir de `ls specs/` do working tree principal (maior
+  NNN + 1, somando as features já reservadas por outras worktrees em andamento, `git worktree list`) e o
+  entrega no prompt.
+- **Limpeza de rascunho de `plan.md`/`tasks.md` em worktree sob `.claude/worktrees/`** (`git checkout --`,
+  `rm`) pode disparar falso-positivo do classificador ("Self-Modification") mesmo com autorização no
+  prompt. Não insistir no subagente nem contornar às cegas: a sessão orquestradora verifica diff a diff
+  que o conteúdo a descartar está superado ou preservado em outro lugar (cópia mais completa, patch),
+  roda o comando ela mesma e relata ao usuário o que verificou e o que executou.
+
 ## Regras de ouro
 
 1. **Nunca pular `clarify` com spec ambíguo.** Ambiguidade não resolvida no spec vira decisão
@@ -150,10 +192,14 @@ releitura atenta do spec em vez de um passo explícito do fluxo.
 4. **Artefato é fonte da verdade, não o chat.** Se a decisão não está no `spec.md`/`plan.md`, ela não
    existe para o próximo passo.
 5. **`caminho:símbolo` citado em artefato de design vem de busca no código, não do nome plausível do
-   arquivo.** Verificar por grep antes de escrever a primeira vez — e sobretudo antes de repetir o
-   mesmo fato num segundo artefato (`plan.md`, `contracts/*`, `data-model.md` frequentemente citam a
-   mesma constante/função). O custo de verificar é constante; o custo de corrigir cresce com o número
-   de artefatos que já repetiram o palpite.
+   arquivo.** Verificar em dois passos, que falham independentemente: (1) grep de existência de
+   arquivo + símbolo antes de escrever a primeira vez — e sobretudo antes de repetir o mesmo fato num
+   segundo artefato (`plan.md`, `contracts/*`, `data-model.md` frequentemente citam a mesma
+   constante/função); (2) para toda citação com número de linha (`arquivo:N` ou `arquivo:N-M`), reabrir o
+   arquivo ao concluir (`Read`/`grep -n`) e comparar o conteúdo literal daquela linha com o que a prosa
+   afirma — nunca confiar em `Read` feito muitas mensagens antes: o número escrito de memória erra por
+   off-by-one ou aponta para o arquivo errado mesmo com arquivo e símbolo existentes. O custo de verificar
+   é constante; o custo de corrigir cresce com o número de artefatos que já repetiram o palpite.
 6. **Superfície "configurável" citada em artefato precisa existir no contrato, não só na prosa.** Se
    `data-model.md`/`contracts/` mandam um diagnóstico ou comportamento respeitar um valor configurável
    (limite, default, modo), confirme que esse valor tem propriedade correspondente no tipo público que o
@@ -173,14 +219,25 @@ releitura atenta do spec em vez de um passo explícito do fluxo.
    que interagem) é onde a paráfrase mais estreita: ou a tarefa reafirma a condição completa, ou declara
    explicitamente a redução e aponta a tarefa que fecha a lacuna. Um executor mandado seguir `tasks.md` ao
    pé da letra não tem caminho para corrigir isso sem violar o escopo autorizado.
+9. **"Seguir o padrão do projeto de referência X" inclui a dependência que X usa.** Se X resolve o
+   problema com dependência nomeada (pacote, SDK), `/speckit.plan` a trata como requisito a validar
+   tecnicamente (target framework, versão transitiva) — nunca como opção a descartar por "ainda não
+   instalada"; instalá-la é parte da feature. Incompatibilidade real vira risco/pergunta ao usuário
+   antes de qualquer alternativa própria; divergir da referência é decisão do usuário, não decisão
+   silenciosa em `research.md`.
 
 ## Verificação antes de concluir
 
 Releia esta skill contra o artefato que você acabou de produzir — ou antes de delegar a implementação:
 
 - Todo `caminho:símbolo` citado foi verificado por grep, não inferido do nome plausível do arquivo?
+- Toda citação com número de linha (`arquivo:N`, `arquivo:N-M`) foi reaberta agora e a linha literal bate
+  com a prosa? Rodar um script que extrai todo `` `arquivo:N(-M)?` `` dos artefatos gerados e reabre cada
+  um, em vez de confiar na citação feita de memória.
 - Toda superfície citada como "configurável" existe no tipo de contrato público, e não apenas em prosa?
 - Cada tarefa foi confrontada com o texto literal do acceptance scenario que diz satisfazer?
+- Se o plano nasceu de "seguir o padrão de X", toda dependência nomeada de X foi tratada como requisito
+  (ou a divergência foi levada ao usuário), e não descartada em `research.md`?
 - Se houve decisão tomada pelo agente, ela está marcada com autoria e base, e listada no relatório de retorno?
 - Se o repo tem `data-model.md`/`contracts/`, eles entraram na varredura do `analyze` (ver
   `docs/comandos.md`), e não só `spec.md`/`plan.md`/`tasks.md`?
