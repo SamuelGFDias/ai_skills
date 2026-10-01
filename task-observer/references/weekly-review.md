@@ -159,6 +159,10 @@ Updated skills ([N] observations, [N] principles applied):
 [items with reasons]
 ```
 
+Also state in the summary that staging is not installation: installing
+into the versioned skills repo is a SEPARATE step, and that repo stays
+clean until then (see "Provenance and installation" below).
+
 Wait for the user to acknowledge before other work.
 
 ## Constraints
@@ -199,3 +203,27 @@ well as files. Do not edit skill files in place — nothing goes live
 until the user installs it. **Keep-two rule:** for any skill, keep only
 the two most recent date directories under `skill-updates/`; delete
 older ones.
+
+### Provenance and installation
+
+Staging lives outside the versioned skills repo by design, so nothing
+links the commit that installs an update to the observations that
+produced it — an unattended review would lose the observation number and
+the reason for each new rule. Close that gap in the same delivery:
+
+- Alongside the bundles, write ONE file,
+  `[workspace folder]/skill-updates/[date]/PROVENANCE.md`, at the root of
+  the date directory — outside every skill directory, so it is never
+  zipped into a bundle or copied into the installed skill. Per skill, list
+  each applied observation as: number, the section/file changed, and one
+  line of why.
+- Tell the user to paste that per-skill summary into the body of the
+  installation commit (the file is deleted with its date directory by the
+  keep-two rule; the commit message is the durable record).
+- Say explicitly in the delivery that installing into the versioned
+  skills repo is a separate step from staging, and that the repo is clean
+  — no diff, nothing to commit — until the user installs. A request such as
+  "commit the skills repo" right after a review presupposes a state the
+  review deliberately leaves unapplied.
+- The never-write-to-the-live-skill rule above is unchanged: provenance is
+  written to staging only.
