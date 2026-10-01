@@ -32,7 +32,7 @@ Uso: ado <subcomando> [args...]
   work-item <apelido> <id> [--json]
   epics <apelido>
   tree <apelido> [--type TIPO-FILHO] [--feature-contains TEXTO]
-  export-workitems <apelido> <destino> --epic <id> | --ids <id1,...> | --title-contains <texto> | --all [--type TIPO] [--state ESTADO] [--layout flat|docs] [--clean] [--dry-run]
+  export-workitems <apelido> <destino> --epic <id> | --ids <id1,...> | --title-contains <texto> | --all [--type TIPO] [--state ESTADO] [--layout flat|docs] [--clean] [--dry-run] [--no-order-prefix]
   wikis <apelido>
   export-wiki <apelido> <path-da-wiki> <destino> [--wiki <NOME>]
 EOF
