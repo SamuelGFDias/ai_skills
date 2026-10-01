@@ -87,5 +87,24 @@ ado_wiql_ids() {
     wiql="SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '${ADO_PROJECT//\'/\'\'}' AND [System.WorkItemType] = '${type//\'/\'\'}' ${state_clause} ${title_clause} ORDER BY [System.ChangedDate] DESC"
     body="$(jq -n --arg q "$wiql" '{query:$q}')"
     ids_json="$(ado_post "${base_url}/_apis/wit/wiql?api-version=${ADO_API_VERSION}" "$body")"
+    local total
+    total="$(printf '%s' "$ids_json" | jq '[.workItems[]?.id] | length' 2>/dev/null || echo 0)"
+    if [ "$total" -gt "$top" ]; then
+        echo "AVISO: resultado truncado — mostrando $top de $total. Use --all (ou --top $total) para trazer tudo." >&2
+    fi
     printf '%s' "$ids_json" | jq -r --argjson top "$top" '[.workItems[]?.id][:$top] | join(",")' 2>/dev/null || true
+}
+
+# POST em lote de ids (limite de 200 por chamada da API). Imprime um JSON {"value":[...]} único.
+# Uso: ado_batch_all <base_url> <ids-csv> <corpo-extra-json ex.: {"fields":[...]} ou {"$expand":"all"}>
+ado_batch_all() {
+    local base_url="$1" ids="$2" extra="$3" chunk body
+    local -a arr
+    IFS=, read -ra arr <<< "$ids"
+    local i
+    for ((i=0; i<${#arr[@]}; i+=200)); do
+        chunk="$(IFS=,; echo "${arr[*]:i:200}")"
+        body="$(jq -n --arg ids "$chunk" --argjson extra "$extra" '{ids: ($ids|split(",")|map(tonumber))} + $extra')"
+        ado_post "${base_url}/_apis/wit/workitemsbatch?api-version=${ADO_API_VERSION}" "$body" | jq -c '.value[]'
+    done | jq -s '{value: .}'
 }

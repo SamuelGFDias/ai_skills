@@ -5,13 +5,13 @@
 #
 # Uso:
 #   scripts/query-workitems.sh <apelido> [--type "User Story"] [--state <estado>] \
-#       [--title-contains <texto>] [--top N] [--json]
+#       [--title-contains <texto>] [--top N|--all] [--json]
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 source ./lib.sh
 
 ALIAS="${1:-}"
-[ -n "$ALIAS" ] || { echo "Uso: $0 <apelido> [--type TIPO] [--state ESTADO] [--title-contains TEXTO] [--top N] [--json]" >&2; exit 1; }
+[ -n "$ALIAS" ] || { echo "Uso: $0 <apelido> [--type TIPO] [--state ESTADO] [--title-contains TEXTO] [--top N|--all] [--json]" >&2; exit 1; }
 shift
 
 TYPE="User Story"
@@ -25,6 +25,7 @@ while [ $# -gt 0 ]; do
         --state) STATE="$2"; shift 2 ;;
         --title-contains) TITLE_CONTAINS="$2"; shift 2 ;;
         --top) TOP="$2"; shift 2 ;;
+        --all) TOP=1000000; shift ;;
         --json) JSON=1; shift ;;
         *) echo "Opção desconhecida: $1" >&2; exit 1 ;;
     esac
