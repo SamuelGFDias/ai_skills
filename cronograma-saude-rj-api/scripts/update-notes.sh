@@ -9,6 +9,12 @@ fi
 
 ACTIVITY_ID="$1"
 NOTES="$2"
+
+if [[ -z "$ACTIVITY_ID" ]]; then
+  echo "Erro: activityId não pode ser vazio." >&2
+  exit 1
+fi
+
 BASE_URL="https://cronograma.saude.rj.gov.br/api"
 COOKIE_JAR="${CRONOGRAMA_COOKIE_JAR:-$HOME/.cache/cronograma-cookies.txt}"
 mkdir -p "$(dirname "$COOKIE_JAR")"

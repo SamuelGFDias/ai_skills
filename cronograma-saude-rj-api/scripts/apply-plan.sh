@@ -1,22 +1,35 @@
 #!/usr/bin/env bash
 # Uso: apply-plan.sh <projectId> <plan.json> [--dry-run]
 #
-# Aplica um "plano" (categorias + atividades, com notes opcionais) de uma vez,
-# reaproveitando create-category.sh / create-activity.sh / update-notes.sh na
-# mesma ordem usada manualmente (notes sempre depois da criação da atividade —
-# ver armadilha do PUT /activities/{id} documentada no SKILL.md).
+# Aplica um "plano" (categorias + atividades, com responsável, notes e dias
+# opcionais) de uma vez, reaproveitando create-category.sh / create-activity.sh /
+# update-activity.sh / update-notes.sh / update-activity-day.sh. Ordem por
+# atividade: criar -> responsável (PUT) -> notes (PATCH) -> dias. O PUT de
+# /activities/{id} zera as notes, por isso as notes vêm sempre depois dele (ver
+# armadilha documentada no SKILL.md).
 #
 # Schema de plan.json:
 # {
+#   "defaultResponsible": "Samuel Dias",                       (opcional)
+#   "defaultDays": [ { "date": "2026-10-01", "status": "A" } ],  (opcional)
 #   "categories": [
 #     {
 #       "name": "Nome da categoria",
 #       "activities": [
-#         { "number": 1, "description": "Descrição da atividade", "notes": "Observação opcional" }
+#         {
+#           "number": 1,
+#           "description": "Descrição da atividade",
+#           "notes": "Observação opcional",
+#           "responsible": "Sobrescreve defaultResponsible (opcional)",
+#           "days": [ { "date": "2026-10-02", "status": "C" } ]   (substitui defaultDays; [] = nenhum)
+#         }
 #       ]
 #     }
 #   ]
 # }
+#
+# Sem responsible (nem default), a atividade fica sem responsável. `status` dos
+# dias aceita F | A | C. Cada data vira uma chamada PUT /activity-days.
 #
 # --dry-run: só valida o plan.json e imprime uma prévia; nenhuma chamada de
 # escrita (POST/PATCH/PUT) é feita à API.
@@ -50,9 +63,33 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Emite uma linha JSON por categoria, já normalizada (notes ausente/null vira
 # ""), ou falha com mensagem clara em stderr e exit != 0 sem chamar a API.
 VALIDATE_PY='
-import json, sys
+import datetime, json, sys
 
 path = sys.argv[1]
+
+
+def parse_days(value, where):
+    if not isinstance(value, list):
+        print(f"Erro: {where} precisa ser uma lista de {{\"date\", \"status\"}}.", file=sys.stderr)
+        sys.exit(1)
+    days = []
+    for di, day in enumerate(value):
+        if not isinstance(day, dict):
+            print(f"Erro: {where}[{di}] precisa ser um objeto.", file=sys.stderr)
+            sys.exit(1)
+        date, status = day.get("date"), day.get("status")
+        try:
+            datetime.date.fromisoformat(date)
+        except (TypeError, ValueError):
+            print(f"Erro: {where}[{di}].date inválida (esperado YYYY-MM-DD): {date!r}", file=sys.stderr)
+            sys.exit(1)
+        if status not in ("F", "A", "C"):
+            print(f"Erro: {where}[{di}].status precisa ser F, A ou C: {status!r}", file=sys.stderr)
+            sys.exit(1)
+        days.append({"date": date, "status": status})
+    return days
+
+
 try:
     with open(path) as f:
         plan = json.load(f)
@@ -71,6 +108,12 @@ categories = plan.get("categories")
 if not isinstance(categories, list) or len(categories) == 0:
     print("Erro: plano precisa ter \"categories\" como lista não vazia.", file=sys.stderr)
     sys.exit(1)
+
+default_responsible = plan.get("defaultResponsible") or ""
+if not isinstance(default_responsible, str):
+    print("Erro: defaultResponsible precisa ser string.", file=sys.stderr)
+    sys.exit(1)
+default_days = parse_days(plan.get("defaultDays", []), "defaultDays")
 
 normalized = []
 for ci, cat in enumerate(categories):
@@ -104,7 +147,16 @@ for ci, cat in enumerate(categories):
         if not isinstance(notes, str):
             print(f"Erro: categories[{ci}].activities[{ai}].notes precisa ser string.", file=sys.stderr)
             sys.exit(1)
-        norm_activities.append({"number": number, "description": description, "notes": notes})
+        responsible = act.get("responsible") or default_responsible
+        if not isinstance(responsible, str):
+            print(f"Erro: categories[{ci}].activities[{ai}].responsible precisa ser string.", file=sys.stderr)
+            sys.exit(1)
+        if "days" in act:
+            days = parse_days(act["days"], f"categories[{ci}].activities[{ai}].days")
+        else:
+            days = default_days
+        norm_activities.append({"number": number, "description": description, "notes": notes,
+                                "responsible": responsible, "days": days})
     normalized.append({"name": name, "activities": norm_activities})
 
 for cat in normalized:
@@ -141,7 +193,10 @@ for i, line in enumerate(sys.stdin, start=1):
             notes_info = " | notes: \"%s\"" % notes
         else:
             notes_info = " | notes: (não seta)"
-        print("  - #%s: %s%s" % (number, description, notes_info))
+        resp_info = " | resp: %s" % act["responsible"] if act["responsible"] else " | resp: (não seta)"
+        days = act["days"]
+        days_info = " | dias: %s" % ",".join("%s=%s" % (d["date"], d["status"]) for d in days) if days else " | dias: (nenhum)"
+        print("  - #%s: %s%s%s%s" % (number, description, notes_info, resp_info, days_info))
 print("[DRY-RUN] Nenhuma chamada de escrita (POST/PATCH/PUT) foi feita à API.")
 '
   echo "$CATEGORIES_JSONL" | python3 -c "$PREVIEW_PY"
@@ -177,6 +232,8 @@ with open(events_path) as f:
                 "description": ev["description"],
                 "id": ev["id"],
                 "notesSet": ev["notesSet"],
+                "responsible": ev["responsible"],
+                "daysSet": ev["daysSet"],
             })
 
 print(json.dumps({"projectId": project_id, "categories": categories}, indent=2, ensure_ascii=False))
@@ -227,6 +284,21 @@ for act in cat["activities"]:
       report_and_exit
     fi
 
+    ACT_RESP=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["responsible"])' "$ACT_JSON")
+    ACT_DAYS=$(python3 -c '
+import json, sys
+for d in json.loads(sys.argv[1])["days"]:
+    print(d["date"] + " " + d["status"])
+' "$ACT_JSON")
+
+    # O PUT zera as notes, então o responsável vem antes das notes.
+    if [[ -n "$ACT_RESP" ]]; then
+      if ! "$SCRIPT_DIR/update-activity.sh" "$ACTIVITY_ID" "$CATEGORY_ID" "$ACT_NUMBER" "$ACT_DESC" "$ACT_RESP" >/dev/null; then
+        echo "Falha ao definir responsável da atividade #$ACT_NUMBER (id $ACTIVITY_ID) na categoria \"$CAT_NAME\". Abortando lote." >&2
+        report_and_exit
+      fi
+    fi
+
     NOTES_SET=false
     if [[ -n "$ACT_NOTES" ]]; then
       if ! "$SCRIPT_DIR/update-notes.sh" "$ACTIVITY_ID" "$ACT_NOTES" >/dev/null; then
@@ -236,6 +308,16 @@ for act in cat["activities"]:
       NOTES_SET=true
     fi
 
+    DAYS_SET=0
+    while read -r DAY_DATE DAY_STATUS; do
+      [[ -z "$DAY_DATE" ]] && continue
+      if ! "$SCRIPT_DIR/update-activity-day.sh" "$ACTIVITY_ID" "$DAY_DATE" "$DAY_STATUS" >/dev/null; then
+        echo "Falha ao marcar $DAY_DATE ($DAY_STATUS) da atividade #$ACT_NUMBER (id $ACTIVITY_ID) na categoria \"$CAT_NAME\". Abortando lote." >&2
+        report_and_exit
+      fi
+      DAYS_SET=$((DAYS_SET + 1))
+    done <<< "$ACT_DAYS"
+
     python3 -c 'import json,sys
 print(json.dumps({
     "type": "activity",
@@ -244,8 +326,10 @@ print(json.dumps({
     "description": sys.argv[3],
     "id": sys.argv[4],
     "notesSet": sys.argv[5] == "true",
+    "responsible": sys.argv[6],
+    "daysSet": int(sys.argv[7]),
 }, ensure_ascii=False))
-' "$CATEGORY_ID" "$ACT_NUMBER" "$ACT_DESC" "$ACTIVITY_ID" "$NOTES_SET" >> "$EVENTS_LOG"
+' "$CATEGORY_ID" "$ACT_NUMBER" "$ACT_DESC" "$ACTIVITY_ID" "$NOTES_SET" "$ACT_RESP" "$DAYS_SET" >> "$EVENTS_LOG"
   done <<< "$ACTIVITIES_JSONL"
 done <<< "$CATEGORIES_JSONL"
 

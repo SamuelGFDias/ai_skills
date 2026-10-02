@@ -11,6 +11,24 @@ PROJECT_ID="$1"
 CATEGORY_ID="$2"
 NUMBER="$3"
 DESCRIPTION="$4"
+
+if [[ -z "$PROJECT_ID" ]]; then
+  echo "Erro: projectId não pode ser vazio." >&2
+  exit 1
+fi
+if [[ -z "$CATEGORY_ID" ]]; then
+  echo "Erro: categoryId não pode ser vazio." >&2
+  exit 1
+fi
+if [[ -z "$NUMBER" ]]; then
+  echo "Erro: number não pode ser vazio." >&2
+  exit 1
+fi
+if [[ -z "$DESCRIPTION" ]]; then
+  echo "Erro: description não pode ser vazio." >&2
+  exit 1
+fi
+
 BASE_URL="https://cronograma.saude.rj.gov.br/api"
 COOKIE_JAR="${CRONOGRAMA_COOKIE_JAR:-$HOME/.cache/cronograma-cookies.txt}"
 mkdir -p "$(dirname "$COOKIE_JAR")"

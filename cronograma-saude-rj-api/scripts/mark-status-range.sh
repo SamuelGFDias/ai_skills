@@ -23,6 +23,11 @@ START_DATE="$2"
 END_DATE="$3"
 STATUS="$4"
 
+if [[ -z "$ACTIVITY_ID" ]]; then
+  echo "Erro: activityId não pode ser vazio." >&2
+  exit 1
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Valida o intervalo (startDate <= endDate) e gera a lista de datas

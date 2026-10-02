@@ -128,10 +128,10 @@ Tags conforme a spec (`/api/docs-json`). Todos exigem sessão autenticada exceto
 | Método | Path | Descrição | Params/Body |
 |---|---|---|---|
 | GET | `/api/projects` | Listar projetos | query `archived` (string, opcional — `"true"` inclui arquivados) |
-| POST | `/api/projects` | Criar projeto | body `CreateProjectDto` (campos não documentados — usar técnica de descoberta acima) |
+| POST | `/api/projects` | Criar projeto | body `CreateProjectDto`: `name` (obrigatório, string de 1 a 200 caracteres) e `description` (opcional) — descoberto via `probe-dto.sh` em 2026-10-02; usar `create-project.sh` |
 | GET | `/api/projects/{id}` | Buscar por ID | path `id` |
 | PUT | `/api/projects/{id}` | Atualizar | path `id`, body `UpdateProjectDto` |
-| DELETE | `/api/projects/{id}` | Excluir | path `id` |
+| DELETE | `/api/projects/{id}` | Excluir | path `id` — devolve **HTTP 500** enquanto o projeto ainda tiver categorias; apagar antes as atividades e as categorias (`DELETE /activities/{id}`, `DELETE /categories/{id}`) e só então o projeto (confirmado em 2026-10-02) |
 | PATCH | `/api/projects/{id}/archive` | Arquivar | path `id` |
 | PATCH | `/api/projects/{id}/restore` | Restaurar | path `id` |
 
@@ -169,6 +169,10 @@ Tags conforme a spec (`/api/docs-json`). Todos exigem sessão autenticada exceto
 | Método | Path | Descrição | Params |
 |---|---|---|---|
 | GET | `/api/audit` | Listar auditoria do projeto | query `projectId` (obrigatório), `offset` (number, opcional), `limit` (number, opcional) |
+
+Resposta: `{"total": N, "items": [...]}`; cada item é uma **mudança de status de dia**: `id`, `activity_id`, `activity_number`, `activity_description`, `date`, `old_status`, `new_status`, `changed_at`, `changed_by`, `batch_id`. Confirmado em 2026-10-02:
+- Só registra operações **em lote** (`POST /activity-days/bulk`, o que a tela faz ao marcar vários dias de uma vez). Os `PUT /activity-days` individuais (`update-activity-day.sh`, `mark-status-range.sh`) **não** aparecem, nem criação/edição/exclusão de atividade ou categoria.
+- `changed_by` vem `unknown` — não dá para atribuir a ação a uma pessoa. Serve para saber *quando* e *quais* dias foram marcados em lote (todos os itens de um lote compartilham `batch_id`), não para descobrir quem excluiu uma atividade.
 
 ### Snapshots
 | Método | Path | Descrição | Params/Body |
@@ -216,7 +220,9 @@ o corpo do erro) se a API responder 4xx/5xx.
 | `update-notes.sh` | `update-notes.sh <activityId> <notes>` | Atualiza a observação/nota de uma atividade (`PATCH /api/activities/{id}/notes`) — **rodar sempre depois** de `update-activity.sh` na mesma atividade (ver armadilha acima). |
 | `update-activity-day.sh` | `update-activity-day.sh <activityId> <date YYYY-MM-DD> <status>` | Atualiza (ou remove, com `status` vazio) o status de um dia de atividade no calendário (`PUT /api/activity-days`); `status` aceita `F`\|`A`\|`C`\|`""`. Com `""` o script omite o campo `status` do body, porque a API rejeita `"status":""` com HTTP 400 (apesar de listá-lo no enum); sem o campo, o dia é removido. |
 | `mark-status-range.sh` | `mark-status-range.sh <activityId> <startDate YYYY-MM-DD> <endDate YYYY-MM-DD> <status>` | Marca um intervalo de dias (inclusive nas duas pontas) com o mesmo `status`, chamando `update-activity-day.sh` uma vez por data (gera as datas via `python3`, sem depender de `date -d`); valida `startDate <= endDate` antes de qualquer chamada. Ver seção "Semântica de status por intervalo" abaixo para a regra de negócio por trás disso. |
-| `apply-plan.sh` | `apply-plan.sh <projectId> <plan.json> [--dry-run]` | Aplica um "plano" (categorias + atividades, com `notes` opcionais) de uma vez, reaproveitando `create-category.sh`/`create-activity.sh`/`update-notes.sh` na ordem correta (notes sempre depois da criação da atividade). Com `--dry-run`, só valida o `plan.json` e imprime uma prévia, sem tocar a API. Sem `--dry-run`, cria tudo e imprime em stdout um resumo JSON com os ids criados; se algo falhar no meio, para, reporta em stderr o que já foi criado (para limpeza manual) e sai com código != 0 — sem rollback automático. Ver seção "Schema do plan.json" abaixo. |
+| `apply-plan.sh` | `apply-plan.sh <projectId> <plan.json> [--dry-run]` | Aplica um "plano" (categorias + atividades, com `notes` opcionais) de uma vez, reaproveitando `create-category.sh`/`create-activity.sh`/`update-activity.sh`/`update-notes.sh`/`update-activity-day.sh`. Ordem por atividade: criar → responsável → notes → dias (notes sempre depois do responsável, porque o `PUT` as zera). Aceita `responsible` e `days` opcionais (ver "Schema do plan.json"). Com `--dry-run`, só valida o `plan.json` e imprime uma prévia, sem tocar a API. Sem `--dry-run`, cria tudo e imprime em stdout um resumo JSON com os ids criados; se algo falhar no meio, para, reporta em stderr o que já foi criado (para limpeza manual) e sai com código != 0 — sem rollback automático. Ver seção "Schema do plan.json" abaixo. |
+| `create-project.sh` | `create-project.sh <name> [description]` | Cria projeto (`POST /api/projects`); imprime o `id` criado em stdout e o JSON completo em stderr. Valida `name` (1 a 200 caracteres) localmente. Só usar quando o usuário pedir projeto novo (ver padrão 1). |
+| `copy-category.sh` | `copy-category.sh <srcProjectId> <categoryName> <dstProjectId> [--months YYYY-MM[,...]] [--dry-run]` | Copia uma categoria de um projeto para outro: categoria, atividades (descrição, responsável, notes) e dias marcados. Monta um plan.json do calendário de origem e aplica com `apply-plan.sh`. Numeração das cópias continua do maior número do destino (a numeração é por projeto). **Só copia os dias dos meses em `--months`** (default: mês corrente) — informar todos os meses com marcação. Aborta sem criar nada se o destino já tiver categoria com o mesmo nome. Não mexe na origem. |
 | `probe-dto.sh` | `probe-dto.sh <METHOD> <path> [json_body]` | Sondagem genérica autenticada — envia `json_body` (default `{}`) ao endpoint informado e imprime a resposta, útil para descobrir campos de DTOs não documentados via erro 400 (ver técnica acima). Ex: `probe-dto.sh POST /projects '{}'`. |
 
 ### Schema do `plan.json` (`apply-plan.sh`)
@@ -244,6 +250,21 @@ de `number` (inteiro) e `description` (string não vazia). `notes` é opcional �
 `""` significa que `update-notes.sh` não é chamado para aquela atividade (a atividade fica sem
 notas, comportamento padrão da API). O `apply-plan.sh` valida esse schema inteiro (com `python3`,
 sem `jq`) antes de fazer qualquer chamada à API, inclusive no modo `--dry-run`.
+
+Campos opcionais para responsável e calendário (todos validados no `--dry-run`):
+
+```json
+{
+  "defaultResponsible": "Samuel Dias",
+  "defaultDays": [{"date": "2026-10-01", "status": "A"}],
+  "categories": [{"name": "Cat", "activities": [
+    {"number": 1, "description": "X"},
+    {"number": 2, "description": "Y", "responsible": "Outra pessoa", "days": [{"date": "2026-10-02", "status": "C"}]}
+  ]}]
+}
+```
+
+`defaultResponsible` e `defaultDays` valem para toda atividade que não definir o próprio `responsible` / `days`; `"days": []` explícito desliga os dias padrão daquela atividade. `status` aceita `F`, `A` ou `C` e `date` precisa ser `YYYY-MM-DD`. Sem responsável (nem padrão), a atividade fica sem responsável.
 
 ### Semântica de status por intervalo (`ActivityDays` / calendário)
 
@@ -285,7 +306,7 @@ ACTIVITY_ID=$(./scripts/create-activity.sh "$PROJECT_ID" "$CATEGORY_ID" 1 "Minha
 
 Valem ao criar ou atualizar atividades de um projeto, na ordem em que costumam ser aplicados:
 
-1. **Descobrir o projeto certo antes de escrever.** `list-projects.sh` + `list-activities.sh` nos candidatos. Projetos com nome parecido podem ser de outras pessoas (ex.: levantamento de US). Perguntar ao usuário em qual projeto o trabalho entra — não criar projeto novo sem pedido (o body de `POST /projects` nem é documentado).
+1. **Descobrir o projeto certo antes de escrever.** `list-projects.sh` + `list-activities.sh` nos candidatos. Projetos com nome parecido podem ser de outras pessoas (ex.: levantamento de US). Perguntar ao usuário em qual projeto o trabalho entra — não criar projeto novo sem pedido, e mesmo com pedido conferir antes se já não existe um para o mesmo fim (em 2026-10-02 foi criado "Fase 2 Settorj" havendo "SETTORJ - Fase 2"; o trabalho teve de ser migrado com `copy-category.sh`). Quando o projeto novo for mesmo necessário, usar `create-project.sh`.
 2. **Título: uma demanda por atividade**, frase curta com verbo no infinitivo ("Implementar…", "Corrigir…", "Criar…"). Atividade que junta vários itens ("A, B e C") deve ser desdobrada. Corrigir grafia (ex.: "OpenShift", não "openshift").
 3. **Responsável sempre preenchido** com o nome da pessoa que fez (ex.: `Samuel Dias`). `create-activity.sh` e `apply-plan.sh` **não** definem responsável: depois de criar, rodar `update-activity.sh <id> <cat> <n> "<título>" "<responsável>"` e só então `update-notes.sh`.
 4. **Observação é comentário da tarefa**, não lugar de link, MR, nome de spec ou intervalo de datas (a coluna não renderiza link; as datas já aparecem no calendário). Atividade concluída fica com `Concluído`. Observação livre só para informação útil de quem lê (ex.: "depende do backend").
@@ -295,6 +316,12 @@ Valem ao criar ou atualizar atividades de um projeto, na ordem em que costumam s
 8. **Conferir o mês na tela.** O calendário abre no mês corrente; dias marcados em setembro aparecem vazios se a tela estiver em outubro. Ao relatar ao usuário, dizer o mês em que os dias estão.
 
 Dicas de operação:
+- **Formato do calendário** (`GET /api/calendar?projectId=…&year=…&month=…`, `month` 0-indexado): `{categories, activities, activityDays, days}`. `activityDays` é um **dicionário** `{"<activityId>_<YYYY-MM-DD>": "<status>"}`, não uma lista; atividades e categorias vêm em `snake_case` (`category_id`). Só devolve os dias do mês pedido.
+- **Numeração das atividades é por projeto**, não por categoria. Ao colocar uma categoria num projeto que já tem atividades, continuar do maior número existente (o `copy-category.sh` faz isso).
+- **Excluir atividade leva os dias junto** (confirmado: não sobram dias órfãos no calendário).
+- Os scripts são `bash`; ao escrever loops de apoio, rodar com `bash arquivo.sh` — no zsh, `read -a` falha com `bad option: -a`.
+- Os scripts que recebem ids (`delete-activity.sh`, `update-activity.sh`, `update-notes.sh`, `update-activity-day.sh`, `create-*`, `list-*`, `mark-status-range.sh`) recusam argumento vazio antes de chamar a API. Antes só havia checagem de quantidade de argumentos, e um `$id` vazio virava `DELETE /api/activities/` (404 por sorte).
+- Em lote que apaga (`delete-activity.sh` em loop), validar o id no código antes de cada chamada e nunca confiar em `awk`/`cut` sem testar a coluna.
 - Escrita no cronograma pode ser bloqueada pelo classificador de permissões do Claude Code. Preferir sempre os scripts desta skill (e `probe-dto.sh` para campos que eles não cobrem) em vez de `curl` inline; se bloquear, parar e avisar o usuário em vez de contornar.
 - Não usar `grep -q` direto no pipe de `probe-dto.sh`: o `grep` fecha o pipe cedo e o script é lido como falha (falso erro, embora a API tenha respondido HTTP 200). Capturar a saída e só então testar.
 
