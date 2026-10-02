@@ -23,6 +23,9 @@ $Missing = @()
 $ClaudeSkillsSynced = $false
 
 function Test-CliExists([string]$Name) {
+    if ($Name -eq "gemini") {
+        return ($null -ne (Get-Command "gemini" -ErrorAction SilentlyContinue) -or $null -ne (Get-Command "agy" -ErrorAction SilentlyContinue))
+    }
     return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue)
 }
 

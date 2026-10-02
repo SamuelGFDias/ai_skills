@@ -102,7 +102,7 @@ EOF
 echo "=== install.sh — detectando CLIs instalados ==="
 
 for cli in claude kilo codex gemini opencode; do
-  if command -v "$cli" >/dev/null 2>&1; then
+  if command -v "$cli" >/dev/null 2>&1 || { [ "$cli" = "gemini" ] && command -v agy >/dev/null 2>&1; }; then
     FOUND+=("$cli")
   else
     MISSING+=("$cli")
