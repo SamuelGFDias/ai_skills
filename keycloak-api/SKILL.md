@@ -1,6 +1,6 @@
 ---
 name: keycloak-api
-description: Consulta e sincroniza a Admin REST API de instâncias Keycloak (token, roles de realm/client, groups, e espelhamento de roles/groups entre dois ambientes como dev→stg) sem que o client_secret seja digitado em texto puro na conversa. Realms e credenciais (client ou user) são cadastrados separadamente — um client/user referencia um realm por alias. Credenciais ficam num arquivo local protegido; scripts nunca imprimem secret ou token. Use quando o usuário pedir para consultar, comparar ou espelhar (replicar) roles/clients/groups entre ambientes Keycloak, ou para cadastrar/editar realms, clients ou usuários dessa skill.
+description: Consulta e sincroniza a Admin REST API de instâncias Keycloak (token, roles de realm/client, groups, e espelhamento de roles/groups entre dois ambientes como dev→stg) sem que o client_secret seja digitado em texto puro na conversa. Realms e credenciais (client ou user) são cadastrados separadamente — um client/user referencia um realm por alias. Credenciais ficam num arquivo local protegido; scripts nunca imprimem secret ou token. Use quando o usuário pedir para consultar, comparar ou espelhar (replicar) roles/clients/groups entre ambientes Keycloak, para cadastrar/editar realms, clients ou usuários dessa skill, ou para planejar/provar um realm de aplicação nova com DNS próprio (Frontend URL do realm, vhost nginx com allowlist, client, Google IdP, tema) na mesma instância.
 ---
 
 # Keycloak API
@@ -286,6 +286,17 @@ source ~/.zshrc   # ou abrir um novo terminal
 ```
 
 Depois disso, `kc <subcomando> ...` funciona em qualquer diretório/shell (ex: `kc token sesrj-dev-biae`).
+
+## Realm para aplicação nova (DNS próprio na mesma instância)
+
+Conhecimento provado num Keycloak local, em `docs/realm-aplicacao-nova.md` (leia antes de planejar): o realm vem do
+caminho e não do Host; o hostname da instância é um só (`KC_HOSTNAME`); um realm novo pode anunciar outro DNS pela
+**Frontend URL do realm**, com um vhost nginx que libera só `/realms/<novo>/` e `/resources/`. Inclui os três caminhos
+(realm novo, segunda instância, hostname dinâmico), o checklist ordenado, o template do vhost, riscos e rollback.
+
+Prova antes de produção: `scripts/testar-realm-dominio-local.sh` (Keycloak e nginx descartáveis, termina em `TUDO OK`).
+Criar realm/client/IdP ainda não tem subcomando `kc`; ações em produção (Keycloak, nginx, DNS, certificado, Google) ficam
+com o usuário.
 
 ## Ao apresentar resultados ao usuário
 
