@@ -102,6 +102,44 @@ Sempre validar o título contra este padrão antes de submeter.
 6. Atribuir milestone após criar, se informado.
 7. Limpeza do arquivo temporário.
 
+## Issues de Spec (Spec-Driven: spec-pai + fatias filhas)
+
+Quando a demanda vem de uma **spec** (`specs/NNN-*/`, GitHub Spec Kit), **não abrir 1 issue para a
+spec inteira**. Usar hierarquia nativa (mesma ideia do core+Tasks da `atividade-factory`, mas
+planejada à frente em vez de registro retroativo):
+
+| Situação da spec | Estrutura |
+|---|---|
+| Tem `tasks.md` | **Issue-pai** = a spec inteira + **1 filha por fatia que agrega valor** (1 PR coeso; nem uma tarefa solta, nem a spec toda). Preferir as fatias/PRs que o próprio `tasks.md` define; agrupar fases pequenas e contíguas, dividir as grandes. |
+| Só tem `spec.md` (sem plan/tasks) | **Issue-pai** + **1 filha "Gerar plano e tarefas"** (`/speckit.plan`, `/speckit.tasks`, `/speckit.analyze`). Ao concluir essa filha, o fluxo exige **abrir as issues de implementação** da spec (filhas por fatia, como na linha acima) sob a mesma pai. |
+| Spec entregue (tasks todas `[x]`) | Não criar issue. |
+
+Só entram tarefas **pendentes** (`- [ ]`). Cada `T###` pendente aparece em **exatamente uma** filha.
+
+### Regras
+
+- **Título do pai:** `[Spec NNN] <Módulo> - Implementar <tema>` (prefixo entre colchetes é a exceção
+  tolerada). **Título das filhas:** padrão normal `Módulo - Ação ...`, sem prefixo de spec.
+- **Labels:** pai = `spec` + `spec:NNN`; filha = `spec:NNN` + tipo (`enhancement`) + `module:*`.
+  A filha "Gerar plano e tarefas" leva também `speckit`.
+- **Corpo da filha (template fixo, não variar entre execuções/subagentes):** `## US` →
+  `## Valor entregue` → `## Tarefas da spec` (caminho do `tasks.md`, fatia e a lista literal
+  `- [ ] T### descrição`) → `## Definition of Done` → `## Dependências`.
+- **Corpo do pai:** link para `spec.md`/`plan.md`/`tasks.md`, resumo, estado (feito × pendente) e
+  `## Definition of Done` (todas as filhas fechadas; `specs/INDEX.md` atualizado; nenhum `- [ ]`
+  restante no `tasks.md`, salvo ações humanas documentadas). **Não repetir** a lista de filhas como
+  texto longo: o widget de sub-issues já a mostra.
+- **Definition of Done da filha — obrigatória em toda filha:** *marcar `[x]` no `tasks.md` as
+  tarefas citadas na issue, **no mesmo commit/PR da solução***. Issue só fecha com isso feito; a
+  filha cita as tarefas justamente para esse vínculo ser verificável.
+- **Fechamento em cascata manual:** quando a última filha fecha, a spec terminou → fechar o pai
+  (atualizando `specs/INDEX.md`). Fechar o pai **não** fecha as filhas automaticamente (conferir
+  que todas estão fechadas antes) e vice-versa.
+- **Anti-duplicata** (passo 2 do fluxo) vale também aqui: buscar por `spec:NNN` e pelos IDs
+  `T###` antes de criar.
+- **Ordem de criação:** pai → filhas (na ordem de implementação) → vincular cada filha ao pai como
+  sub-issue → registrar dependências entre filhas no corpo. Comandos no provider.
+
 ## Fluxo — Adicionar Comentário com Solução
 
 Antes de fechar uma issue, registrar a solução como comentário: commit hash, descrição técnica do

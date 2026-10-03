@@ -128,6 +128,39 @@ gh issue close <numero> -R owner/repo --reason completed
 Ao contrário do GitLab, fechar uma issue no GitHub **não** bloqueia editar milestone ou labels
 depois — não existe o problema de "reabrir para mexer em data" descrito no provider GitLab.
 
+## Fluxo — Issues de Spec (pai + sub-issues nativas)
+
+Padrão genérico no `SKILL.md` ("Issues de Spec"). Sub-issues são nativas do GitHub (REST) e a API
+pede o **id** interno da issue filha (campo `id`), **não** o número:
+
+```bash
+R=owner/repo
+# labels (idempotente)
+gh label create spec --color 5319E7 --description "Issue-pai de uma spec" --force -R $R
+gh label create "spec:016" --color C5B3F2 --description "Spec 016" --force -R $R
+gh label create speckit --color 0E8A16 --description "Gerar plan/tasks via Spec Kit" --force -R $R
+
+# criar e capturar número + id
+URL=$(gh issue create -R $R --title "..." --body-file .tmp/pai.md --label "spec,spec:016" --assignee "@me")
+PAI=${URL##*/}
+URL=$(gh issue create -R $R --title "..." --body-file .tmp/filha.md --label "enhancement,spec:016,module:iam" --assignee "@me")
+FILHA=${URL##*/}
+FILHA_ID=$(gh api repos/$R/issues/$FILHA --jq .id)
+
+# vincular filha ao pai
+gh api repos/$R/issues/$PAI/sub_issues -X POST -F sub_issue_id=$FILHA_ID
+
+# listar / conferir progresso
+gh api repos/$R/issues/$PAI/sub_issues --jq '.[] | "#\(.number) \(.state) \(.title)"'
+gh api repos/$R/issues/$PAI --jq .sub_issues_summary
+```
+
+Dependência entre filhas: texto `Depende de #N` na seção `## Dependências` (opcional: `gh api
+repos/$R/issues/N/dependencies/blocked_by -X POST -F issue_id=<id>`).
+
+Fechar: filha com `gh issue close <n> --reason completed` depois de conferir o `[x]` no
+`tasks.md` do commit; pai só quando `sub_issues_summary` mostrar todas concluídas.
+
 ## Fluxo — Milestones
 
 GitHub só tem `due_on` (data de entrega) nativamente — **não existe campo de `start_date`** para
