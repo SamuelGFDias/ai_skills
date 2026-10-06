@@ -193,3 +193,10 @@ Antes de delegar, o arquiteto confere se os 9 papéis (`executor-mecanico`, `exe
 - **Se não configurado** (tipos ausentes ou rejeitados pelo CLI): **não** tentar contornar sozinho. Identificar qual CLI está em uso, ler `arquiteto/cli/<cli>/models.json` (e `arquiteto/roles/` se preciso) para saber o que falta, e **instruir o usuário** a instalar via `arquiteto/bin/sync-agents.sh` (cria symlinks de `arquiteto/dist/<cli>/` para o diretório real do CLI), explicando que tipos novos ou alterados só aparecem numa sessão nova do CLI. Enquanto não configurado, usar o agente geral disponível (`general-purpose`/`general`) com o modelo mais próximo do papel (conforme `models.json`) e registrar na síntese que a execução ficou no padrão da sessão.
 
 O arquiteto não precisa conhecer a configuração de todos os CLIs de antemão — lê o `models.json` do CLI detectado somente quando constata a ausência dos tipos.
+
+**Precedência de modelo e esforço no Claude Code** (verificado em 2026-10-06, Claude Code 2.1.292; fonte: docs `sub-agents` e `model-config`):
+
+- **Modelo:** `model` passado na chamada `Agent` > `model` do frontmatter do papel > env `CLAUDE_CODE_SUBAGENT_MODEL` > modelo da sessão. Por isso o arquiteto **não** passa `model` na chamada `Agent` com papel tipado — anularia o mapeamento do `models.json`. Constatado nos transcripts: `executor-mecanico` → `claude-haiku-4-5`, `investigador-padrao` → `claude-sonnet-5-5`, com a sessão em `claude-opus-5-5`.
+- **Esforço:** env `CLAUDE_CODE_EFFORT_LEVEL` > `effort` do frontmatter > esforço da sessão (`effortLevel` em `modelSettings` do `settings.json`). Se a env estiver definida, todos os papéis rodam no mesmo esforço — conferir com `env | grep CLAUDE_CODE_` quando o custo divergir do esperado.
+- **Haiku ignora `effort`** (não suporta níveis de esforço) — o `effort: low` do `executor-mecanico` é decorativo enquanto o papel estiver em haiku.
+- **Como observar:** o transcript não registra o esforço; `/tasks` mostra modelo + esforço na linha de cada subagente. O modelo efetivo pode ser extraído do transcript sem lê-lo inteiro: `grep -o '"model":"[^"]*"' <output_file> | sort | uniq -c`.
