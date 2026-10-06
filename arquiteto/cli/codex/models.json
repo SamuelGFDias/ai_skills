@@ -5,5 +5,7 @@
   "executor-critico": { "model": "gpt-5.5", "reasoning": "high", "sandbox": "workspace-write" },
   "investigador-padrao": { "model": "gpt-5.4-mini", "reasoning": "medium", "sandbox": "read-only" },
   "investigador-critico": { "model": "gpt-5.5", "reasoning": "high", "sandbox": "read-only" },
-  "speckit-master": { "model": "gpt-5.4", "reasoning": "high", "sandbox": "read-only" }
+  "speckit-master": { "model": "gpt-5.4", "reasoning": "high", "sandbox": "read-only" },
+  "revisor-padrao": { "model": "gpt-5.4", "reasoning": "medium", "sandbox": "read-only" },
+  "revisor-critico": { "model": "gpt-5.5", "reasoning": "high", "sandbox": "read-only" }
 }
