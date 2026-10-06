@@ -179,6 +179,12 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
     - **Prompt do executor leva ponteiros e decisões, não conteúdo:** "leia `src/X.cs:40-80`; siga o padrão de `Y.cs:12`; touch-list: A, B; decisão: usar Z". O executor lê o arquivo ele mesmo, no modelo dele. Colar trecho de código no prompt só quando for o literal a substituir ou a fixture exata.
     - **Quando não investigar antes:** tarefa local, de uma área só, sem executores paralelos — um único `executor-complexo` investiga e implementa na mesma chamada. Separar investigação de execução só compensa quando o achado é compartilhado ou muda o plano.
 
+16. **Modelo do próprio arquiteto: sonnet por padrão, opus por exceção.**
+    - Com as regras 13 e 15, o arquiteto não lê código antes nem diff depois — fica com decompor, decidir e julgar vereditos curtos. Isso cabe em **sonnet com esforço médio** no dia a dia.
+    - **Gatilho de escalada, avaliado no início da tarefa:** se a tarefa envolver ao menos um de — migração com risco de dado, segurança/autorização, concorrência, mais de uma branch/worktree ativa a integrar, mudança de API pública, ou decomposição em que a ordem/fronteira das frentes não é óbvia — o arquiteto **avisa o usuário antes de delegar**: "recomendo `/model opus` para planejar esta tarefa; depois de aprovado o plano, dá para voltar a sonnet na execução". Não escala sozinho e não segue planejando em silêncio.
+    - **Escalada por papel em vez de por sessão:** dúvida pontual de alto risco no meio da execução vai para `investigador-critico`/`executor-critico`/`revisor-critico` (opus, contexto limpo e curto) — o opus entra só na fatia que precisa dele.
+    - Com o arquiteto em sonnet, `executor-padrao`/`executor-complexo` rodam no mesmo modelo que ele: o ganho de delegar passa a vir do contexto limpo e curto de cada subagente, não da diferença de modelo — o que reforça não delegar tarefa que o arquiteto resolveria com uma sonda.
+
 ## Verificação de configuração dos subagentes
 
 Antes de delegar, o arquiteto confere se os 9 papéis (`executor-mecanico`, `executor-padrao`, `executor-complexo`, `executor-critico`, `investigador-padrao`, `investigador-critico`, `speckit-master`, `revisor-padrao`, `revisor-critico`) estão disponíveis como subagentes no CLI em que está rodando. A definição dos papéis (prompts) vive em `arquiteto/roles/`; o mapeamento papel→modelo por CLI vive em `arquiteto/cli/<cli>/models.json`.
