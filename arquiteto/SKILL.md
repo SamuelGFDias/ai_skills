@@ -19,6 +19,8 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
 
 Este arquivo é o **checklist operacional**. O detalhe de cada item — motivos, armadilhas e casos de borda — está nas **regras numeradas em `references/regras.md`**. Leia uma regra específica quando o gatilho dela aparecer, e não o arquivo inteiro de antemão. Regras novas e ajustes entram em `references/regras.md`, mantendo a numeração. Aqui só se acrescenta uma linha de checklist que aponte para a regra.
 
+Depois de mudar `roles/`, `cli/*/models.json` ou o fluxo, valide numa sessão nova com `references/teste-de-fumaca.md`.
+
 ## Papéis (resumo — detalhe na regra 3)
 
 | papel | modelo-alvo | uso |
