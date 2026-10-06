@@ -41,7 +41,7 @@ Este arquivo é o **checklist operacional**. O detalhe de cada item — motivos,
 4. **Investigar, se compensar** (regras 3 e 15): N `investigador-padrao` em paralelo quando o achado muda a decomposição ou é compartilhado. Tarefa local de uma área só vai direto para um `executor-complexo`.
 5. **Decompor** (regras 2, 7, 9 e 12): mini-tarefas com um critério de pronto cada e touch-list definido por grep, com um agente por área de arquivo. Consolidar o que compartilha contexto.
 6. **Gravar o contrato, se as áreas se encostam** (regra 14): `executor-mecanico` grava `.arquiteto/contrato-<tarefa>.md` antes do lote.
-7. **Disparar os executores** (regras 4, 5 e 10): paralelo quando independentes, sequencial quando dependentes. Prompt com ponteiros e decisões, sem nada colado. Depois do disparo, repassar os endereços dos pares quando houver contrato.
+7. **Disparar os executores** (regras 4, 5, 10 e 17): paralelo quando independentes, sequencial quando dependentes. Prompt com ponteiros e decisões, sem nada colado. Depois do disparo, repassar os endereços dos pares quando houver contrato.
 8. **Conferir o artefato de cada retorno** (regras 6, 8 e 11): `git status --short`, `git diff --stat` contra o touch-list e comparação literal entre o comando pedido e o comando relatado. Em caso de BLOQUEIO, classificar e re-delegar no máximo 2 vezes no mesmo tipo.
 9. **Revisar o lote integrado** (regra 13): `revisor-padrao` ou `revisor-critico` com contexto limpo. Achado `alto`/`medio` vira executor de correção, seguido de re-revisão do trecho corrigido. Lote só mecânico dispensa revisor.
 10. **Rodar o gate completo, uma vez, no arquiteto** (regras 8 e 10): exigir evidência positiva no log, porque exit code não basta. Publicar exige o gate antes do push.
@@ -54,7 +54,7 @@ Este arquivo é o **checklist operacional**. O detalhe de cada item — motivos,
 - [ ] Objetivo, critério de pronto único, touch-list nominal, ref/branch verificado e verificação estreita permitida (regras 5, 7 e 10).
 - [ ] Skill de domínio indicada quando aplicável: `commiter`, `issue-factory`, `vault-factory`, `nuget-factory`, `speckit` (regra 5).
 - [ ] Ponteiros `arquivo:linha` e decisões, nunca conteúdo colado (regra 15).
-- [ ] Contrato de retorno exigido (regra 6).
+- [ ] Contrato de retorno exigido (regra 6). Com papel tipado, uma linha basta (regra 17).
 - [ ] Ação sensível (push, merge, deleção, publicação) só com confirmação do usuário (regra 6).
 
 ## Regras (índice — texto completo em `references/regras.md`)
@@ -75,6 +75,7 @@ Este arquivo é o **checklist operacional**. O detalhe de cada item — motivos,
 14. Contrato primeiro e mensagens entre pares só por protocolo.
 15. O arquiteto sonda e não lê implementação.
 16. Arquiteto em sonnet por padrão e escalada para opus por gatilho.
+17. Prompt enxuto quando o papel tipado já carrega as regras.
 
 ## Verificação de configuração dos subagentes
 
