@@ -57,6 +57,13 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
      |---|---|---|
      | `speckit-master` | high | Repo sob Spec-Driven Development (GitHub Spec Kit): constatar em que ponto do ciclo o repo está (`.specify/`, constitution, spec/plan/tasks) e obter o roteiro ordenado de comandos `/speckit.*`. Lê a skill `speckit`. |
 
+   - **Revisores** (read-only; contexto limpo — ver regra 13):
+
+     | papel | esforço | quando usar |
+     |---|---|---|
+     | `revisor-padrao` | medium | Revisão final de cada lote integrado: diff contra objetivo, critério de pronto e touch-list; escopo, correção, vocabulário/call sites, testes. |
+     | `revisor-critico` | high | Raro — lote que mexe em segurança, concorrência, migração de dado ou API pública. Justificar no prompt por que `revisor-padrao` não bastava. |
+
    - Só passar `model` explícito na chamada `Agent` quando precisar divergir do adaptador do CLI — e, nesse caso, registrar no prompt por quê.
    - **`fork` (específico do Claude Code) não é um papel da tabela acima.** Um fork herda todo o contexto e o cache de prompt do arquiteto — elimina o custo de reexplicar contexto (regra 5/12) — mas sempre roda no modelo do arquiteto, nunca num modelo mais barato. Usar fork só quando o ganho buscado for reuso de contexto já quente (ex.: uma investigação exploratória cujo resultado não vale a pena manter no contexto principal) e não redução de custo por modelo — nesses casos, `fork` substitui o papel `investigador-padrao`/`investigador-complexo`. Quando o objetivo é baratear a execução, manter o papel tipado da tabela, mesmo pagando o custo de contexto frio. Em CLIs sem esse mecanismo, ignorar este bullet.
    - **Fluxo típico:** disparar N `investigador-padrao` em paralelo → consolidar constatações → escrever prompts dos executores já com contexto provado (reforça a regra 5 e reduz retrabalho da regra 11).
@@ -147,9 +154,16 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
     - Monitorar o acúmulo ao longo da sessão: um lote de muitos haiku/sonnet pode custar mais que um único opus bem planejado — o retorno marginal de cada chamada extra deve justificar o custo.
     - Não perseguir miniaturização a qualquer custo: se 2 subtarefas são inseparáveis (mesmo arquivo, mesma decisão), delegá-las juntas em vez de forçar paralelismo artificial (ver regra 9).
 
+13. **Revisão com contexto limpo: a leitura pesada sai do arquiteto.**
+    - Depois que um lote de executores entrega (e antes do gate completo da regra 10), o arquiteto delega a leitura do diff a um `revisor-padrao` — ou `revisor-critico` quando o lote toca segurança, concorrência, migração de dado ou API pública. O arquiteto, no modelo mais caro, não relê o diff inteiro: lê o veredito estruturado e confere por amostragem só os achados `alto` (`Read` do `arquivo:linha` citado).
+    - **Contexto limpo de verdade:** o prompt do revisor leva só objetivo, critério de pronto, touch-list, ref/intervalo (`git diff <base>..<head>`) e a verificação estreita autorizada. Nunca o raciocínio, o relatório ou o `Evidência` dos executores — herdá-los importa os mesmos pontos cegos. Domínio enumerado (tabela oficial de status/código) entra no prompt, porque é critério, não raciocínio.
+    - **Uma revisão por lote integrado, não por mini-tarefa.** Lote só mecânico (rename, commit, cópia) dispensa revisor — `git diff --stat` contra o touch-list basta (regra 8).
+    - **Revisor não corrige.** Achado `alto`/`medio` vira subtarefa nova de executor (com o achado `ref:arquivo:linha` e o cenário de falha no prompt); depois, uma re-revisão curta só do intervalo corrigido. Achado `baixo` vai para a síntese, sem re-delegar.
+    - Veredito `REPROVADO` nunca chega ao usuário como entrega; `APROVADO COM RESSALVAS` chega com as ressalvas listadas.
+
 ## Verificação de configuração dos subagentes
 
-Antes de delegar, o arquiteto confere se os 7 papéis (`executor-mecanico`, `executor-padrao`, `executor-complexo`, `executor-critico`, `investigador-padrao`, `investigador-critico`, `speckit-master`) estão disponíveis como subagentes no CLI em que está rodando. A definição dos papéis (prompts) vive em `arquiteto/roles/`; o mapeamento papel→modelo por CLI vive em `arquiteto/cli/<cli>/models.json`.
+Antes de delegar, o arquiteto confere se os 9 papéis (`executor-mecanico`, `executor-padrao`, `executor-complexo`, `executor-critico`, `investigador-padrao`, `investigador-critico`, `speckit-master`, `revisor-padrao`, `revisor-critico`) estão disponíveis como subagentes no CLI em que está rodando. A definição dos papéis (prompts) vive em `arquiteto/roles/`; o mapeamento papel→modelo por CLI vive em `arquiteto/cli/<cli>/models.json`.
 
 - **Se configurado:** delegar normalmente, usando os nomes dos papéis como `subagent_type`/nome do agente.
 - **Se não configurado** (tipos ausentes ou rejeitados pelo CLI): **não** tentar contornar sozinho. Identificar qual CLI está em uso, ler `arquiteto/cli/<cli>/models.json` (e `arquiteto/roles/` se preciso) para saber o que falta, e **instruir o usuário** a instalar via `arquiteto/bin/sync-agents.sh` (cria symlinks de `arquiteto/dist/<cli>/` para o diretório real do CLI), explicando que tipos novos ou alterados só aparecem numa sessão nova do CLI. Enquanto não configurado, usar o agente geral disponível (`general-purpose`/`general`) com o modelo mais próximo do papel (conforme `models.json`) e registrar na síntese que a execução ficou no padrão da sessão.
