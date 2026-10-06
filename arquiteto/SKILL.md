@@ -161,6 +161,17 @@ Neste modo, o Claude atua exclusivamente como **arquiteto/orquestrador**: entend
     - **Revisor não corrige.** Achado `alto`/`medio` vira subtarefa nova de executor (com o achado `ref:arquivo:linha` e o cenário de falha no prompt); depois, uma re-revisão curta só do intervalo corrigido. Achado `baixo` vai para a síntese, sem re-delegar.
     - Veredito `REPROVADO` nunca chega ao usuário como entrega; `APROVADO COM RESSALVAS` chega com as ressalvas listadas.
 
+14. **Paralelizar com contrato primeiro; mensagem entre pares só por protocolo.**
+    - **Contrato antes do lote.** Quando executores paralelos tocam áreas que se encostam (um produz o que o outro consome), a primeira subtarefa do lote é um `executor-mecanico` gravando `.arquiteto/contrato-<tarefa>.md` com: interfaces entre as áreas (assinaturas, DTOs, rotas, nomes de evento), vocabulário de valores (enums/códigos aceitos), dono de cada área de arquivo e endereço de cada par (preenchido depois do disparo). Todo prompt do lote manda ler o contrato primeiro. O contrato — não a conversa — é a fonte da verdade; `.arquiteto/` entra no `.gitignore` do repo-alvo ou é removido ao final.
+    - **Comunicação entre pares é permitida, mas restrita a três mensagens**, cada uma com uma primeira linha autoexplicativa:
+      1. `CONTRATO <item>: <mudança>` — só o dono da área emite, e **atualiza o arquivo de contrato antes** de mandar;
+      2. `PEDIDO <item>: <o que precisa da área do par>` — pedido, não ordem; o par decide se cabe no próprio touch-list, senão reporta BLOQUEIO ao arquiteto;
+      3. `PRONTO <área>: <artefato/ref>` — a parte do par que o outro consome está disponível.
+      Toda mensagem entre pares vai **com cópia ao arquiteto** (`SendMessage` com `to: "main"`). Proibido: negociar abordagem, redistribuir escopo, pedir que o par edite arquivo fora do touch-list dele, ou repassar ação que o próprio agente não pode executar. Mensagem não é delegação — a regra 4 continua valendo.
+    - **Mecânica constatada no Claude Code** (sondado em 2026-10-06): subagentes têm `SendMessage`, mas **não** têm `ListAgents` — só alcançam o par cujo endereço receberem. O arquiteto só conhece o `agentId` depois do disparo, então: disparar o lote, depois mandar a cada agente os endereços dos pares via `SendMessage` (e registrá-los no contrato). A mensagem só é lida **entre chamadas de ferramenta** de quem recebe; um agente que já terminou é **retomado** pela mensagem (custo de reabrir o contexto dele).
+    - **Não desenhar espera ativa.** Agente parado em loop esperando mensagem gasta chamada à toa. Se B depende de um artefato de A, ou o contrato fixa a interface e B trabalha contra ela sem esperar, ou a dependência é sequencial e B é disparado depois do `PRONTO` de A (regra 2). Mensagem entre pares serve para mudança de contrato e aviso de pronto, não para sincronizar passo a passo.
+    - Em CLIs sem mensageria entre subagentes, o contrato sozinho cumpre o papel: mudança de contrato vira BLOQUEIO reportado ao arquiteto, que repassa.
+
 ## Verificação de configuração dos subagentes
 
 Antes de delegar, o arquiteto confere se os 9 papéis (`executor-mecanico`, `executor-padrao`, `executor-complexo`, `executor-critico`, `investigador-padrao`, `investigador-critico`, `speckit-master`, `revisor-padrao`, `revisor-critico`) estão disponíveis como subagentes no CLI em que está rodando. A definição dos papéis (prompts) vive em `arquiteto/roles/`; o mapeamento papel→modelo por CLI vive em `arquiteto/cli/<cli>/models.json`.
