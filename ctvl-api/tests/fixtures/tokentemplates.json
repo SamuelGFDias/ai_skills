@@ -1,0 +1,35 @@
+{
+  "count": 2,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "idtokentemplate": 2,
+      "name": "SETTORJ_CNS",
+      "tenant": "SETTORJ",
+      "format": "FPE",
+      "charset": "Numeric",
+      "keepleft": 3,
+      "keepright": 0,
+      "irreversible": false,
+      "copyruntdata": false,
+      "allowsmallinput": false,
+      "prefix": null,
+      "datetablenum_status": "ok"
+    },
+    {
+      "idtokentemplate": 1,
+      "name": "SINDRAS_CNS",
+      "tenant": "SINDRAS",
+      "format": "FPE",
+      "charset": "Numeric",
+      "keepleft": 3,
+      "keepright": 0,
+      "irreversible": false,
+      "copyruntdata": false,
+      "allowsmallinput": false,
+      "prefix": "",
+      "datetablenum_status": "ok"
+    }
+  ]
+}
