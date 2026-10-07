@@ -43,17 +43,17 @@ uv tool update-shell     # adiciona ao PATH do usuário
 Verificação:
 
 ```powershell
-specify --version
+specify version
 ```
 
 ## Inicializar um repo (uma vez por repo)
 
 ```bash
-# repo existente, integração Claude Code, sem prompt interativo
-specify init --here --force --non-interactive --integration claude
+# repo existente, integração Claude Code
+specify init --here --force --ai claude
 
 # criar projeto novo
-specify init meu-projeto --integration claude
+specify init meu-projeto --ai claude
 cd meu-projeto
 ```
 
@@ -62,9 +62,11 @@ Flags relevantes:
 | Flag | Efeito |
 |---|---|
 | `--here` | inicializa no diretório atual em vez de criar um novo |
-| `--integration <agente>` | `claude`, `copilot`, ... — define onde os comandos são instalados |
+| `--ai <agente>` | `claude`, `copilot`, ... — define onde os comandos são instalados |
 | `--force` | sobrescreve diretório não vazio |
-| `--non-interactive` | sem prompts (CI, automação, subagente) |
+| `--no-git` | não inicializa repositório git |
+| `--branch-numbering` | estratégia de numeração das branches (`sequential` ou por timestamp) |
+| `--offline` | usa os assets embutidos no CLI; só como alternativa se o download do GitHub falhar (será removido numa versão futura) |
 | `--ignore-agent-tools` | pula a checagem das ferramentas do agente |
 
 O que aparece depois do init: `.specify/` (templates + `memory/`), `.claude/commands/` (os slash
@@ -76,13 +78,12 @@ sessão antes de tentar `/speckit.constitution`.
 ## Atualizar
 
 ```bash
-specify self check              # há versão nova?
-specify self upgrade --dry-run  # o que mudaria
-specify self upgrade            # aplica
-specify self upgrade --tag vX.Y.Z   # fixa numa release
+specify version                                   # versão atual do CLI e do template
+uv tool upgrade specify-cli                       # atualiza o CLI (instalado via uv tool)
+uv tool install specify-cli --force --from git+https://github.com/github/spec-kit.git@vX.Y.Z   # fixa numa release
 ```
 
-Um upgrade pode reescrever templates em `.specify/templates/`. Customizações do projeto devem morar
+Para atualizar os arquivos de um repo já inicializado, rode de novo `specify init --here --force --ai claude`. Um upgrade pode reescrever templates em `.specify/templates/`. Customizações do projeto devem morar
 em `.specify/templates/overrides/`, que tem prioridade sobre os templates core e sobrevive ao upgrade.
 
 Ordem de resolução dos templates, da maior para a menor prioridade:
@@ -99,5 +100,19 @@ Ordem de resolução dos templates, da maior para a menor prioridade:
 | `specify: command not found` após instalar | `~/.local/bin` (ou `%USERPROFILE%\.local\bin`) fora do PATH | `uv tool update-shell` e reabrir o terminal |
 | `/speckit.*` não aparece no Claude Code | sessão anterior ao `init` | reiniciar a sessão do CLI |
 | `init` recusa o diretório | diretório não vazio | `--force` |
-| `init` trava esperando input | picker interativo | `--non-interactive` |
+| `init` trava esperando input | picker interativo de agente | passar `--ai claude` |
+| `--version`, `self check`, `--non-interactive` ou `--integration claude` dão erro | não existem na 0.4.4 | ver a nota de verificação abaixo |
 | customização de template sumiu após upgrade | editou `.specify/templates/` direto | mover para `.specify/templates/overrides/` |
+
+## Nota de verificação
+
+Verificado com specify CLI 0.4.4 (template 1.1.1) em 2026-10-07.
+
+- Subcomandos que existem: `init`, `check`, `version`, `extension`, `preset`.
+- Não existem: `specify --version` (use `specify version`) e `specify self check` / `specify self upgrade`.
+- Flags de `init` que existem: `--ai`, `--ai-skills`, `--ai-commands-dir`, `--script`, `--here`, `--force`, `--no-git`, `--ignore-agent-tools`, `--branch-numbering`, `--preset`, `--offline`, `--skip-tls`, `--debug`, `--github-token`.
+- Não existe `--non-interactive`. `--integration` aparece na ajuda, mas é exclusivo com `--ai` e `--integration claude` não funciona (integração `claude` não registrada); use `--ai claude`.
+- `--offline` avisa que será removido numa versão futura; o padrão é baixar o template do GitHub.
+- O init é aditivo: cria `.specify/` e `.claude/commands/speckit.*.md`, sem sobrescrever `AGENTS.md`, `.gitignore` ou specs existentes. `CLAUDE.md` é criado depois pelo `/speckit.plan`.
+
+A versão do CLI muda: confira `specify init --help` antes de usar um flag novo.
