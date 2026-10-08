@@ -116,6 +116,9 @@ Objetivo: provar que cada usuário enxerga o que deve.
 - O nginx devolve **405** para métodos diferentes de POST na API de dados (`/vts/rest/v2.0/*`); metadados só pela API admin.
 - Erros de login/permissão da admin: 401 = JWT inválido (a skill renova uma vez), 403 = o usuário autenticado não administra o vault (não troque por credencial de dados).
 
+### Integrar uma aplicação (microtoken)
+Quando o pedido é **fazer um app tokenizar/detokenizar** (não administrar o vault), não use a API de dados do CT-VL nem as credenciais `CTVL_*` no app: o time do vault oferece o **microtoken**, uma API HTTP (`POST /tokenize|detokenize/{datatype}`, header `X-API-Key`) na frente do CT-VL. Roteiro completo (perguntas prévias, config, erros 400-504 e retry só em 502/504, o que construir e cliente de referência): `references/microtoken.md`. Esta skill continua sendo o lado admin (templates, máscaras, usuários); o que o app enxerga (datatype, perfil clear/masked da API key) é emitido pelo admin do microtoken. Itens ainda em aberto sobre a ligação entre os dois estão no fim do `references/microtoken.md`.
+
 ## Ao apresentar resultados ao usuário
 - Tabelas (operação, tipo, nome, motivo), nunca JSON bruto nem corpos com senha.
 - Sempre cite a pendência "HABILITAR DETOKENIZE" (e qualquer `CONFLITO` de máscara) e as marcações "a confirmar" que afetaram o resultado.
@@ -175,6 +178,7 @@ ctvl-api/
     endpoints.md                resumo por tag: método, path, finalidade, obrigatórios (gerado)
     schema-config.md            esquema do YAML declarativo, convenção de nomes, herança
     exemplo-config.yaml         defaults + sindras + settorj, sem segredos
+    microtoken.md               como a aplicação consome a tokenização (API microtoken do time do vault)
   tests/
     run-offline-tests.sh        400+ verificações offline (fixtures + servidor falso em loopback)
     fake_ctvl_server.py  pty_setup_env.py  fixtures/
