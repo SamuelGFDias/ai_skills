@@ -2,7 +2,19 @@
 """Servidor FALSO do CT-VL, só para testes offline da skill (loopback). Segue o swagger.
 
  - API admin em /api (JWT fabricado), coleções em memória, paginação limit/offset.
- - `mask` de usuário é somente leitura (como no swagger): só entra por --seed.
+ - `mask` de usuário: o swagger diz readOnly, mas o CT-VL real aceita `PUT /users/{id}` com `mask` = NOME da
+   máscara (medido em DEV, 2026-10-08): 200 e "Mask successfully updated.". O fake imita:
+   * usuário LOCAL (padrão): o PUT exige username e email (400 DRF "This field is required." se faltarem); campo
+     omitido NÃO é alterado (comportamento DRF/JSON: groups, is_staff... ficam como estão);
+   * usuário LDAP (seed `"ldap": true`): aceita o corpo só com `{"mask": nome}`;
+   * máscara inexistente = 400; a releitura devolve sempre o NOME (nunca o id, mesmo com --ref-mode id).
+   Seeds: `"mask_put_noop": true` faz o PUT responder 200 sem gravar (falha fechada); `"put_mutate": {"campo": valor}`
+   faz o PUT gravar também esse campo extra (simula o servidor alterando algo além da máscara);
+   `"put_empties_groups": true` simula um servidor que ESVAZIA `groups` quando o corpo não os traz (PUT completo);
+   por usuário:
+   `"groups": [nomes]` (criados no seed), `"is_staff"`, `"is_superuser"`, `"ldap"`; `"hide_user_fields": [campos]`
+   faz o GET de usuário omitir esses campos (o PUT sem eles dá 400).
+   O rastro dos PUTs de máscara (usuário, nome, corpo) sai em /__test/stats (`mask_puts`, `mask_put_bodies`).
  - --ref-mode name|id define como referências (tenant, key, groups...) são guardadas/devolvidas.
  - API de dados em /vts/rest/v2.0/{tokenize,detokenize} com Basic; erro de negócio = HTTP 200.
 Credenciais admin vêm do ambiente do processo (FAKE_ADMIN_USER / FAKE_ADMIN_PASSWORD).
@@ -36,13 +48,13 @@ COLL = {
 WRITABLE = {
     "keys": ["name", "seedkey"], "charsets": ["name", "alphabet", "predefined", "range"], "groups": ["name"],
     "masks": ["name", "showleft", "showright", "maskchar"],
-    "users": ["username", "email", "password", "is_active", "groups"],
+    "users": ["username", "email", "password", "is_active", "is_staff", "is_superuser", "groups"],
     "tokengroups": ["name", "key"],
     "tokentemplates": ["name", "tenant", "format", "charset", "keepleft", "keepright", "irreversible",
                        "copyruntdata", "allowsmallinput", "prefix", "startyear", "endyear",
                        "daterecordcount", "datetablenum"],
-    "permissions/token/users": ["user", "key", "canPost", "canGet"],
-    "permissions/token/groups": ["group", "key", "canPost", "canGet"],
+    "permissions/token/users": ["user", "key", "asymkey", "opaqueobj", "canPost", "canGet"],
+    "permissions/token/groups": ["group", "key", "asymkey", "opaqueobj", "canPost", "canGet"],
 }
 
 
@@ -61,11 +73,24 @@ class Store:
         self.logins = 0
         self.bad_bearer = 0  # requisições com Bearer que este servidor não emitiu
         self.flaky = seed.get("flaky_first_data_calls", 0) if seed else 0
+        self.mask_put_noop = bool(seed.get("mask_put_noop")) if seed else False
+        self.mask_puts = []  # (username, máscara) de cada PUT de máscara aceito (rastro para os testes)
+        self.mask_put_bodies = []  # [username, corpo] de cada PUT de máscara recebido (aceito ou não)
+        self.put_mutate = dict(seed.get("put_mutate") or {}) if seed else {}
+        self.hide_user_fields = list(seed.get("hide_user_fields") or []) if seed else []  # campos que o GET omite
+        self.put_empties_groups = bool(seed.get("put_empties_groups")) if seed else False
+        self.ldap = set()
         for c in (("Numeric", "0-9", True), ("All printable ASCII", "20-7E", True)):
             self.insert("charsets", {"name": c[0], "alphabet": c[1], "predefined": c[2], "range": True})
         for u in seed.get("users", []) if seed else []:
+            for g in u.get("groups", []):
+                if not self.find("groups", g):
+                    self.insert("groups", {"name": g})
             self.insert("users", {"username": u["username"], "email": u["username"] + "@example.invalid",
-                                  "is_active": True, "groups": []})
+                                  "is_active": True, "is_staff": bool(u.get("is_staff")),
+                                  "is_superuser": bool(u.get("is_superuser")), "groups": list(u.get("groups", []))})
+            if u.get("ldap"):
+                self.ldap.add(u["username"])
             self.passwords[u["username"]] = u["password"]
             if u.get("mask"):
                 self.user_mask[u["username"]] = u["mask"]
@@ -108,11 +133,13 @@ class Store:
                 r[f] = [self.ref_out(target, n) for n in r[f]] if many else self.ref_out(target, r[f])
         if kind == "users":
             r["password"] = "pbkdf2_sha256$600000$fakesalt$fakehashfakehash"
-            r["is_superuser"] = False
-            r["is_staff"] = False
-            r["ldap_user"] = "False"
+            r["is_superuser"] = bool(o.get("is_superuser"))
+            r["is_staff"] = bool(o.get("is_staff"))
+            r["ldap_user"] = o["username"] in self.ldap
             m = self.user_mask.get(o["username"])
-            r["mask"] = (self.ref_out("masks", m) if m else None)
+            r["mask"] = m if m else None  # o CT-VL real devolve o NOME da máscara (medido em DEV)
+            for f in self.hide_user_fields:
+                r.pop(f, None)
         return r
 
 
@@ -161,7 +188,9 @@ def mk_handler(store, admin_user, admin_pw):
                     store.tokens.clear()
                     return self._send(200, {"ok": True})
                 if path == "/__test/stats" and method == "GET":
-                    return self._send(200, {"logins": store.logins, "bad_bearer": store.bad_bearer})
+                    return self._send(200, {"logins": store.logins, "bad_bearer": store.bad_bearer,
+                                            "mask_puts": store.mask_puts,
+                                            "mask_put_bodies": store.mask_put_bodies})
                 if not path.startswith("/api/"):
                     return self._send(404, {"detail": "not found"})
                 p = path[len("/api"):]
@@ -249,6 +278,28 @@ def mk_handler(store, admin_user, admin_pw):
             if method == "DELETE":
                 store.data[kind].remove(obj)
                 return self._send(204, None, raw=b"")
+            if kind == "users" and method == "PUT" and isinstance(body, dict) and "mask" in body:
+                store.mask_put_bodies.append([obj["username"], body])
+                if obj["username"] in store.ldap:
+                    if set(body) != {"mask"}:
+                        return self._send(400, {"detail": "usuário LDAP: o fake só aceita {\"mask\"}"})
+                    canon = {}
+                else:
+                    canon, errors = self.validate(kind, body)  # usuário local: username e email obrigatórios
+                    if errors:
+                        return self._send(400, errors)
+                name = body["mask"]
+                if not isinstance(name, str) or not store.find("masks", name):
+                    return self._send(400, {"mask": ["Invalid mask: %r" % (name,)]})
+                if not store.mask_put_noop:
+                    canon.pop("password", None)
+                    if store.put_empties_groups and obj["username"] not in store.ldap:
+                        canon.setdefault("groups", [])  # servidor simulado de PUT completo: sem `groups`, esvazia
+                    obj.update(canon)
+                    obj.update(store.put_mutate)
+                    store.user_mask[obj["username"]] = name
+                    store.mask_puts.append((obj["username"], name))
+                return self._send(200, "Mask successfully updated.")
             if method in ("PUT", "PATCH"):
                 canon, errors = self.validate(kind, body)
                 if errors:

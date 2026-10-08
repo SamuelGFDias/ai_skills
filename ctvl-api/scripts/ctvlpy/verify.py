@@ -43,7 +43,7 @@ def pick_users(D, sistema, datatype, tokenize_user=None):
     for nome in sorted(D.items["usuarios"]):
         u = D.items["usuarios"][nome]
         cn = u.get("convencao_nome") or {}
-        if cn.get("sistema") != sistema or cn.get("datatype") not in (datatype, "svc"):
+        if cn.get("sistema") != sistema or cn.get("datatype") not in (datatype, "svc", "total"):
             continue
         perm = next((p for p in D.items["permissoes_usuarios"].values() if p["usuario"] == nome), None)
         users.append((u, perm))

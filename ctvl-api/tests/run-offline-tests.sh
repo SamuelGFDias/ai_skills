@@ -14,6 +14,9 @@ cleanup() {
   rm -rf "$WORK"
 }
 trap cleanup EXIT
+# A suíte confere o texto COMPLETO de plan/apply: todas as seções rodam em modo verbose. A seção 12 testa o formato
+# compacto (padrão) removendo/zerando a variável nos casos que precisam dele.
+export CTVL_VERBOSE=1
 
 PASS=0
 FAIL=0
@@ -46,6 +49,12 @@ expect_rc 0 "names: usuário conforme" "$CTVL" names sindras_cns settorj_cns_3_l
 has "settorj +cns +3_left" "names extrai sistema/datatype/esquema"
 expect_rc 1 "names: fora do padrão é reportado (não ignorado)" "$CTVL" names ctvl_cpf_total admin
 has "FORA DO PADRÃO.*ctvl" "names aponta o sistema desconhecido"
+expect_rc 0 "names: sindras_total (reservado, sem aviso)" "$CTVL" names sindras_total
+hasnt "FORA DO PADRÃO" "sindras_total não é fora do padrão"
+expect_rc 1 "names: total em máscara é fora do padrão" "$CTVL" names --kind mask total_3_left sindras_total_3_left
+has "FORA DO PADRÃO" "total em máscara avisa"
+expect_rc 1 "names: datatype desconhecido lista reservados" "$CTVL" names sindras_xyz
+has "reservados: svc, total" "mensagem lista os reservados (svc, total)"
 expect_rc 0 "names: máscara cns_3_left" "$CTVL" names --kind mask cns_3_left settorj_cns_3_left
 expect_rc 0 "check-config do exemplo" "$CTVL" check-config --file "$SKILL_DIR/references/exemplo-config.yaml"
 has "BLOQUEIO +templates SINDRAS_CPF" "charset pendente vira bloqueio"
@@ -233,7 +242,7 @@ hasnt "pbkdf2|fakehash|eyJ|$ADMIN_PW|$PW_TOTAL" "export ao vivo sem segredos"
 curl -s -X POST "http://127.0.0.1:$FAKE_PORT/__test/revoke" >/dev/null
 expect_rc 0 "token revogado: renova sozinho e repete" "$CTVL" list fake groups
 has "renovando" "avisou da renovação"
-# a skill não sabe atribuir máscara: o fake segue o swagger (mask somente leitura)
+# máscara de usuário: o fake imita o CT-VL real (PUT /users/{id} só com {"mask": nome}); a seção 11 cobre a atribuição
 expect_rc 0 "verify-mask: tokeniza e detokeniza por usuário" env CTVL_SINDRAS_SVC_TOKENIZE_PASSWORD="$PW_SVC" \
   CTVL_SINDRAS_CPF_3_LEFT_2_RIGHT_PASSWORD="$PW_PARCIAL" CTVL_SINDRAS_CPF_TOTAL_PASSWORD="$PW_TOTAL" \
   "$CTVL" verify-mask fake --file "$WORK/cfg.yaml" --sistema sindras --datatype cpf --sample 52998224725
@@ -663,7 +672,9 @@ sistemas:
 EOF
 expect_rc 0 "plan: usuário novo com máscara" "$CTVL" plan s10 --file "$WORK/cfg-mask.yaml"
 has "CRIAR +perm.usuário +sindras_cpf_3_left_2_right@SINDRAS_KEY.*perfil mascarado: canGet=false.*enable-detokenize" "plano explica o canGet=false"
-has "atribuir a máscara 'cpf_3_left_2_right' \(campo 'mask'" "plano lista a atribuição manual da máscara"
+has "CRIAR +usuário +sindras_cpf_3_left_2_right.*depois de criar, lê o usuário, atribui a máscara 'cpf_3_left_2_right'" "plano diz que o apply atribui a máscara (não é pendência manual)"
+hasnt "atribuir a máscara|somente leitura|GUI" "nenhuma pendência manual de atribuição de máscara"
+has "usuário novo: o apply cria e atribui a máscara; falta rodar o enable-detokenize" "motivo do canGet=false reflete que o apply atribui e falta o enable"
 has "HABILITAR DETOKENIZE pendente: rode .ctvl enable-detokenize <ambiente> sindras_cpf_3_left_2_right" "plano lista o enable-detokenize pendente"
 OUT="$("$CTVL" apply s10 --file "$WORK/cfg-mask.yaml" --yes 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ]; then ok "apply com máscara pendente"; else bad "N3 apply (rc=$rc)" "$OUT"; fi
@@ -728,7 +739,7 @@ def perm_false(rows):
 edit("fx-ok", "permissions__token__users.json", perm_false)
 EOF
 expect_rc 0 "plan: máscara DIFERENTE atribuída (mostra tudo) não promove o detokenize" "$CTVL" plan --offline --state-dir "$WORK/fx-wrong" --file "$WORK/e1.yaml"
-has "MANUAL +usuário +sindras_cns_3_left" "usuário com outra máscara é MANUAL"
+has "CONFLITO +usuário +sindras_cns_3_left.*já tem a máscara 'legacy_mask', diferente da declarada 'cns_3_left'" "usuário com outra máscara é CONFLITO (o apply não sobrescreve)"
 has "ATUALIZAR +perm.usuário +sindras_cns_3_left@SINDRAS_KEY" "a permissão é rebaixada"
 hasnt "False' -> True|: False -> True" "nunca propõe canGet false -> true"
 has "a máscara atual 'legacy_mask' difere da declarada 'cns_3_left'" "mensagem clara: máscara atual difere da declarada"
@@ -756,9 +767,14 @@ post s13 /masks/ '{"name":"cpf_aberta","showleft":11,"showright":0,"maskchar":"*
 post s13 /permissions/token/users/ '{"user":"sindras_cpf_3_left_2_right","key":"SINDRAS_KEY","canPost":false,"canGet":true}'
 expect_rc 0 "plan ao vivo: usuário com a máscara aberta e canGet=true" "$CTVL" plan s13 --file "$WORK/cfg-mask.yaml"
 has "a máscara atual 'cpf_aberta' difere da declarada 'cpf_3_left_2_right'" "plano ao vivo explica a divergência"
+has "CONFLITO +usuário +sindras_cpf_3_left_2_right" "a máscara errada atribuída é CONFLITO"
 OUT="$("$CTVL" apply s13 --file "$WORK/cfg-mask.yaml" --yes 2>&1)"; rc=$?
-if [ "$rc" -eq 0 ]; then ok "apply --yes com máscara errada atribuída"; else bad "9.1 apply (rc=$rc)" "$OUT"; fi
-has "EXECUTA +PUT /permissions/token/users/" "a permissão é rebaixada"
+if [ "$rc" -eq 3 ]; then ok "apply --yes sem --skip-blocked aborta no CONFLITO de máscara"; else bad "9.1 apply sem skip (rc=$rc)" "$OUT"; fi
+hasnt "EXECUTA" "nada foi escrito no abort"
+OUT="$("$CTVL" apply s13 --file "$WORK/cfg-mask.yaml" --yes --skip-blocked 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then ok "apply --yes --skip-blocked com máscara errada atribuída"; else bad "9.1 apply (rc=$rc)" "$OUT"; fi
+hasnt "EXECUTA +PUT /users/" "o usuário em CONFLITO não é tocado"
+has "EXECUTA +PUT /permissions/token/users/" "a permissão é rebaixada mesmo com o usuário em CONFLITO"
 OUT="$("$CTVL" admin s13 GET /permissions/token/users/ --all 2>/dev/null)"
 if printf '%s' "$OUT" | python3 -c '
 import json, sys
@@ -1175,6 +1191,740 @@ en_setup s33 cpf_3_left_2_right 2 g_det
 expect_rc 3 "(d) grupo do usuário com canGet=true" enable s33 "$MASKED" --yes
 has "\(d\) o grupo 'g_det' do usuário tem canGet=true" "mensagem (d)"
 if [ "$(canget s33 /permissions/token/users/ user "$MASKED")" = "false" ]; then ok "(d) nada foi escrito"; else bad "(d) escreveu"; fi
+
+echo "== 11. o apply atribui a máscara declarada (GET + PUT /users/{id} com username e email atuais + mask)"
+umask() { # <apelido> <usuário> -> máscara do usuário no vault (vazio = sem máscara)
+  "$CTVL" admin "$1" GET /users/ --all 2>/dev/null | python3 -c '
+import json, sys
+rows = [r for r in json.load(sys.stdin) if r.get("username") == sys.argv[1]]
+print((rows[0].get("mask") or "") if rows else "ausente")' "$2"
+}
+mask_puts() { # <apelido> -> quantos PUT de máscara o servidor falso aceitou
+  curl -s "http://127.0.0.1:$(sed -n "s/^$1\.HOST=127.0.0.1://p" "$CTVL_CREDENTIALS_FILE" | tail -1)/__test/stats" \
+    | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["mask_puts"]))'
+}
+seed_users() { # <arquivo> <mask_put_noop true|false> [usuário[:máscara] ...]
+  python3 - "$@" <<'PYEOF'
+import json, secrets, sys
+out, noop, users = sys.argv[1], sys.argv[2] == "true", sys.argv[3:]
+rows = []
+for u in users:
+    name, _, mask = u.partition(":")
+    row = {"username": name, "password": secrets.token_hex(12)}
+    if mask:
+        row["mask"] = mask
+    rows.append(row)
+json.dump({"mask_put_noop": noop, "users": rows}, open(out, "w"))
+PYEOF
+}
+vault_base() { # <apelido> [sim = cria também a máscara]
+  post "$1" /keys/ '{"name":"SINDRAS_KEY"}'
+  if [ "${2:-nao}" = "sim" ]; then post "$1" /masks/ '{"name":"cpf_3_left_2_right","showleft":3,"showright":2,"maskchar":"*"}'; fi
+}
+
+echo "-- 11.A usuário NOVO mascarado: o apply cria, atribui, relê"
+seed_users "$WORK/seed-11a.json" false
+new_server s40 "$WORK/seed-11a.json"
+vault_base s40
+OUT="$("$CTVL" apply s40 --file "$WORK/cfg-mask.yaml" --yes 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then ok "apply cria o usuário mascarado e atribui a máscara"; else bad "11.A apply (rc=$rc)" "$OUT"; fi
+has "EXECUTA +POST /users/ .*usuário sindras_cpf_3_left_2_right" "o usuário é criado"
+has "EXECUTA +PUT /users/[0-9]+ \(usuário sindras_cpf_3_left_2_right: atribui a máscara\) +corpo=\{'username': 'sindras_cpf_3_left_2_right', 'email': '[^']+', 'mask': 'cpf_3_left_2_right'\}" "PUT mínimo: username e email atuais (lidos do GET) + mask"
+hasnt "EXECUTA +PUT /users/[0-9]+.*(password|ldap_user|'id'|is_active|is_staff|is_superuser|groups)" "o PUT de máscara não envia password, id, ldap_user, flags nem groups"
+has "releitura confirma mask=cpf_3_left_2_right" "o apply relê e confere"
+has "0 ação" "replanejamento sem pendências"
+hasnt "atribuir a máscara|somente leitura" "sem pendência manual de atribuição"
+has "HABILITAR DETOKENIZE pendente: rode .ctvl enable-detokenize <ambiente> $MASKED" "a pendência do enable-detokenize continua listada"
+hasnt "atribuída manualmente" "e não fala mais em atribuição manual"
+if [ "$(umask s40 "$MASKED")" = "cpf_3_left_2_right" ]; then ok "vault: usuário novo ficou com a máscara declarada"; else bad "11.A vault sem a máscara"; fi
+if [ "$(umask s40 sindras_cpf_total)" = "" ]; then ok "usuário sem máscara declarada continua sem máscara"; else bad "11.A usuário total ganhou máscara"; fi
+if [ "$(canget s40 /permissions/token/users/ user "$MASKED")" = "false" ]; then ok "vault: o perfil mascarado segue com canGet=false (só o enable-detokenize sobe)"; else bad "11.A canGet do mascarado"; fi
+if printf '%s\n' "$OUT" | grep "EXECUTA.*$MASKED@" | grep -q "'canGet': True"; then bad "11.A: o apply enviou canGet=true para o mascarado"; else ok "nenhum corpo do apply com canGet=true para o mascarado"; fi
+OUT="$("$CTVL" apply s40 --file "$WORK/cfg-mask.yaml" --yes 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then ok "apply repetido"; else bad "11.A apply repetido (rc=$rc)" "$OUT"; fi
+has "Nada a aplicar" "idempotente: máscara já correta = nada a fazer"
+hasnt "EXECUTA" "e nenhuma escrita"
+if [ "$(mask_puts s40)" = "1" ]; then ok "o servidor viu um único PUT de máscara em dois applies"; else bad "11.A PUTs de máscara: $(mask_puts s40)"; fi
+
+echo "-- 11.B usuário que JÁ existe sem máscara (+ legados fora do arquivo) e máscara criada no mesmo plano"
+LEG1=ldap_legado_sem_mascara; LEG2=ldap_legado_mascarado
+seed_users "$WORK/seed-11b.json" false "$MASKED" "$LEG1" "$LEG2:cpf_aberta"
+new_server s41 "$WORK/seed-11b.json"
+vault_base s41
+post s41 /permissions/token/users/ '{"user":"'"$MASKED"'","key":"SINDRAS_KEY","canPost":false,"canGet":true}'
+expect_rc 0 "plan: usuário sem máscara, a máscara ainda não existe no vault" "$CTVL" plan s41 --file "$WORK/cfg-mask.yaml"
+has "CRIAR +máscara +cpf_3_left_2_right" "a máscara será criada no mesmo plano"
+has "ATUALIZAR +usuário +$MASKED +atribui a máscara 'cpf_3_left_2_right'" "usuário existente sem máscara vira ATUALIZAR"
+has "mascara: None -> 'cpf_3_left_2_right'" "o diff mostra vazio -> máscara"
+has "ATUALIZAR +perm.usuário +$MASKED@SINDRAS_KEY" "o canGet=true que já existia num usuário ainda sem máscara é rebaixado"
+hasnt "$LEG1|$LEG2" "o plano não menciona usuários fora do arquivo"
+expect_rc 1 "plan --check falha com a atribuição pendente" "$CTVL" plan s41 --file "$WORK/cfg-mask.yaml" --check
+OUT="$("$CTVL" apply s41 --file "$WORK/cfg-mask.yaml" --yes 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then ok "apply atribui a máscara ao usuário existente"; else bad "11.B apply (rc=$rc)" "$OUT"; fi
+has "EXECUTA +POST /masks/" "a máscara é criada antes"
+has "EXECUTA +PUT /users/[0-9]+ +\(usuário sindras_cpf_3_left_2_right\) +corpo=\{'username': 'sindras_cpf_3_left_2_right', 'email': '[^']+', 'mask': 'cpf_3_left_2_right'\}" "PUT /users/{id} com username e email atuais + mask"
+hasnt "EXECUTA +PUT /users/[0-9]+.*(password|ldap_user|'id'|is_active|is_staff|is_superuser|groups)" "o PUT de máscara não envia password, id, ldap_user, flags nem groups"
+has "releitura confirma mask=cpf_3_left_2_right" "relê e confere"
+has "0 ação" "replanejamento sem pendências"
+if [ "$(umask s41 "$MASKED")" = "cpf_3_left_2_right" ]; then ok "vault: máscara atribuída"; else bad "11.B vault"; fi
+if [ "$(canget s41 /permissions/token/users/ user "$MASKED")" = "false" ]; then ok "vault: canGet rebaixado e não promovido"; else bad "11.B canGet"; fi
+if printf '%s\n' "$OUT" | grep "EXECUTA.*$MASKED@" | grep -q "'canGet': True"; then bad "11.B: canGet=true enviado"; else ok "nenhum corpo do apply com canGet=true para o mascarado"; fi
+if [ "$(umask s41 "$LEG1")" = "" ] && [ "$(umask s41 "$LEG2")" = "cpf_aberta" ]; then ok "usuários legados fora do arquivo ficaram intocados"; else bad "11.B legados alterados"; fi
+if [ "$(mask_puts s41)" = "1" ]; then ok "um único PUT de máscara (só o usuário declarado)"; else bad "11.B PUTs de máscara: $(mask_puts s41)"; fi
+OUT="$("$CTVL" apply s41 --file "$WORK/cfg-mask.yaml" --yes 2>&1)"
+has "Nada a aplicar" "idempotente: segundo apply não escreve"
+if [ "$(mask_puts s41)" = "1" ]; then ok "nenhum PUT novo no segundo apply"; else bad "11.B PUT repetido"; fi
+OUT="$("$CTVL" plan s41 --file "$WORK/cfg-mask.yaml" 2>&1)"
+has "OK +usuário +$MASKED" "plan seguinte: usuário OK"
+hasnt "ATUALIZAR" "e nada a atualizar"
+
+echo "-- 11.C máscara diferente da declarada: CONFLITO, o apply não sobrescreve"
+seed_users "$WORK/seed-11c.json" false "$MASKED:cpf_aberta"
+new_server s42 "$WORK/seed-11c.json"
+vault_base s42 sim
+post s42 /masks/ '{"name":"cpf_aberta","showleft":11,"showright":0,"maskchar":"*"}'
+expect_rc 0 "plan: máscara atual diferente da declarada" "$CTVL" plan s42 --file "$WORK/cfg-mask.yaml"
+has "CONFLITO +usuário +$MASKED +o usuário já tem a máscara 'cpf_aberta', diferente da declarada 'cpf_3_left_2_right'.*não sobrescreve" "mensagem clara do CONFLITO"
+has "mascara: 'cpf_aberta' -> 'cpf_3_left_2_right'" "diff atual -> declarada"
+OUT="$("$CTVL" apply s42 --file "$WORK/cfg-mask.yaml" --yes 2>&1)"; rc=$?
+if [ "$rc" -eq 3 ]; then ok "apply sem --skip-blocked aborta"; else bad "11.C apply (rc=$rc)" "$OUT"; fi
+hasnt "EXECUTA" "nada foi escrito"
+OUT="$("$CTVL" apply s42 --file "$WORK/cfg-mask.yaml" --yes --skip-blocked --no-verify 2>&1)"
+hasnt "EXECUTA +PUT /users/" "com --skip-blocked também não sobrescreve a máscara"
+if [ "$(umask s42 "$MASKED")" = "cpf_aberta" ] && [ "$(mask_puts s42)" = "0" ]; then ok "vault: máscara atual preservada"; else bad "11.C máscara sobrescrita"; fi
+
+echo "-- 11.D falha fechada: o PUT responde 200 mas a releitura não mostra a máscara"
+seed_users "$WORK/seed-11d.json" true "$MASKED"
+new_server s43 "$WORK/seed-11d.json"
+vault_base s43 sim
+OUT="$("$CTVL" apply s43 --file "$WORK/cfg-mask.yaml" --yes 2>&1)"; rc=$?
+if [ "$rc" -ne 0 ]; then ok "apply sai com erro (rc=$rc) quando a releitura diverge"; else bad "11.D apply deveria falhar" "$OUT"; fi
+has "ERRO: usuário $MASKED: a releitura mostra mask=None, esperado 'cpf_3_left_2_right'" "erro explícito com o valor lido e o esperado"
+hasnt "EXECUTA +POST /permissions" "parou antes de escrever as permissões"
+seed_users "$WORK/seed-11d2.json" true
+new_server s44 "$WORK/seed-11d2.json"
+vault_base s44 sim
+OUT="$("$CTVL" apply s44 --file "$WORK/cfg-mask.yaml" --yes 2>&1)"; rc=$?
+if [ "$rc" -ne 0 ]; then ok "usuário novo: apply também falha fechado (rc=$rc)"; else bad "11.D usuário novo deveria falhar" "$OUT"; fi
+has "ERRO: usuário $MASKED: a releitura mostra mask=None" "erro explícito"
+hasnt "EXECUTA +POST /permissions" "usuário novo: parou antes das permissões"
+OUT="$("$CTVL" admin s44 PUT "/users/1" --body '{"mask":"nao_existe"}' --yes 2>&1)"; rc=$?
+if [ "$rc" -ne 0 ]; then ok "o fake rejeita máscara inexistente (400)"; else bad "fake aceitou máscara inexistente" "$OUT"; fi
+
+echo "-- 11.E máscara a_confirmar/bloqueada continua bloqueando o usuário"
+mkmask ", status: a_confirmar"
+seed_users "$WORK/seed-11e.json" false "$MASKED"
+new_server s45 "$WORK/seed-11e.json"
+vault_base s45
+expect_rc 0 "plan: máscara a confirmar e usuário existente sem máscara" "$CTVL" plan s45 --file "$WORK/cfg-m.yaml"
+has "BLOQUEADO +usuário +$MASKED" "usuário BLOQUEADO"
+OUT="$("$CTVL" apply s45 --file "$WORK/cfg-m.yaml" --yes --skip-blocked --no-verify 2>&1)"
+hasnt "EXECUTA +PUT /users/" "nenhuma máscara atribuída"
+if [ "$(umask s45 "$MASKED")" = "" ] && [ "$(mask_puts s45)" = "0" ]; then ok "vault: usuário segue sem máscara"; else bad "11.E máscara atribuída"; fi
+
+echo "-- 11.F enable-detokenize: a mensagem manda rodar o apply (não a GUI)"
+seed_users "$WORK/seed-11f.json" false "sindras_svc_tokenize" "$MASKED"
+new_server s46 "$WORK/seed-11f.json"
+vault_base s46 sim
+OUT="$(env CTVL_SINDRAS_CPF_3_LEFT_2_RIGHT_PASSWORD="$PWU" CTVL_SINDRAS_SVC_TOKENIZE_PASSWORD="$PWS" "$CTVL" enable-detokenize s46 "$MASKED" --file "$WORK/cfg-mask.yaml" --yes 2>&1)"; rc=$?
+if [ "$rc" -eq 3 ]; then ok "enable-detokenize recusa usuário ainda sem máscara"; else bad "11.F rc=$rc" "$OUT"; fi
+has "\(b\) o usuário está sem máscara atribuída no vault \(rode .ctvl apply.: ele atribui 'cpf_3_left_2_right'\)" "orienta rodar o apply"
+hasnt "GUI" "sem menção à GUI"
+
+echo "-- 11.G rebaixamento do canGet=true independe do bloqueio do usuário (existente, mascarado, sem máscara)"
+# (i) máscara a_confirmar: o usuário fica BLOQUEADO (não recebe a máscara), mas o canGet=true pré-existente cai para false
+mkmask ", status: a_confirmar"
+seed_users "$WORK/seed-11g.json" false "$MASKED"
+new_server s47 "$WORK/seed-11g.json"
+vault_base s47 sim
+post s47 /permissions/token/users/ '{"user":"'"$MASKED"'","key":"SINDRAS_KEY","canPost":false,"canGet":true}'
+expect_rc 0 "11.G(i) plan: máscara a_confirmar, usuário existente sem máscara, permissão com canGet=true" "$CTVL" plan s47 --file "$WORK/cfg-m.yaml"
+has "BLOQUEADO +usuário +$MASKED" "(i) a ação do usuário continua BLOQUEADO (visibilidade)"
+has "ATUALIZAR +perm.usuário +$MASKED@SINDRAS_KEY" "(i) a permissão é planejada como ATUALIZAR (rebaixamento), não BLOQUEADO"
+has "canGet: True -> False" "(i) o diff é canGet true -> false"
+has "REBAIXAMENTO.*--skip-blocked" "(i) o plano avisa de forma explícita quando o rebaixamento é aplicado"
+OUT="$("$CTVL" apply s47 --file "$WORK/cfg-m.yaml" --yes --skip-blocked --no-verify 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then ok "(i) apply --skip-blocked termina com rc 0"; else bad "11.G(i) apply (rc=$rc)" "$OUT"; fi
+has "EXECUTA +PUT /permissions/token/users/[0-9]+ .*$MASKED@" "(i) o PUT da permissão é executado"
+hasnt "EXECUTA +PUT /users/" "(i) a máscara NÃO é atribuída (usuário BLOQUEADO)"
+if printf '%s\n' "$OUT" | grep "EXECUTA.*$MASKED@" | grep -q "'canGet': True"; then bad "11.G(i): canGet=true enviado ao mascarado"; else ok "(i) nenhum corpo do apply com canGet=true para o mascarado"; fi
+if [ "$(canget s47 /permissions/token/users/ user "$MASKED")" = "false" ]; then ok "(i) vault: canGet rebaixado para false"; else bad "11.G(i) canGet no vault: $(canget s47 /permissions/token/users/ user "$MASKED")"; fi
+if [ "$(umask s47 "$MASKED")" = "" ] && [ "$(mask_puts s47)" = "0" ]; then ok "(i) vault: usuário segue sem máscara"; else bad "11.G(i) máscara atribuída"; fi
+OUT="$("$CTVL" apply s47 --file "$WORK/cfg-m.yaml" --yes --skip-blocked --no-verify 2>&1)"
+hasnt "EXECUTA" "(i) idempotente: o segundo apply não escreve mais nada"
+
+# (ii) máscara inexistente no vault e no arquivo
+cat >"$WORK/cfg-nomask.yaml" <<EOF
+versao: 1
+api:
+  refs: {$REFS_ALL}
+recursos:
+  chaves: [{nome: SINDRAS_KEY}]
+  usuarios: [{nome: $MASKED, email: a@example.invalid, mascara: cpf_inexistente}]
+  permissoes_usuarios: [{usuario: $MASKED, chave: SINDRAS_KEY, tokenize: false, detokenize: true}]
+EOF
+seed_users "$WORK/seed-11g2.json" false "$MASKED"
+new_server s48 "$WORK/seed-11g2.json"
+vault_base s48
+post s48 /permissions/token/users/ '{"user":"'"$MASKED"'","key":"SINDRAS_KEY","canPost":false,"canGet":true}'
+expect_rc 0 "11.G(ii) plan: máscara inexistente no vault e no arquivo" "$CTVL" plan s48 --file "$WORK/cfg-nomask.yaml"
+has "BLOQUEADO +usuário +$MASKED +máscara 'cpf_inexistente' não existe no vault nem está declarada" "(ii) usuário BLOQUEADO pelo motivo certo"
+has "ATUALIZAR +perm.usuário +$MASKED@SINDRAS_KEY" "(ii) a permissão é rebaixada mesmo assim"
+OUT="$("$CTVL" apply s48 --file "$WORK/cfg-nomask.yaml" --yes --skip-blocked --no-verify 2>&1)"
+hasnt "EXECUTA +PUT /users/" "(ii) nenhuma máscara atribuída"
+if [ "$(canget s48 /permissions/token/users/ user "$MASKED")" = "false" ]; then ok "(ii) vault: canGet rebaixado para false"; else bad "11.G(ii) canGet no vault"; fi
+
+# (iii) sem --skip-blocked: o apply aborta (rc 3) e NADA é escrito; o canGet=true permanece, mas o plano o avisa
+seed_users "$WORK/seed-11g3.json" false "$MASKED"
+new_server s49 "$WORK/seed-11g3.json"
+vault_base s49 sim
+post s49 /permissions/token/users/ '{"user":"'"$MASKED"'","key":"SINDRAS_KEY","canPost":false,"canGet":true}'
+OUT="$("$CTVL" apply s49 --file "$WORK/cfg-m.yaml" --yes 2>&1)"; rc=$?
+if [ "$rc" -eq 3 ]; then ok "(iii) sem --skip-blocked o apply aborta (rc 3)"; else bad "11.G(iii) apply (rc=$rc)" "$OUT"; fi
+hasnt "EXECUTA" "(iii) nada é escrito no abort"
+has "AVISO.*$MASKED@SINDRAS_KEY.*canGet=true.*PERMANECE" "(iii) aviso explícito de que o canGet=true permanece no vault"
+has "--skip-blocked" "(iii) o aviso diz como aplicar o rebaixamento"
+if [ "$(canget s49 /permissions/token/users/ user "$MASKED")" = "true" ]; then ok "(iii) vault: canGet=true segue (abort = nada aplicado), com aviso"; else bad "11.G(iii) canGet no vault"; fi
+expect_rc 1 "(iii) plan --check falha enquanto o rebaixamento estiver pendente" "$CTVL" plan s49 --file "$WORK/cfg-m.yaml" --check
+# canPost=true declarado + canGet=true no vault: só o rebaixamento passa; o resto da permissão respeita o bloqueio do usuário
+sed 's/permissoes: \[detokenize\]}$/permissoes: [detokenize, tokenize]}/' "$WORK/cfg-m.yaml" >"$WORK/cfg-mtk.yaml"
+if cmp -s "$WORK/cfg-m.yaml" "$WORK/cfg-mtk.yaml"; then bad "11.G sed do cfg-mtk não alterou o arquivo"; fi
+expect_rc 0 "11.G(iii-b) plan: permissão com canPost=true declarado" "$CTVL" plan s49 --file "$WORK/cfg-mtk.yaml"
+has "canGet: True -> False" "(iii-b) o rebaixamento continua planejado"
+hasnt "canPost: False -> True" "(iii-b) o canPost=true NÃO é planejado enquanto o usuário está BLOQUEADO"
+
+# (iv) o vault não devolve o id do usuário: o PUT da permissão usa o id da PERMISSÃO, então o rebaixamento segue valendo
+mkdir -p "$WORK/st-11g4"
+for pth in keys charsets groups tokengroups tokentemplates masks users permissions/token/users permissions/token/groups formats; do
+  "$CTVL" admin s49 GET "/$pth/" --all >"$WORK/st-11g4/$(printf '%s' "$pth" | sed 's#/#__#g').json" 2>/dev/null
+done
+python3 - "$WORK/st-11g4/users.json" <<'PYEOF'
+import json, sys
+rows = json.load(open(sys.argv[1]))
+for r in rows:
+    r.pop("id", None)
+json.dump(rows, open(sys.argv[1], "w"))
+PYEOF
+expect_rc 0 "11.G(iv) plan: o vault não devolveu o id do usuário" "$CTVL" plan --offline --state-dir "$WORK/st-11g4" --file "$WORK/cfg-m.yaml"
+has "BLOQUEADO +usuário +$MASKED" "(iv) usuário BLOQUEADO"
+has "ATUALIZAR +perm.usuário +$MASKED@SINDRAS_KEY" "(iv) a permissão é rebaixada sem precisar do id do usuário"
+has "canGet: True -> False" "(iv) o diff é canGet true -> false"
+
+# 11.H em diante: rebaixar canGet=true é uma passagem INDEPENDENTE dos demais bloqueios (oráculo: GET no vault do fake)
+ntrue() { # <apelido> <path> <campo user|group> <nome> -> quantas linhas dessa permissão estão com canGet=true
+  "$CTVL" admin "$1" GET "$2" --all 2>/dev/null | python3 -c '
+import json, sys
+print(sum(1 for r in json.load(sys.stdin) if r.get(sys.argv[1]) == sys.argv[2] and r.get("canGet")))' "$3" "$4"
+}
+nrows() { # <apelido> <path> <campo user|group> <nome> -> quantas linhas dessa permissão existem
+  "$CTVL" admin "$1" GET "$2" --all 2>/dev/null | python3 -c '
+import json, sys
+print(sum(1 for r in json.load(sys.stdin) if r.get(sys.argv[1]) == sys.argv[2]))' "$3" "$4"
+}
+no_get_true() { # <regex do sujeito> <descrição>  procura em $OUT (regressão: nunca canGet=true para mascarado)
+  if printf '%s\n' "$OUT" | grep -E "EXECUTA.*($1)" | grep -q "'canGet': True"; then bad "$2 (canGet=true enviado)" "$OUT"; else ok "$2"; fi
+}
+vault_h() { # <apelido> <chave do tokengroup> -> chaves, máscara, tokengroup SINDRAS, permissão com canGet=true do mascarado
+  vault_base "$1" sim
+  post "$1" /keys/ '{"name":"OTHER_KEY"}'
+  post "$1" /tokengroups/ '{"name":"SINDRAS","key":"'"$2"'"}'
+  post "$1" /permissions/token/users/ '{"user":"'"$MASKED"'","key":"SINDRAS_KEY","canPost":false,"canGet":true}'
+}
+mkmask ", status: a_confirmar"
+seed_users "$WORK/seed-12.json" false "$MASKED"
+
+echo "-- 11.H chave da permissão difere da chave do tokengroup no vault (além do usuário bloqueado)"
+new_server s50 "$WORK/seed-12.json"
+vault_h s50 OTHER_KEY
+expect_rc 0 "11.H plan: tokengroup do vault usa OTHER_KEY, a permissão declara SINDRAS_KEY, canGet=true no vault" "$CTVL" plan s50 --file "$WORK/cfg-m.yaml"
+has "BLOQUEADO +perm.usuário +$MASKED@SINDRAS_KEY.*difere da chave atual" "(a) a permissão continua BLOQUEADA pelo motivo da chave"
+has "ATUALIZAR +perm.usuário +$MASKED@SINDRAS_KEY" "(a) mesmo assim o rebaixamento é planejado"
+has "canGet: True -> False" "(a) o diff é canGet true -> false"
+has "AVISO.*$MASKED@SINDRAS_KEY.*PERMANECE" "(a) o plano avisa que sem --skip-blocked o canGet=true permanece"
+OUT="$("$CTVL" apply s50 --file "$WORK/cfg-m.yaml" --yes --skip-blocked --no-verify 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then ok "(a) apply --skip-blocked termina com rc 0"; else bad "11.H apply (rc=$rc)" "$OUT"; fi
+no_get_true "$MASKED@" "(a/f) nenhum corpo do apply com canGet=true para o mascarado"
+if [ "$(ntrue s50 /permissions/token/users/ user "$MASKED")" = "0" ] && [ "$(nrows s50 /permissions/token/users/ user "$MASKED")" = "1" ]; then ok "(a) vault: a linha existente ficou com canGet=false (sem criar outra)"; else bad "11.H vault: $(ntrue s50 /permissions/token/users/ user "$MASKED") true de $(nrows s50 /permissions/token/users/ user "$MASKED")"; fi
+OUT="$("$CTVL" apply s50 --file "$WORK/cfg-m.yaml" --yes --skip-blocked --no-verify 2>&1)"
+hasnt "EXECUTA +PUT /permissions" "(a) idempotente: o segundo apply não reescreve a permissão"
+
+echo "-- 11.I chave do tokengroup não comparável (api.refs.tokengroup.key ausente e evidência inconclusiva)"
+new_server s51 "$WORK/seed-12.json"
+vault_base s51 sim
+post s51 /keys/ '{"name":"1"}'
+post s51 /tokengroups/ '{"name":"SINDRAS","key":"1"}'
+post s51 /permissions/token/users/ '{"user":"'"$MASKED"'","key":"SINDRAS_KEY","canPost":false,"canGet":true}'
+sed 's/tokengroup.key: name, //' "$WORK/cfg-m.yaml" >"$WORK/cfg-12a2.yaml"
+expect_rc 0 "11.I plan: chave do tokengroup não comparável" "$CTVL" plan s51 --file "$WORK/cfg-12a2.yaml"
+has "BLOQUEADO +perm.usuário +$MASKED@SINDRAS_KEY.*não comparável" "(a2) a permissão continua BLOQUEADA"
+has "ATUALIZAR +perm.usuário +$MASKED@SINDRAS_KEY" "(a2) o rebaixamento é planejado mesmo assim"
+OUT="$("$CTVL" apply s51 --file "$WORK/cfg-12a2.yaml" --yes --skip-blocked --no-verify 2>&1)"
+no_get_true "$MASKED@" "(a2/f) nenhum corpo com canGet=true"
+if [ "$(ntrue s51 /permissions/token/users/ user "$MASKED")" = "0" ]; then ok "(a2) vault: canGet rebaixado para false"; else bad "11.I vault"; fi
+
+echo "-- 11.J referência perm_user.key não confirmada: sem PUT montável, o aviso é explícito"
+REFS_B='tokengroup.key: name, template.tenant: name, template.format: name, template.charset: name, user.groups: name'
+# (b1) evidência inconclusiva (a chave "1" é nome E id): nem dá para saber qual linha é do usuário
+cat >"$WORK/cfg-12b1.yaml" <<EOF
+versao: 1
+api:
+  refs: {$REFS_B}
+recursos:
+  chaves: [{nome: "1"}]
+  mascaras: [{nome: cpf_3_left_2_right, show_left: 3, show_right: 2, mask_char: "*"}]
+  usuarios: [{nome: $MASKED, email: a@example.invalid, mascara: cpf_3_left_2_right}]
+  tokengroups: [{nome: SINDRAS, chave: "1"}]
+  permissoes_usuarios: [{usuario: $MASKED, chave: "1", tokenize: false, detokenize: true}]
+EOF
+new_server s52 "$WORK/seed-12.json"
+post s52 /keys/ '{"name":"1"}'
+post s52 /tokengroups/ '{"name":"SINDRAS","key":"1"}'
+post s52 /permissions/token/users/ '{"user":"'"$MASKED"'","key":"1","canPost":false,"canGet":true}'
+expect_rc 0 "11.J(b1) plan: perm_user.key inconclusivo" "$CTVL" plan s52 --file "$WORK/cfg-12b1.yaml"
+has "AVISO.*$MASKED@1.*canGet=true.*perm_user.key" "(b1) AVISO explícito: pode haver canGet=true e a referência não está confirmada"
+has "PERMANECE" "(b1) o aviso diz que o canGet=true permanece"
+expect_rc 1 "(b1) plan --check falha com o rebaixamento não aplicável" "$CTVL" plan s52 --file "$WORK/cfg-12b1.yaml" --check
+OUT="$("$CTVL" apply s52 --file "$WORK/cfg-12b1.yaml" --yes --skip-blocked --no-verify 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then ok "(b1) apply --skip-blocked termina (rc 0)"; else bad "11.J(b1) apply (rc=$rc)" "$OUT"; fi
+has "AVISO.*$MASKED@1.*canGet=true" "(b1) o apply imprime o aviso"
+hasnt "EXECUTA +PUT /permissions" "(b1) nada inventado: nenhum PUT de permissão"
+no_get_true "$MASKED@" "(b1/f) nenhum corpo com canGet=true"
+# (b2) evidência por leitura ("name") mas sem confirmação: a linha é identificável, o PUT não é montável
+new_server s53 "$WORK/seed-12.json"
+vault_h s53 SINDRAS_KEY
+cat >"$WORK/cfg-12b2.yaml" <<EOF
+versao: 1
+api:
+  refs: {$REFS_B}
+recursos:
+  chaves: [{nome: SINDRAS_KEY}]
+  usuarios: [{nome: $MASKED, email: a@example.invalid, mascara: cpf_inexistente}]
+  tokengroups: [{nome: SINDRAS, chave: SINDRAS_KEY}]
+  permissoes_usuarios: [{usuario: $MASKED, chave: SINDRAS_KEY, tokenize: false, detokenize: true}]
+EOF
+expect_rc 0 "11.J(b2) plan: perm_user.key só por evidência" "$CTVL" plan s53 --file "$WORK/cfg-12b2.yaml"
+has "AVISO.*$MASKED@SINDRAS_KEY.*canGet=true.*(perm_user.key|não confirmad|a confirmar)" "(b2) AVISO explícito de rebaixamento não aplicável"
+expect_rc 1 "(b2) plan --check falha" "$CTVL" plan s53 --file "$WORK/cfg-12b2.yaml" --check
+OUT="$("$CTVL" apply s53 --file "$WORK/cfg-12b2.yaml" --yes --skip-blocked --no-verify 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then ok "(b2) apply --skip-blocked termina (rc 0)"; else bad "11.J(b2) apply (rc=$rc)" "$OUT"; fi
+has "AVISO.*$MASKED@SINDRAS_KEY.*canGet=true" "(b2) o apply imprime o aviso"
+hasnt "EXECUTA +PUT /permissions" "(b2) nenhum PUT de permissão"
+no_get_true "$MASKED@" "(b2/f) nenhum corpo com canGet=true"
+# (b3) mesmo cenário com o usuário NÃO bloqueado: o aviso existe e o apply aborta ANTES de escrever (referência a confirmar)
+sed 's/mascara: cpf_inexistente/mascara: cpf_3_left_2_right/; s#^  chaves:#  mascaras: [{nome: cpf_3_left_2_right, show_left: 3, show_right: 2, mask_char: "*"}]\n  chaves:#' \
+  "$WORK/cfg-12b2.yaml" >"$WORK/cfg-12b3.yaml"
+expect_rc 0 "11.J(b3) plan: usuário não bloqueado e perm_user.key só por evidência" "$CTVL" plan s53 --file "$WORK/cfg-12b3.yaml"
+has "AVISO.*$MASKED@SINDRAS_KEY.*canGet=true.*NÃO é aplicável" "(b3) AVISO explícito mesmo sem usuário bloqueado"
+OUT="$("$CTVL" apply s53 --file "$WORK/cfg-12b3.yaml" --yes --skip-blocked --no-verify 2>&1)"; rc=$?
+if [ "$rc" -eq 3 ]; then ok "(b3) apply aborta antes de escrever (referência a confirmar)"; else bad "11.J(b3) apply (rc=$rc)" "$OUT"; fi
+hasnt "EXECUTA" "(b3) nada é escrito"
+
+echo "-- 11.K permissão duplicada com canGet=true nas duas linhas: as duas são rebaixadas"
+new_server s54 "$WORK/seed-12.json"
+vault_h s54 SINDRAS_KEY
+post s54 /permissions/token/users/ '{"user":"'"$MASKED"'","key":"SINDRAS_KEY","canPost":false,"canGet":true}'
+if [ "$(ntrue s54 /permissions/token/users/ user "$MASKED")" = "2" ]; then ok "(c) premissa: duas linhas com canGet=true no vault"; else bad "11.K seed"; fi
+expect_rc 0 "11.K plan: duplicata" "$CTVL" plan s54 --file "$WORK/cfg-m.yaml"
+has "(BLOQUEADO|CONFLITO) +perm.usuário +$MASKED@SINDRAS_KEY" "(c) a permissão duplicada continua sem ser gerida (usuário bloqueado)"
+OUT="$("$CTVL" apply s54 --file "$WORK/cfg-m.yaml" --yes --skip-blocked --no-verify 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then ok "(c) apply --skip-blocked termina com rc 0"; else bad "11.K apply (rc=$rc)" "$OUT"; fi
+no_get_true "$MASKED@" "(c/f) nenhum corpo com canGet=true"
+if [ "$(printf '%s\n' "$OUT" | grep -E "EXECUTA +PUT /permissions/token/users/[0-9]+ .*$MASKED@" | sed -E 's#.*(/permissions/token/users/[0-9]+).*#\1#' | sort -u | wc -l)" = "2" ]; then ok "(c) dois PUTs em ids distintos"; else bad "11.K PUTs por id" "$OUT"; fi
+if [ "$(ntrue s54 /permissions/token/users/ user "$MASKED")" = "0" ] && [ "$(nrows s54 /permissions/token/users/ user "$MASKED")" = "2" ]; then ok "(c) vault: as duas linhas com canGet=false (nenhuma criada nem apagada)"; else bad "11.K vault: $(ntrue s54 /permissions/token/users/ user "$MASKED") true de $(nrows s54 /permissions/token/users/ user "$MASKED")"; fi
+
+# (c2) usuário NÃO bloqueado (a máscara é atribuída pelo próprio apply): a duplicata segue CONFLITO e as duas linhas caem
+mkmask ""
+cp "$WORK/cfg-m.yaml" "$WORK/cfg-m-ok.yaml"
+mkmask ", status: a_confirmar"
+new_server s57 "$WORK/seed-12.json"
+vault_h s57 SINDRAS_KEY
+post s57 /permissions/token/users/ '{"user":"'"$MASKED"'","key":"SINDRAS_KEY","canPost":false,"canGet":true}'
+expect_rc 0 "11.K(c2) plan: duplicata com usuário não bloqueado" "$CTVL" plan s57 --file "$WORK/cfg-m-ok.yaml"
+has "CONFLITO +perm.usuário +$MASKED@SINDRAS_KEY.*2 linhas de permissão" "(c2) a duplicata é CONFLITO"
+OUT="$("$CTVL" apply s57 --file "$WORK/cfg-m-ok.yaml" --yes --skip-blocked --no-verify 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then ok "(c2) apply --skip-blocked termina com rc 0"; else bad "11.K(c2) apply (rc=$rc)" "$OUT"; fi
+no_get_true "$MASKED@" "(c2/f) nenhum corpo com canGet=true"
+if [ "$(ntrue s57 /permissions/token/users/ user "$MASKED")" = "0" ] && [ "$(nrows s57 /permissions/token/users/ user "$MASKED")" = "2" ]; then ok "(c2) vault: as duas linhas com canGet=false"; else bad "11.K(c2) vault"; fi
+
+echo "-- 11.L grupo com membro mascarado, canGet=true no vault e outro impedimento na permissão"
+new_server s55 "$WORK/seed-mask.json"
+vault_base s55 sim
+post s55 /keys/ '{"name":"OTHER_KEY"}'
+post s55 /tokengroups/ '{"name":"SINDRAS","key":"OTHER_KEY"}'
+post s55 /groups/ '{"name":"g_det"}'
+"$CTVL" admin s55 PUT /users/1 --body '{"username":"sindras_cpf_3_left_2_right","email":"a@example.invalid","groups":["g_det"]}' --yes >/dev/null 2>&1
+post s55 /permissions/token/groups/ '{"group":"g_det","key":"SINDRAS_KEY","canPost":false,"canGet":true}'
+cat >"$WORK/cfg-12d.yaml" <<EOF
+versao: 1
+api:
+  refs: {$REFS_G}
+recursos:
+  chaves: [{nome: SINDRAS_KEY}]
+  grupos: [{nome: g_det}]
+  tokengroups: [{nome: SINDRAS, chave: SINDRAS_KEY}]
+  permissoes_grupos: [{grupo: g_det, tokengroup: SINDRAS, chave: SINDRAS_KEY, tokenize: false, detokenize: true}]
+EOF
+expect_rc 0 "11.L plan: grupo com membro mascarado e chave divergente do tokengroup" "$CTVL" plan s55 --file "$WORK/cfg-12d.yaml"
+has "BLOQUEADO +perm.grupo +g_det@SINDRAS_KEY" "(d) a permissão do grupo continua BLOQUEADA"
+has "ATUALIZAR +perm.grupo +g_det@SINDRAS_KEY" "(d) o rebaixamento do grupo é planejado"
+has "membro\(s\) mascarado\(s\) \(sindras_cpf_3_left_2_right\)" "(d) o motivo cita o membro mascarado (não a 'máscara não confirmada')"
+OUT="$("$CTVL" apply s55 --file "$WORK/cfg-12d.yaml" --yes --skip-blocked --no-verify 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then ok "(d) apply --skip-blocked termina com rc 0"; else bad "11.L apply (rc=$rc)" "$OUT"; fi
+no_get_true "g_det@" "(d/f) nenhum corpo com canGet=true para o grupo"
+if [ "$(ntrue s55 /permissions/token/groups/ group g_det)" = "0" ] && [ "$(nrows s55 /permissions/token/groups/ group g_det)" = "1" ]; then ok "(d) vault: permissão do grupo com canGet=false"; else bad "11.L vault"; fi
+
+echo "-- 11.M sem --skip-blocked: rc 3, nada escrito, a mensagem de aborto cita o canGet=true remanescente"
+new_server s56 "$WORK/seed-12.json"
+vault_h s56 OTHER_KEY
+OUT="$("$CTVL" apply s56 --file "$WORK/cfg-m.yaml" --yes 2>&1)"; rc=$?
+if [ "$rc" -eq 3 ]; then ok "(e) apply sem --skip-blocked aborta (rc 3)"; else bad "11.M apply (rc=$rc)" "$OUT"; fi
+hasnt "EXECUTA" "(e) nada é escrito no abort"
+has "mantêm canGet=true" "(e) a mensagem de aborto cita o canGet=true remanescente"
+has "ATENÇÃO: [0-9]+ linha\(s\) de permissão mascarada\(s\) mantêm canGet=true no vault; use --skip-blocked para aplicar os rebaixamentos \(e o resto não bloqueado do plano\)" "(e) texto exato da orientação"
+has "Pendências manuais" "(e) as pendências manuais são impressas"
+has "AVISO.*$MASKED@SINDRAS_KEY.*PERMANECE" "(e) o aviso da permissão está entre as pendências"
+if [ "$(ntrue s56 /permissions/token/users/ user "$MASKED")" = "1" ]; then ok "(e) vault: intacto (abort = nada aplicado)"; else bad "11.M vault"; fi
+expect_rc 1 "(e) plan --check falha" "$CTVL" plan s56 --file "$WORK/cfg-m.yaml" --check
+
+echo "-- 11.N mensagem do motivo reflete a causa real"
+OUT="$("$CTVL" plan s56 --file "$WORK/cfg-m.yaml" 2>&1)"
+hasnt "a máscara não está confirmada" "(5) a frase fixa imprecisa não aparece mais"
+has "perfil mascarado sem máscara confirmada \(" "(5) usuário mascarado: o motivo traz a causa da máscara"
+
+echo "-- 11.O avisos: permissão sem chave resolvível e canGet=true em chave não declarada"
+mkmask ", status: a_confirmar"
+# (1) permissão do mascarado sem chave resolvível (tokengroup não declarado nem existente)
+new_server s60 "$WORK/seed-12.json"
+vault_h s60 SINDRAS_KEY
+cat >"$WORK/cfg-12o1.yaml" <<EOF
+versao: 1
+api:
+  refs: {$REFS_G}
+recursos:
+  chaves: [{nome: SINDRAS_KEY}]
+  mascaras: [{nome: cpf_3_left_2_right, show_left: 3, show_right: 2, mask_char: "*"}]
+  usuarios: [{nome: $MASKED, email: a@example.invalid, mascara: cpf_3_left_2_right}]
+  permissoes_usuarios: [{usuario: $MASKED, tokengroup: SEM_TG, tokenize: false, detokenize: true}]
+EOF
+expect_rc 0 "11.O(1) plan: permissão sem chave resolvível" "$CTVL" plan s60 --file "$WORK/cfg-12o1.yaml"
+has "AVISO.*$MASKED.*sem chave resolvível.*PERMANECE" "(O1) AVISO de permissão sem chave resolvível"
+expect_rc 1 "(O1) plan --check falha" "$CTVL" plan s60 --file "$WORK/cfg-12o1.yaml" --check
+OUT="$("$CTVL" apply s60 --file "$WORK/cfg-12o1.yaml" --yes --skip-blocked --no-verify 2>&1)"
+hasnt "EXECUTA +PUT /permissions.*$MASKED" "(O1) nenhum PUT de permissão do sujeito"
+# (2) canGet=true do mascarado em chave que o arquivo não declara para ele
+new_server s61 "$WORK/seed-12.json"
+vault_h s61 OTHER_KEY
+cat >"$WORK/cfg-12o2.yaml" <<EOF
+versao: 1
+api:
+  refs: {$REFS_G}
+recursos:
+  chaves: [{nome: OTHER_KEY}]
+  mascaras: [{nome: cpf_3_left_2_right, show_left: 3, show_right: 2, mask_char: "*"}]
+  usuarios: [{nome: $MASKED, email: a@example.invalid, mascara: cpf_3_left_2_right}]
+  tokengroups: [{nome: SINDRAS, chave: OTHER_KEY}]
+  permissoes_usuarios: [{usuario: $MASKED, tokengroup: SINDRAS, chave: OTHER_KEY, tokenize: false, detokenize: true}]
+EOF
+expect_rc 1 "11.O(2) plan --check: canGet=true em chave não declarada" "$CTVL" plan s61 --file "$WORK/cfg-12o2.yaml" --check
+has "AVISO.*$MASKED.*SINDRAS_KEY.*não declara.*PERMANECE" "(O2) AVISO cita usuário e chave"
+OUT="$("$CTVL" apply s61 --file "$WORK/cfg-12o2.yaml" --yes --skip-blocked --no-verify 2>&1)"
+hasnt "EXECUTA +PUT /permissions.*$MASKED@SINDRAS_KEY" "(O2) nenhum PUT na chave não declarada"
+if [ "$(ntrue s61 /permissions/token/users/ user "$MASKED")" = "1" ]; then ok "(O2) vault: canGet=true na chave não declarada intacto"; else bad "11.O vault"; fi
+
+echo "-- 11.P read-modify-write do PUT de máscara: corpo mínimo (local) x só mask (LDAP); a releitura protege o resto"
+GRP=g_um
+cat >"$WORK/cfg-rmw.yaml" <<EOF
+versao: 1
+api:
+  refs: {$REFS_ALL}
+recursos:
+  grupos: [{nome: $GRP}]
+  mascaras: [{nome: cpf_3_left_2_right, show_left: 3, show_right: 2, mask_char: "*"}]
+  usuarios: [{nome: $MASKED, email: a@example.invalid, mascara: cpf_3_left_2_right, grupos: [$GRP]}]
+EOF
+rmw_seed() { # <arquivo> <json extra do topo do seed> <json extra do usuário>  (usuário local com 1 grupo e is_staff=true)
+  python3 - "$1" "$2" "$3" "$MASKED" "$GRP" <<'PYEOF'
+import json, secrets, sys
+out, top, ux, name, grp = sys.argv[1:6]
+u = {"username": name, "password": secrets.token_hex(12), "groups": [grp], "is_staff": True}
+u.update(json.loads(ux))
+d = json.loads(top)
+d["users"] = [u]
+json.dump(d, open(out, "w"))
+PYEOF
+}
+user_json() { # <apelido> <usuário> -> is_staff/is_active/groups/mask atuais no vault (JSON ordenado)
+  "$CTVL" admin "$1" GET /users/ --all 2>/dev/null | python3 -c '
+import json, sys
+r = [x for x in json.load(sys.stdin) if x["username"] == sys.argv[1]]
+print(json.dumps({k: r[0].get(k) for k in ("is_staff", "is_active", "groups", "mask")}, sort_keys=True))' "$2"
+}
+put_bodies() { # <apelido> -> corpos dos PUTs de máscara que o servidor recebeu (JSON)
+  curl -s "http://127.0.0.1:$(sed -n "s/^$1\.HOST=127.0.0.1://p" "$CTVL_CREDENTIALS_FILE" | tail -1)/__test/stats" \
+    | python3 -c 'import json,sys; print(json.dumps(json.load(sys.stdin)["mask_put_bodies"], sort_keys=True))'
+}
+RMW_OK='{"groups": ["'$GRP'"], "is_active": true, "is_staff": true, "mask": "cpf_3_left_2_right"}'
+
+rmw_seed "$WORK/seed-p1.json" '{}' '{}'
+new_server s70 "$WORK/seed-p1.json"
+OUT="$("$CTVL" apply s70 --file "$WORK/cfg-rmw.yaml" --yes --no-verify 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then ok "11.P1 apply em usuário local com 1 grupo"; else bad "11.P1 apply (rc=$rc)" "$OUT"; fi
+has "EXECUTA +PUT /users/[0-9]+ +\(usuário $MASKED: ?atribui a máscara\)? *corpo=|EXECUTA +PUT /users/[0-9]+ +\(usuário $MASKED\) +corpo=" "o PUT de máscara é executado"
+has "corpo=\{'username': '$MASKED', 'email': '$MASKED@example.invalid', 'mask': 'cpf_3_left_2_right'\}" "corpo do PUT: username e email ATUAIS do GET + mask, nada mais"
+hasnt "EXECUTA +PUT /users/.*(password|ldap_user|'id'|is_active|is_staff|is_superuser|groups)" "sem password, id, ldap_user, flags nem groups"
+if [ "$(user_json s70 "$MASKED")" = "$RMW_OK" ]; then ok "vault: grupo e is_staff preservados, máscara atribuída"; else bad "11.P1 vault: $(user_json s70 "$MASKED")"; fi
+has "releitura confirma mask=cpf_3_left_2_right" "a releitura confirma a máscara"
+
+rmw_seed "$WORK/seed-p2.json" '{}' '{}'
+new_server s71 "$WORK/seed-p2.json"
+post s71 /masks/ '{"name":"cpf_3_left_2_right","showleft":3,"showright":2,"maskchar":"*"}'
+OUT="$("$CTVL" admin s71 PUT /users/1 --body '{"mask":"cpf_3_left_2_right"}' --yes 2>&1)"; rc=$?
+if [ "$rc" -ne 0 ]; then ok "11.P2 premissa do fake: usuário local, PUT só com mask = 400"; else bad "11.P2 fake aceitou PUT só com mask em usuário local" "$OUT"; fi
+has "username.*This field is required" "o 400 do fake lista username"
+has "email.*This field is required" "o 400 do fake lista email"
+OUT="$("$CTVL" admin s71 PUT /users/1 --body '{"username":"'"$MASKED"'","email":"a@example.invalid","mask":"cpf_3_left_2_right"}' --yes 2>&1)"
+if [ "$(user_json s71 "$MASKED")" = "$RMW_OK" ]; then ok "premissa do fake (DRF): campo omitido no PUT não é alterado (groups e is_staff intactos)"; else bad "11.P2 fake alterou campo omitido: $(user_json s71 "$MASKED")"; fi
+
+rmw_seed "$WORK/seed-p3.json" '{"put_mutate": {"is_staff": false}}' '{}'
+new_server s72 "$WORK/seed-p3.json"
+OUT="$("$CTVL" apply s72 --file "$WORK/cfg-rmw.yaml" --yes --no-verify 2>&1)"; rc=$?
+if [ "$rc" -eq 1 ]; then ok "11.P3 servidor mudou is_staff no PUT: falha fechada (rc 1)"; else bad "11.P3 rc=$rc" "$OUT"; fi
+has "ERRO: usuário $MASKED: depois do PUT de máscara o campo 'is_staff' mudou" "o erro diz qual campo mudou"
+hasnt "@example.invalid.*mudou|mudou.*@example.invalid" "o erro não imprime o valor do email"
+rmw_seed "$WORK/seed-p3b.json" '{"put_mutate": {"groups": [], "email": "outro@example.invalid"}}' '{}'
+new_server s73 "$WORK/seed-p3b.json"
+OUT="$("$CTVL" apply s73 --file "$WORK/cfg-rmw.yaml" --yes --no-verify 2>&1)"; rc=$?
+if [ "$rc" -eq 1 ]; then ok "11.P3b servidor mudou groups e email: falha fechada (rc 1)"; else bad "11.P3b rc=$rc" "$OUT"; fi
+has "o campo 'email', 'groups' mudou" "o erro lista todos os campos que mudaram"
+rmw_seed "$WORK/seed-p3c.json" '{"put_empties_groups": true}' '{}'
+new_server s76 "$WORK/seed-p3c.json"
+OUT="$("$CTVL" apply s76 --file "$WORK/cfg-rmw.yaml" --yes --no-verify 2>&1)"; rc=$?
+if [ "$rc" -eq 1 ]; then ok "11.P3c servidor que esvazia groups quando omitido: a releitura falha fechado (rc 1)"; else bad "11.P3c rc=$rc" "$OUT"; fi
+has "ERRO: usuário $MASKED: depois do PUT de máscara o campo 'groups' mudou" "o erro nomeia o campo groups"
+
+rmw_seed "$WORK/seed-p4.json" '{}' '{"ldap": true}'
+new_server s74 "$WORK/seed-p4.json"
+OUT="$("$CTVL" apply s74 --file "$WORK/cfg-rmw.yaml" --yes --no-verify 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then ok "11.P4 usuário LDAP: apply ok"; else bad "11.P4 rc=$rc" "$OUT"; fi
+has "corpo=\{'mask': 'cpf_3_left_2_right'\}" "usuário LDAP: o PUT leva só {'mask': nome}"
+if [ "$(put_bodies s74)" = '[["'"$MASKED"'", {"mask": "cpf_3_left_2_right"}]]' ]; then ok "o servidor recebeu exatamente {mask} do usuário LDAP"; else bad "11.P4 corpo no servidor: $(put_bodies s74)"; fi
+if [ "$(put_bodies s70)" = '[["'"$MASKED"'", {"email": "'"$MASKED"'@example.invalid", "mask": "cpf_3_left_2_right", "username": "'"$MASKED"'"}]]' ]; then ok "o servidor recebeu exatamente username, email e mask do usuário local"; else bad "11.P1 corpo no servidor: $(put_bodies s70)"; fi
+
+rmw_seed "$WORK/seed-p5.json" '{"hide_user_fields": ["email"]}' '{}'
+new_server s75 "$WORK/seed-p5.json"
+OUT="$("$CTVL" apply s75 --file "$WORK/cfg-rmw.yaml" --yes --no-verify 2>&1)"; rc=$?
+if [ "$rc" -eq 1 ]; then ok "11.P5 GET sem email: o PUT recebe 400 do servidor e o apply falha (rc 1)"; else bad "11.P5 rc=$rc" "$OUT"; fi
+has "ERRO: HTTP 400 em PUT /users/[0-9]+: .*email.*This field is required" "erro explícito com o campo que faltou"
+hasnt "EXECUTA +PUT /users/.*'email'" "a skill não inventa campo que o GET não devolveu"
+if [ "$(umask s75 "$MASKED")" = "" ]; then ok "vault: máscara não atribuída após o 400"; else bad "11.P5 máscara atribuída"; fi
+
+echo "== 12. saída compacta (padrão) e --verbose"
+CMPX() { env -u CTVL_VERBOSE "$@"; }  # a suíte exporta CTVL_VERBOSE=1 no topo: aqui o padrão compacto
+EXEMPLO="$SKILL_DIR/references/exemplo-config.yaml"
+
+echo "-- 12.a itens OK colapsados em contagem por tipo"
+expect_rc 0 "12.a plan compacto do round-trip (tudo OK)" env -u CTVL_VERBOSE "$CTVL" plan --offline --state-dir "$TESTS_DIR/fixtures" --file "$WORK/e1.yaml"
+has "^Plano offline" "cabeçalho com o ambiente"
+has "^OK \([0-9]+\): .*2 chaves, charset, 2 grupos" "OK em uma linha de contagem (plural e singular corretos)"
+hasnt "^ *OK +(usuário|chave|template|máscara)" "nenhum item OK em linha própria"
+has "^A FAZER \(0\)" "nada a fazer"
+has "^Bloqueios: 0 \| Avisos: 0 \| Conflitos: 0" "rodapé com as contagens"
+hasnt "Resumo:|Pendências manuais|OPERAÇÃO" "sem o formato verbose"
+expect_rc 0 "12.a' plan --check compacto no round-trip" env -u CTVL_VERBOSE "$CTVL" plan --offline --state-dir "$TESTS_DIR/fixtures" --file "$WORK/e1.yaml" --check
+
+echo "-- 12.b cada item não-OK em uma linha, sem a explicação repetida"
+expect_rc 0 "12.b plan compacto do exemplo (estado vazio)" env -u CTVL_VERBOSE "$CTVL" plan --offline --empty-state --file "$EXEMPLO"
+has "^A FAZER \([0-9]+\)" "seção A FAZER"
+has "^  CRIAR +usuário +settorj_cns_3_left +máscara: nenhuma -> settorj_cns_3_left" "usuário com máscara: uma linha com o diff curto"
+has "^  CRIAR +chave +SINDRAS_KEY$" "item sem diff: operação, tipo e nome"
+has "^  CRIAR +perm.usuário +sindras_cns_3_left@SINDRAS_KEY$" "permissão em uma linha"
+hasnt "permissão é sobre a CHAVE|senha via variável|depois de criar, atribui" "o texto explicativo repetido não aparece por linha"
+if [ "$(printf '%s\n' "$OUT" | grep -c "sindras_cns_3_left@SINDRAS_KEY")" = "1" ]; then ok "a permissão aparece uma única vez"; else bad "12.b permissão repetida"; fi
+if [ "$(printf '%s\n' "$OUT" | grep -c '^Legenda:\|^         ')" -le 3 ]; then ok "legenda com no máximo 3 linhas"; else bad "12.b legenda longa" "$OUT"; fi
+has "^Legenda: o apply atribui a máscara e relê; só o enable-detokenize escreve canGet=true" "legenda do assunto máscara/detokenize"
+has "Senhas NÃO definidas \([0-9]+; o apply aborta antes de escrever\): .*CTVL_SETTORJ_CNS_PASSWORD" "senhas ausentes numa linha só"
+VERB_EXEMPLO="$(env CTVL_VERBOSE=1 "$CTVL" plan --offline --empty-state --file "$EXEMPLO" 2>&1)"
+COMP_EXEMPLO="$OUT"
+
+echo "-- 12.c BLOQUEADO, CONFLITO e AVISO continuam com o motivo completo"
+python3 - "$WORK" "$CTVL" "$EXEMPLO" "$TESTS_DIR/fixtures" <<'PYEOF'
+import os, re, subprocess, sys
+work, ctvl, exemplo, fix = sys.argv[1:5]
+def run(args, verbose):
+    env = dict(os.environ)
+    env.pop("CTVL_VERBOSE", None)
+    if verbose:
+        env["CTVL_VERBOSE"] = "1"
+    return subprocess.run([ctvl, "plan", "--offline"] + args, env=env, capture_output=True, text=True).stdout
+cenarios = {
+    "exemplo (estado vazio)": ["--empty-state", "--file", exemplo],
+    "template em CONFLITO": ["--state-dir", fix, "--file", work + "/mut-tpl.yaml"],
+    "misto (conflito, bloqueio, avisos)": ["--state-dir", fix, "--file", work + "/mut-misc.yaml"],
+}
+ruim = []
+for nome, args in cenarios.items():
+    v, c = run(args, True), run(args, False)
+    linhas = [l for l in v.splitlines() if re.match(r"^(BLOQUEADO|CONFLITO) ", l)]
+    manuais = [l for l in v.splitlines() if l.startswith("  - ") and "HABILITAR DETOKENIZE" not in l]
+    if not linhas and not manuais:
+        ruim.append("%s: cenário sem bloqueio/conflito/aviso" % nome)
+    for l in linhas:
+        op, _tipo, resto = l.split(None, 2)
+        det = resto.split(None, 1)[1].strip() if len(resto.split(None, 1)) > 1 else ""
+        if det not in c:
+            ruim.append("%s: motivo de %s ausente no compacto: %s" % (nome, op, det[:80]))
+    for m in manuais:
+        if m not in c:
+            ruim.append("%s: aviso/pendência ausente no compacto: %s" % (nome, m[:80]))
+    nb, nc = sum(1 for l in linhas if l.startswith("BLOQUEADO")), sum(1 for l in linhas if l.startswith("CONFLITO"))
+    esperado = "Bloqueios: %d | Avisos: %d | Conflitos: %d" % (nb, len(manuais), nc)
+    if esperado not in c:
+        ruim.append("%s: rodapé esperado %r" % (nome, esperado))
+print("\n".join(ruim) if ruim else "OK")
+sys.exit(1 if ruim else 0)
+PYEOF
+if [ $? -eq 0 ]; then ok "12.c todo motivo de BLOQUEADO/CONFLITO e todo aviso/pendência do verbose está no compacto, e o rodapé mostra as contagens reais"; else bad "12.c motivo resumido ou rodapé errado"; fi
+OUT="$COMP_EXEMPLO"
+has "^BLOQUEIOS E CONFLITOS \(11\)" "seção própria de bloqueios"
+has "BLOQUEADO +template +SINDRAS_CPF +charset pendente de decisão do projeto \(templates.yaml / README: ASCII imprimível x numérico\)" "motivo completo do bloqueio"
+has "^Bloqueios: 11 \| Avisos: 0 \| Conflitos: 0" "rodapé com 11 bloqueios"
+OUT="$(CMPX "$CTVL" plan --offline --state-dir "$TESTS_DIR/fixtures" --file "$WORK/mut-tpl.yaml" 2>&1)"
+has "CONFLITO +template +SETTORJ_CNS +muda a receita de um template existente.*só com --allow-breaking-update +\[keep_left: 3 -> 4\]" "CONFLITO com motivo completo e diff curto"
+has "^Bloqueios: 0 \| Avisos: 0 \| Conflitos: 2" "rodapé com 2 conflitos"
+OUT="$(CMPX "$CTVL" plan --offline --state-dir "$TESTS_DIR/fixtures" --file "$WORK/mut-tpl.yaml" --allow-breaking-update 2>&1)"
+has "ATUALIZAR +template +SETTORJ_CNS +keep_left: 3 -> 4" "com a flag: ATUALIZAR em uma linha"
+has "template ATUALIZAR muda a receita" "legenda do template"
+
+echo "-- 12.d enable-detokenize numa linha só; 4 usuários a atribuir máscara; apply compacto"
+cat >"$WORK/cfg-12.yaml" <<EOF
+versao: 1
+convencao: {sistemas: [sindras], datatypes: [cpf, cns]}
+api:
+  refs: {$REFS_ALL}
+usuarios_padrao: {email_dominio: example.invalid}
+defaults:
+  datatypes:
+    cns:
+      template: {format: FPE, charset: Numeric, keep_left: 0, keep_right: 0}
+      mascaras:
+        0_left_0_right: {show_left: 0, show_right: 0, mask_char: "*"}
+        3_left: {show_left: 3, show_right: 0, mask_char: "*"}
+      usuarios:
+        - {esquema: total, permissoes: [detokenize]}
+        - {esquema: 0_left_0_right, permissoes: [detokenize]}
+        - {esquema: 3_left, permissoes: [detokenize]}
+    cpf:
+      template: {format: FPE, charset: Numeric, keep_left: 0, keep_right: 0}
+      mascaras:
+        0_left_0_right: {show_left: 0, show_right: 0, mask_char: "*"}
+        3_left: {show_left: 3, show_right: 0, mask_char: "*"}
+      usuarios:
+        - {esquema: 0_left_0_right, permissoes: [detokenize]}
+        - {esquema: 3_left, permissoes: [detokenize]}
+  servico:
+    - {esquema: tokenize, permissoes: [tokenize]}
+sistemas:
+  sindras: {tokengroup: SINDRAS, chave: SINDRAS_KEY, datatypes: [cpf, cns]}
+EOF
+python3 - "$WORK/seed-12d.json" <<'PYEOF'
+import json, secrets, sys
+us = ["sindras_cns_total", "sindras_cns_0_left_0_right", "sindras_cns_3_left", "sindras_cpf_0_left_0_right",
+      "sindras_cpf_3_left", "sindras_svc_tokenize"]
+json.dump({"users": [{"username": u, "password": secrets.token_hex(12)} for u in us]}, open(sys.argv[1], "w"))
+PYEOF
+vault_12d() { # <apelido>: tudo já existe, só falta atribuir a máscara a 4 usuários
+  new_server "$1" "$WORK/seed-12d.json"
+  post "$1" /keys/ '{"name":"SINDRAS_KEY"}'
+  post "$1" /tokengroups/ '{"name":"SINDRAS","key":"SINDRAS_KEY"}'
+  for d in CNS CPF; do
+    post "$1" /tokentemplates/ '{"name":"SINDRAS_'$d'","tenant":"SINDRAS","format":"FPE","charset":"Numeric","keepleft":0,"keepright":0,"irreversible":false,"allowsmallinput":false,"copyruntdata":false,"prefix":""}'
+  done
+  for d in cns cpf; do
+    post "$1" /masks/ '{"name":"'$d'_0_left_0_right","showleft":0,"showright":0,"maskchar":"*"}'
+    post "$1" /masks/ '{"name":"'$d'_3_left","showleft":3,"showright":0,"maskchar":"*"}'
+  done
+  for u in sindras_cns_total sindras_cns_0_left_0_right sindras_cns_3_left sindras_cpf_0_left_0_right sindras_cpf_3_left; do
+    post "$1" /permissions/token/users/ '{"user":"'$u'","key":"SINDRAS_KEY","canPost":false,"canGet":'"$([ "$u" = sindras_cns_total ] && echo true || echo false)"'}'
+  done
+  post "$1" /permissions/token/users/ '{"user":"sindras_svc_tokenize","key":"SINDRAS_KEY","canPost":true,"canGet":false}'
+}
+vault_12d s80
+expect_rc 0 "12.d plan compacto: 4 usuários a atribuir máscara" env -u CTVL_VERBOSE "$CTVL" plan s80 --file "$WORK/cfg-12.yaml"
+echo "$OUT" >"$WORK/compacto-12d.txt"
+has "^Plano s80 \(sindras\)" "cabeçalho: ambiente e sistema"
+has "^OK \([0-9]+\): .*2 templates, 4 máscaras, 2 usuários" "OK colapsado (plural correto)"
+has "^A FAZER \(4\)" "4 itens a fazer"
+for u in cns_0_left_0_right cns_3_left cpf_0_left_0_right cpf_3_left; do
+  has "^  ATUALIZAR +usuário +sindras_$u +máscara: nenhuma -> $u$" "ATUALIZAR sindras_$u em uma linha com o diff curto"
+done
+has "^DEPOIS \(enable-detokenize, 1 por usuário\): 4 pendentes" "as 4 pendências de enable-detokenize numa linha"
+has "^  sindras_\*: cns_0_left_0_right, cns_3_left, cpf_0_left_0_right, cpf_3_left$" "nomes abreviados numa linha"
+hasnt "HABILITAR DETOKENIZE" "sem as 4 linhas longas quase idênticas"
+has "^Bloqueios: 0 \| Avisos: 0 \| Conflitos: 0" "rodapé"
+has "^Legenda: o apply atribui a máscara e relê; só o enable-detokenize escreve canGet=true\.$" "uma legenda curta"
+expect_rc 1 "12.d plan --check compacto falha com ações pendentes" env -u CTVL_VERBOSE "$CTVL" plan s80 --file "$WORK/cfg-12.yaml" --check
+OUT="$(CMPX "$CTVL" plan s80 --file "$WORK/cfg-12.yaml" 2>&1)"; COMP_12D="$OUT"
+OUT="$(CTVL_VERBOSE=1 "$CTVL" plan s80 --file "$WORK/cfg-12.yaml" 2>&1)"
+if [ "$(printf '%s\n' "$OUT" | grep -c 'HABILITAR DETOKENIZE pendente: rode')" = "4" ]; then ok "verbose: as 4 linhas HABILITAR DETOKENIZE completas continuam"; else bad "12.d verbose sem as 4 linhas" "$OUT"; fi
+has "^Resumo: ATUALIZAR=4, OK=" "verbose: linha Resumo"
+has "^OPERAÇÃO +TIPO +NOME +DETALHE" "verbose: tabela completa"
+
+echo "-- 12.e --verbose reproduz o texto completo (igual a CTVL_VERBOSE=1)"
+V1="$("$CTVL" plan s80 --file "$WORK/cfg-12.yaml" --verbose 2>&1)"
+V2="$(env CTVL_VERBOSE=1 "$CTVL" plan s80 --file "$WORK/cfg-12.yaml" 2>&1)"
+V3="$(env -u CTVL_VERBOSE "$CTVL" plan s80 --file "$WORK/cfg-12.yaml" --verbose 2>&1)"
+if [ "$V1" = "$V2" ] && [ "$V1" = "$V3" ] && [ -n "$V1" ]; then ok "12.e plan --verbose == CTVL_VERBOSE=1 (byte a byte)"; else bad "12.e verbose difere" "$V1"; fi
+if [ "$V1" != "$COMP_12D" ] && [ "${#V1}" -gt "${#COMP_12D}" ]; then ok "12.e e é mais longo que o compacto"; else bad "12.e verbose não é o completo"; fi
+if [ "$(env CTVL_VERBOSE=0 "$CTVL" plan s80 --file "$WORK/cfg-12.yaml" 2>&1)" = "$COMP_12D" ]; then ok "12.e CTVL_VERBOSE=0 = compacto"; else bad "12.e CTVL_VERBOSE=0"; fi
+V1="$(printf '%s' "$VERB_EXEMPLO")"
+OUT="$V1"
+has "OPERAÇÃO +TIPO +NOME +DETALHE" "verbose do exemplo: cabeçalho da tabela"
+has "senha via variável CTVL_SETTORJ_CNS_PASSWORD" "verbose do exemplo: a explicação por linha continua"
+
+echo "-- 12.f apply compacto: uma linha por escrita, mesmos exit codes"
+vault_12d s81
+OUT="$(env -u CTVL_VERBOSE "$CTVL" apply s81 --file "$WORK/cfg-12.yaml" --yes 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then ok "12.f apply compacto (rc 0)"; else bad "12.f apply (rc=$rc)" "$OUT"; fi
+has "^A FAZER \(4\)" "o apply imprime o plano compacto"
+for u in cns_0_left_0_right cns_3_left cpf_0_left_0_right cpf_3_left; do
+  has "^EXECUTA PUT /users/[0-9]+ \(usuário sindras_$u\) -> HTTP 200$" "uma linha por escrita: PUT da máscara de sindras_$u"
+done
+hasnt "corpo=" "sem os corpos (modo compacto)"
+if [ "$(printf '%s\n' "$OUT" | grep -c '^EXECUTA ')" = "4" ]; then ok "exatamente 4 linhas EXECUTA para 4 escritas"; else bad "12.f nº de linhas EXECUTA" "$OUT"; fi
+has "^Aplicado: 4 operação\(ões\)\." "total aplicado"
+has "^Verificação \(replanejamento\): 0 ação\(ões\) ainda pendente\(s\) \(esperado 0\)\." "verificação no rodapé"
+has "releitura confirma mask=cns_0_left_0_right" "a releitura continua visível"
+if [ "$(umask s81 sindras_cns_3_left)" = "cns_3_left" ] && [ "$(canget s81 /permissions/token/users/ user sindras_cns_3_left)" = "false" ]; then ok "vault: máscara atribuída e canGet segue false"; else bad "12.f vault"; fi
+OUT="$(env -u CTVL_VERBOSE "$CTVL" apply s81 --file "$WORK/cfg-12.yaml" --yes 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then ok "12.f segundo apply (rc 0)"; else bad "12.f 2º apply (rc=$rc)" "$OUT"; fi
+has "Nada a aplicar" "idempotente"
+vault_12d s82
+OUT="$(env CTVL_VERBOSE=1 "$CTVL" apply s82 --file "$WORK/cfg-12.yaml" --yes 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ]; then ok "12.f apply --verbose (rc 0)"; else bad "12.f apply verbose (rc=$rc)" "$OUT"; fi
+has "^EXECUTA +PUT /users/[0-9]+ +\(usuário sindras_cns_3_left\) +corpo=\{'username': 'sindras_cns_3_left'" "verbose: EXECUTA com corpo, como antes"
+has "^  -> HTTP 200" "verbose: o -> HTTP em linha própria, como antes"
+has "^Pendências manuais \(a skill não executa; não esqueça\):" "verbose: pendências manuais completas"
+
+echo "-- 12.g exit codes inalterados no modo compacto (bloqueio, conflito, releitura)"
+expect_rc 0 "12.g plan com bloqueios sai 0" env -u CTVL_VERBOSE "$CTVL" plan --offline --empty-state --file "$EXEMPLO"
+expect_rc 1 "12.g plan --check com bloqueios sai 1" env -u CTVL_VERBOSE "$CTVL" plan --offline --empty-state --file "$EXEMPLO" --check
+expect_rc 1 "12.g plan --check com conflito sai 1" env -u CTVL_VERBOSE "$CTVL" plan --offline --state-dir "$TESTS_DIR/fixtures" --file "$WORK/mut-tpl.yaml" --check
+expect_rc 2 "12.g apply sem --yes sai 2" env -u CTVL_VERBOSE "$CTVL" apply s80 --file "$WORK/cfg-12.yaml"
+seed_users "$WORK/seed-12g0.json" false "$MASKED:cpf_aberta"
+new_server s83 "$WORK/seed-12g0.json"
+vault_base s83 sim
+post s83 /masks/ '{"name":"cpf_aberta","showleft":11,"showright":0,"maskchar":"*"}'
+OUT="$(env -u CTVL_VERBOSE "$CTVL" apply s83 --file "$WORK/cfg-mask.yaml" --yes 2>&1)"; rc=$?
+if [ "$rc" -eq 3 ]; then ok "12.g apply com CONFLITO e sem --skip-blocked aborta (rc 3)"; else bad "12.g rc=$rc" "$OUT"; fi
+has "CONFLITO +usuário +$MASKED +o usuário já tem a máscara 'cpf_aberta', diferente da declarada 'cpf_3_left_2_right'.*não sobrescreve" "CONFLITO com o motivo completo no apply compacto"
+has "item\(ns\) BLOQUEADO/CONFLITO: nada foi aplicado" "mensagem de aborto completa"
+hasnt "^EXECUTA" "nada escrito"
+seed_users "$WORK/seed-12g.json" true "$MASKED"
+new_server s84 "$WORK/seed-12g.json"
+vault_base s84 sim
+OUT="$(env -u CTVL_VERBOSE "$CTVL" apply s84 --file "$WORK/cfg-mask.yaml" --yes 2>&1)"; rc=$?
+if [ "$rc" -ne 0 ]; then ok "12.g releitura divergente falha fechado (rc=$rc)"; else bad "12.g deveria falhar" "$OUT"; fi
+has "ERRO: usuário $MASKED: a releitura mostra mask=None, esperado 'cpf_3_left_2_right'" "mensagem de ERRO completa no modo compacto"
 
 echo
 echo "Resultado: $PASS passaram, $FAIL falharam"

@@ -2,6 +2,8 @@
 
 Usuário  : sindras_cns, settorj_cns, sindras_cpf_3_left_2_right
 Serviço  : <sistema>_svc_<esquema>  (datatype reservado "svc"), ex.: sindras_svc_tokenize
+Sem máscara: <sistema>_total  (datatype reservado "total"; um por sistema, não um por campo —
+           a máscara é atributo do usuário do vault, então um único usuário sem máscara vê todos os datatypes em claro)
 Máscara  : [<sistema>_]<datatype>_<esquema>, ex.: cns_3_left (padrão) ou settorj_cns_3_left
 """
 import re
@@ -9,6 +11,8 @@ import re
 DEFAULT_SISTEMAS = ["sindras", "biae", "settorj"]
 DEFAULT_DATATYPES = ["cpf", "cns"]
 RESERVED_SVC = "svc"
+RESERVED_TOTAL = "total"
+RESERVED = (RESERVED_SVC, RESERVED_TOTAL)
 
 _TOKEN = re.compile(r"^[a-z0-9]+$")
 _FULL = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
@@ -41,9 +45,9 @@ def parse_user_name(nome, sistemas=None, datatypes=None):
     problemas = []
     if sistema not in sistemas:
         problemas.append("sistema '%s' não está na convenção (%s)" % (sistema, ", ".join(sistemas)))
-    if datatype not in datatypes and datatype != RESERVED_SVC:
-        problemas.append("datatype '%s' não está na convenção (%s, reservado: %s)" % (
-            datatype, ", ".join(datatypes), RESERVED_SVC))
+    if datatype not in datatypes and datatype not in RESERVED:
+        problemas.append("datatype '%s' não está na convenção (%s, reservados: %s)" % (
+            datatype, ", ".join(datatypes), ", ".join(RESERVED)))
     if datatype == RESERVED_SVC and not esquema:
         problemas.append("usuário de serviço exige esquema (ex.: %s_svc_tokenize)" % sistema)
     return _result(nome, sistema, datatype, esquema, problemas)
@@ -65,7 +69,8 @@ def parse_mask_name(nome, sistemas=None, datatypes=None):
     datatype, esquema = parts[0], "_".join(parts[1:])
     problemas = []
     if datatype not in datatypes:
-        problemas.append("datatype '%s' não está na convenção (%s)" % (datatype, ", ".join(datatypes)))
+        extra = " ('%s' é reservado de usuário, não vale em máscara)" % datatype if datatype in RESERVED else ""
+        problemas.append("datatype '%s' não está na convenção (%s)%s" % (datatype, ", ".join(datatypes), extra))
     return _result(nome, sistema, datatype, esquema, problemas)
 
 

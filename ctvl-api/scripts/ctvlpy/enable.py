@@ -40,7 +40,7 @@ def _checks(D, state, refs, usuario, env, tokenize_user):
     # (b)
     mname, resolved = refs.to_name("user.mask", state.by_name("usuarios")[usuario].get("mask"))
     if not cur["mascara"]:
-        probs.append("(b) o usuário está sem máscara atribuída no vault (atribua '%s' na GUI do vault)" % decl["mascara"])
+        probs.append("(b) o usuário está sem máscara atribuída no vault (rode `ctvl apply`: ele atribui '%s')" % decl["mascara"])
     elif not resolved:
         probs.append("(b) a referência user.mask não resolve (formato a confirmar): rode probe-refs e declare api.refs.user.mask")
     elif mname != decl["mascara"]:
@@ -121,6 +121,7 @@ def _perm_row(state, refs, usuario, chave):
 
 def _put_or_post(D, client, refs, usuario, p, chave, row, can_get, out):
     body = {"user": refs.to_api("perm_user.user", usuario), "key": refs.to_api("perm_user.key", chave),
+            "asymkey": None, "opaqueobj": None,  # o servidor exige os campos no corpo (medido em DEV)
             "canPost": bool(p["tokenize"]), "canGet": can_get}
     if row is not None:
         method, path = "PUT", _detail(D, "permissoes_usuarios", row.get(ID_FIELD["permissoes_usuarios"]))

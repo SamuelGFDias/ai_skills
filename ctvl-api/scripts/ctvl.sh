@@ -27,7 +27,7 @@ Leitura da configuração atual:
   probe-refs <ambiente>                    Evidência de nome x id nas referências (sem imprimir valores).
 
 Declarativo (idempotente; nunca deleta):
-  plan  <ambiente|--offline> --file CFG.yaml | --docs-dir DIR [--empty-state|--state-dir DIR] ...
+  plan  <ambiente|--offline> --file CFG.yaml | --docs-dir DIR [--empty-state|--state-dir DIR] ...   (saída compacta; --verbose ou CTVL_VERBOSE=1 = texto completo)
   apply <ambiente> --file CFG.yaml | --docs-dir DIR --yes [--skip-blocked] [--allow-breaking-update]
 
   enable-detokenize <ambiente> <usuario> --file CFG.yaml | --docs-dir DIR [--yes] [--sample VALOR_FABRICADO]

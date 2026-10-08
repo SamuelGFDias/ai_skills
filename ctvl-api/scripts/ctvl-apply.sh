@@ -4,8 +4,9 @@ CTVLCMD_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 # shellcheck source=lib-ctvl.sh
 source "$CTVLCMD_DIR/lib-ctvl.sh"
 # Aplica o plano no vault. Idempotente; exige --yes; nunca deleta nada.
+# Saída compacta por padrão; --verbose (ou CTVL_VERBOSE=1) mostra o texto completo de cada item.
 # Uso: ctvl-apply.sh <ambiente> (--file cfg.yaml | --docs-dir DIR) --yes [--skip-blocked]
-#        [--allow-breaking-update] [--key-map GRUPO=CHAVE] [--email-domain D] [--no-verify]
+#        [--allow-breaking-update] [--key-map GRUPO=CHAVE] [--email-domain D] [--no-verify] [--verbose]
 # Senhas de usuários novos vêm de variáveis de ambiente (password_ref: env:CTVL_<NOME>_PASSWORD), nunca do
 # arquivo; a senha admin (CTVL_ADMIN_PASSWORD*) é removida do ambiente do motor e não pode ser usada ali.
 if [ "$#" -lt 1 ] || [ "$1" = "--offline" ]; then

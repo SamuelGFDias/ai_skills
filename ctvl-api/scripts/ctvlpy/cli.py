@@ -195,11 +195,24 @@ def cmd_export(args):
     return 0
 
 
-def _print_manuais(P):
-    if P.manuais:
+def is_verbose(args):
+    """--verbose ou CTVL_VERBOSE=1 (qualquer valor que não seja vazio/0/false/no/off): texto completo de cada item."""
+    if getattr(args, "verbose", False):
+        return True
+    return os.environ.get("CTVL_VERBOSE", "").strip().lower() not in ("", "0", "false", "no", "off")
+
+
+def _print_manuais(P, verbose=True):
+    if not P.manuais:
+        return
+    if verbose:
         out("Pendências manuais (a skill não executa; não esqueça):")
         for m in P.manuais:
             out("  - " + m)
+        return
+    rotina, outras = pl.manuais_split(P)
+    partes = (["%d enable-detokenize" % len(rotina)] if rotina else []) + (["%d aviso(s)/divergência(s)" % len(outras)] if outras else [])
+    out("Pendências manuais (a skill não executa; detalhes no plano acima): " + ", ".join(partes))
 
 
 def _sync_common(args, apply):
@@ -210,7 +223,11 @@ def _sync_common(args, apply):
     refs = Refs(state, D.api["refs"])
     opts = {"allow_breaking_update": args.allow_breaking_update}
     P = pl.finalize(pl.build_plan(D, state, refs, opts))
-    out(pl.render(P, show_extra=args.show_extra))
+    verbose = is_verbose(args)
+    if verbose:
+        out(pl.render(P, show_extra=args.show_extra))
+    else:
+        out(pl.render_compact(P, D, os.environ.get("CTVL_ALIAS") or "offline", show_extra=args.show_extra))
     counts = P.count()
     blocked = [a for a in P.actions if a.op in ("BLOQUEADO", "CONFLITO")]
     if not apply:
@@ -229,6 +246,13 @@ def _sync_common(args, apply):
         err("[ctvl] %d item(ns) BLOQUEADO/CONFLITO: nada foi aplicado. Resolva, ou use --skip-blocked para aplicar "
             "o restante (os dependentes dos bloqueados são pulados junto: template, usuário só de permissão e "
             "permissão de um tokengroup bloqueado)." % len(blocked))
+        pend = [a for a in P.pending_writes() if a.rebaixa]
+        if pend:  # as pendências manuais (com o AVISO de cada permissão) já saíram no plano impresso acima
+            err("[ctvl] ATENÇÃO: %d linha(s) de permissão mascarada(s) mantêm canGet=true no vault; use --skip-blocked "
+                "para aplicar os rebaixamentos (e o resto não bloqueado do plano)." % len(pend))
+        if P.rebaixo_na:
+            err("[ctvl] ATENÇÃO: %d permissão(ões) mascarada(s) mantêm canGet=true no vault e o rebaixamento NÃO é "
+                "aplicável pela skill (ver AVISO nas pendências manuais)." % P.rebaixo_na)
         return 3
     probs = pl.preflight(P, refs)
     if probs:
@@ -238,11 +262,11 @@ def _sync_common(args, apply):
         return 3
     if not P.pending_writes():
         out("Nada a aplicar: o vault já está de acordo com o arquivo.")
-        _print_manuais(P)
+        _print_manuais(P, verbose)
         return 0
-    n = pl.apply_plan(P, D, c, state, refs, out)
+    n = pl.apply_plan(P, D, c, state, refs, out, compact=not verbose)
     out("Aplicado: %d operação(ões)." % n)
-    _print_manuais(P)
+    _print_manuais(P, verbose)
     if not args.no_verify:
         left = pl.verify_after(D, c, opts)
         out("Verificação (replanejamento): %d ação(ões) ainda pendente(s) (esperado 0)." % len(left))
@@ -396,6 +420,8 @@ def build_parser():
         p.add_argument("--check", action="store_true")
         p.add_argument("--yes", action="store_true")
         p.add_argument("--no-verify", action="store_true")
+        p.add_argument("--verbose", action="store_true",
+                       help="texto completo de cada item (padrão: saída compacta); também CTVL_VERBOSE=1")
 
     p = add("enable-detokenize", cmd_enable_detokenize)
     p.add_argument("usuario")
