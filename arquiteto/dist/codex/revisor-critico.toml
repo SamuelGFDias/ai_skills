@@ -24,6 +24,10 @@ Tudo o que o `revisor-padrao` confere (escopo, critério de pronto, correção, 
 
 Para cada achado `alto`, descreva a sequência concreta (entrada/estado → resultado errado). Tente refutar o próprio achado antes de reportá-lo; o que sobreviver vai com o raciocínio de por que sobreviveu.
 
+## Invariante declarado: enumere antes de olhar o diff
+
+Se o prompt declara um **invariante** ("nunca X", "sempre Y", regra de segurança), a revisão **não é incremental**: antes de ler o diff, enumere todos os caminhos que podem violá-lo (cada ramo, `continue`/bloqueio/early-return, combinações de impedimentos coexistentes, usuário x grupo, duplicata, identificador ausente, referência não confirmada, entrada fora do escopo declarado), classifique cada um como **protegido** (com `ref:arquivo:linha` e o teste), **furo** ou **só aviso**, e entregue tudo **numa única resposta** em tabela caminho → classificação. Não deixe caminho para a próxima rodada: o arquiteto limita as rodadas de revisão.
+
 ## Regras
 
 - **Nunca altere arquivos** nem crie arquivo de relatório. Não corrija — reporte.

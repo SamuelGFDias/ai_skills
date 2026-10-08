@@ -45,7 +45,7 @@ Depois de mudar `roles/`, `cli/*/models.json` ou o fluxo, valide numa sessão no
 6. **Gravar o contrato, se as áreas se encostam** (regra 14): `executor-mecanico` grava `.arquiteto/contrato-<tarefa>.md` antes do lote.
 7. **Disparar os executores** (regras 4, 5, 10 e 17): paralelo quando independentes, sequencial quando dependentes. Prompt com ponteiros e decisões, sem nada colado. Depois do disparo, repassar os endereços dos pares quando houver contrato.
 8. **Conferir o artefato de cada retorno** (regras 6, 8 e 11): `git status --short`, `git diff --stat` contra o touch-list e comparação literal entre o comando pedido e o comando relatado. Em caso de BLOQUEIO, classificar e re-delegar no máximo 2 vezes no mesmo tipo.
-9. **Revisar o lote integrado** (regra 13): `revisor-padrao` ou `revisor-critico` com contexto limpo. Achado `alto`/`medio` vira executor de correção, seguido de re-revisão do trecho corrigido, dispensável só se a correção for pequena, testada e de uma área (regra 13). Lote só mecânico dispensa revisor.
+9. **Revisar o lote integrado** (regra 13): `revisor-padrao` ou `revisor-critico` com contexto limpo. Mudança que protege invariante: o prompt declara o invariante e exige a **enumeração exaustiva dos caminhos numa passada**, nunca "revise só o trecho corrigido". Achado `alto`/`medio` vira executor de correção que varre a **família** do achado, seguido de uma re-revisão, dispensável só se a correção for pequena, testada e de uma área. **No máximo 2 revisões por lote**; o que sobrar sem escrita indevida vira limite documentado (regra 13). Lote só mecânico dispensa revisor.
 10. **Rodar o gate completo, uma vez, no arquiteto** (regras 8 e 10): exigir evidência positiva no log, porque exit code não basta. Cobre o que mudou depois do último relato verde de cada executor, com ao menos um teste por área e o type-check/build. Publicar exige o gate antes do push.
 11. **Sintetizar para o usuário** (regra 6): o que foi delegado, para qual papel, o resultado conferido, as re-delegações e escaladas, e o veredito do revisor.
 
@@ -56,6 +56,7 @@ Depois de mudar `roles/`, `cli/*/models.json` ou o fluxo, valide numa sessão no
 - [ ] Objetivo, critério de pronto único, touch-list nominal, ref/branch verificado e verificação estreita permitida (regras 5, 7 e 10).
 - [ ] Skill de domínio indicada quando aplicável: `commiter`, `issue-factory`, `vault-factory`, `nuget-factory`, `speckit` (regra 5). Commit: "sem rodapé de atribuição de IA".
 - [ ] Ponteiros `arquivo:linha` e decisões, nunca conteúdo colado (regra 15).
+- [ ] Prompt de revisor de invariante: invariante em uma frase + enumerar todos os caminhos antes do diff + tabela caminho → protegido/furo/aviso (regra 13). Prompt de correção: varrer a família do achado, não só a instância (regra 13).
 - [ ] Contrato de retorno exigido (regra 6). Com papel tipado, uma linha basta (regra 17).
 - [ ] Ação sensível (push, merge, deleção, publicação) só com confirmação do usuário (regra 6).
 
@@ -73,7 +74,7 @@ Depois de mudar `roles/`, `cli/*/models.json` ou o fluxo, valide numa sessão no
 10. Verificação estreita no agente, gate completo no arquiteto.
 11. Bloqueio e re-delegação: no máximo 2 no mesmo tipo.
 12. Orçamento: consolidar subtarefas por contexto compartilhado.
-13. Revisão com contexto limpo.
+13. Revisão com contexto limpo, exaustiva sobre o invariante (não incremental), com no máximo 2 rodadas por lote.
 14. Contrato primeiro e mensagens entre pares só por protocolo.
 15. O arquiteto sonda e não lê implementação.
 16. Arquiteto em sonnet por padrão e escalada para opus por gatilho.

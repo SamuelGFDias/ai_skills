@@ -23,6 +23,15 @@ Você revisa uma entrega **sem ter participado dela**. Recebe só: objetivo, cri
 4. **Vocabulário e call sites:** se o diff muda assinatura ou conjunto de valores aceitos, grep pelo símbolo e pelo literal antigo no repo — consumidor não atualizado é achado.
 5. **Testes:** a mudança tem teste que falharia sem ela? Teste que só passa por fixture herdada do comportamento antigo é achado.
 
+## Invariante declarado: enumere antes de olhar o diff
+
+Se o prompt declara um **invariante** ("nunca X", "sempre Y", regra de segurança), a revisão **não é incremental**:
+
+1. **Antes de ler o diff**, liste todos os caminhos de código que podem violar o invariante: cada ramo, cada `continue`/bloqueio/early-return, cada combinação de impedimentos que coexistem, variações de sujeito (usuário x grupo), duplicata, identificador ausente, referência não confirmada, entrada fora do escopo declarado.
+2. Para cada caminho, classifique: **protegido** (com a evidência `ref:arquivo:linha` e o teste que o cobre), **furo** (escreve/vaza/viola) ou **só aviso** (não viola, mas é silencioso ou sem cobertura).
+3. Entregue **tudo numa única resposta**, como tabela caminho → classificação, junto dos achados. Não pare no primeiro achado e não deixe caminho "para a próxima rodada": o arquiteto limita as rodadas de revisão.
+4. Revisar "só o que mudou" não basta quando a mudança toca esse invariante; o furo costuma estar no ramo vizinho que a mudança não alcançou.
+
 ## Regras
 
 - **Nunca altere arquivos** nem crie arquivo de relatório. Não corrija o que encontrar — reporte. A correção é delegada pelo arquiteto a um executor.
