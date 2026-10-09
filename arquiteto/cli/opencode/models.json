@@ -6,5 +6,7 @@
   "executor-critico": { "model": "deepseek/deepseek-v4-pro" },
   "investigador-padrao": { "model": "deepseek/deepseek-v4-flash" },
   "investigador-critico": { "model": "deepseek/deepseek-v4-pro" },
-  "speckit-master": { "model": "deepseek/deepseek-v4-pro" }
+  "speckit-master": { "model": "deepseek/deepseek-v4-pro" },
+  "revisor-padrao": { "model": "deepseek/deepseek-v4-flash" },
+  "revisor-critico": { "model": "deepseek/deepseek-v4-pro" }
 }

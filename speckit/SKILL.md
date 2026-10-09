@@ -40,8 +40,8 @@ Percorra de cima para baixo e pare na primeira linha que casar.
 
 | Constatação | Próximo passo |
 |---|---|
-| `specify --version` falha | Instalar o CLI → `docs/instalacao.md` |
-| não existe `.specify/` na raiz | `specify init --here --force --non-interactive --integration claude` |
+| `specify version` falha | Instalar o CLI → `docs/instalacao.md` |
+| não existe `.specify/` na raiz | `specify init --here --force --ai claude` |
 | `.specify/memory/constitution.md` ausente, vazio ou ainda com placeholders do template | `/speckit.constitution` |
 | feature nova e não há `specs/NNN-*/` correspondente | `/speckit.specify` |
 | `spec.md` contém `[NEEDS CLARIFICATION]`, `TODO`, ou requisito ambíguo | `/speckit.clarify` — **sempre antes do plan** |
@@ -54,7 +54,7 @@ Percorra de cima para baixo e pare na primeira linha que casar.
 | tarefas precisam virar issues no GitHub | `/speckit.taskstoissues` |
 
 Evidências para constatar cada estado: `ls .specify specs`, `git status --short`,
-`grep -n 'NEEDS CLARIFICATION\|TODO' specs/*/spec.md`, `specify --version`.
+`grep -n 'NEEDS CLARIFICATION\|TODO' specs/*/spec.md`, `specify version`.
 
 **Checklist é snapshot, não fonte de verdade.** Um `checklists/*.md` audita outro artefato e fica obsoleto
 quando o alvo evolui (ex.: `clarify` rodou depois e resolveu os marcadores, mas o item "sem
