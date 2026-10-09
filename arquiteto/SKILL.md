@@ -59,6 +59,7 @@ Depois de mudar `roles/`, `cli/*/models.json` ou o fluxo, valide numa sessão no
 - [ ] Prompt de revisor de invariante: invariante em uma frase + enumerar todos os caminhos antes do diff + tabela caminho → protegido/furo/aviso (regra 13). Prompt de correção: varrer a família do achado, não só a instância (regra 13).
 - [ ] Contrato de retorno exigido (regra 6). Com papel tipado, uma linha basta (regra 17).
 - [ ] Ação sensível (push, merge, deleção, publicação) só com confirmação do usuário (regra 6).
+- [ ] Se um subagente falhou: gravar o relatório em `reports/falhas/` antes de encerrar a sessão e commitá-lo (regra 18).
 
 ## Regras (índice — texto completo em `references/regras.md`)
 
@@ -79,6 +80,7 @@ Depois de mudar `roles/`, `cli/*/models.json` ou o fluxo, valide numa sessão no
 15. O arquiteto sonda e não lê implementação.
 16. Arquiteto em sonnet por padrão e escalada para opus por gatilho.
 17. Prompt enxuto quando o papel tipado já carrega as regras.
+18. Falha de subagente vira relatório versionado em `reports/falhas/` (sessão + solicitação + resposta + análise do erro), para a revisão mensal decidir se sobe o nível do modelo/esforço. Formato em `reports/README.md`.
 
 ## Verificação de configuração dos subagentes
 
