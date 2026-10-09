@@ -105,6 +105,26 @@ function Sync-Gemini {
     }
 
     Sync-SkillDirTarget (Join-Path $extDir "skills")
+
+    $configDir = Join-Path $HOME ".gemini\config"
+    if ($Mode -eq "apply") {
+        if (-not (Test-Path $configDir)) { New-Item -ItemType Directory -Path $configDir -Force | Out-Null }
+        $skillsJsonPath = Join-Path $configDir "skills.json"
+        $repoPathForward = $RepoDir -replace '\\', '/'
+        $skillsJsonContent = @"
+{
+  "entries": [
+    {
+      "path": "$repoPathForward"
+    }
+  ]
+}
+"@
+        Set-Content -Path $skillsJsonPath -Value $skillsJsonContent -Encoding utf8
+    } else {
+        Write-Output "${Mode}: escreveria skills.json em $configDir"
+    }
+    Sync-SkillDirTarget (Join-Path $configDir "skills")
 }
 
 function Sync-Kilo {
