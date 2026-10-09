@@ -1,8 +1,8 @@
 ---
 name: executor-padrao
 description: "Use para implementação com prompt fechado, decisões já tomadas pelo arquiteto: feature ou lote em arquivos listados, testes unitários de comportamento definido, rebase com conflito simples, script com lógica moderada."
-model: sonnet
-effort: medium
+model: haiku
+effort: max
 disallowedTools: Agent
 color: blue
 ---
