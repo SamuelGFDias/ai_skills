@@ -13,6 +13,13 @@ Uso:
   build-agents.py --check              # verifica se dist está em dia com roles+models (drift)
   build-agents.py --list               # lista CLIs suportados
   build-agents.py <cli> --target <dir> # destino alternativo (uso pontual)
+  build-agents.py <cli> --local-out <dir>
+                                       # só os papéis sobrescritos em cli/<cli>/models.local.json,
+                                       # já mesclados (uso do sync-agents.sh; nunca grava em dist/)
+
+Override local: cli/<cli>/models.local.json (NÃO versionado, ver .gitignore) tem o mesmo formato de
+models.json e é mesclado por papel, campo a campo, sobre ele. Só afeta --local-out; dist/ e --check
+usam sempre models.json, então o que é commitado não carrega config pessoal.
 """
 import json
 import sys
@@ -87,6 +94,18 @@ def load_models(cli: str, path: Path):
         return json.loads(text)
     except json.JSONDecodeError as e:
         raise BuildError(f"JSON inválido em {path}: {e}")
+
+
+def load_local(cli: str):
+    """Lê cli/<cli>/models.local.json (override pessoal, não versionado). {} se não existir.
+    Chaves iniciadas por '_' (ex.: _comment) são ignoradas."""
+    path = CLI_DIR / cli / "models.local.json"
+    if not path.exists():
+        return {}
+    data = load_models(cli, path)
+    if not isinstance(data, dict):
+        raise BuildError(f"{path}: esperado um objeto JSON papel -> campos")
+    return {k: v for k, v in data.items() if not k.startswith("_")}
 
 
 def is_readonly(meta: dict) -> bool:
@@ -228,10 +247,15 @@ BUILDERS = {
 EXT = {"claude": ".md", "kilo": ".md", "codex": ".toml", "gemini": ".md", "opencode": ".md"}
 
 
-def build_cli(cli):
-    """Retorna {nome_arquivo: conteudo} para um CLI."""
+def build_cli(cli, local=False, only_local=False):
+    """Retorna {nome_arquivo: conteudo} para um CLI.
+
+    local=True mescla cli/<cli>/models.local.json sobre models.json; only_local=True devolve
+    só os papéis presentes nesse override. Sem local, o resultado depende só do que é versionado.
+    """
     models_path = CLI_DIR / cli / "models.json"
     models = load_models(cli, models_path)
+    local_models = load_local(cli) if local else {}
     out = {}
     seen_names = {}
     for role_path in sorted(ROLES_DIR.glob("*.md")):
@@ -247,11 +271,13 @@ def build_cli(cli):
             )
         seen_names[name] = role_path
 
+        if only_local and name not in local_models:
+            continue
         if name not in models:
             raise BuildError(
                 f"papel '{name}' (definido em {role_path}) não tem entrada em {models_path}"
             )
-        cfg = models[name]
+        cfg = {**models[name], **local_models.get(name, {})}
 
         try:
             content = BUILDERS[cli](meta, body, cfg, role_path)
@@ -263,6 +289,14 @@ def build_cli(cli):
                 f"campo obrigatório {e} ausente"
             )
         out[f"{name}{EXT[cli]}"] = content
+
+    unknown = sorted(k for k in local_models if k not in seen_names)
+    if unknown:
+        print(
+            f"  AVISO: models.local.json de '{cli}' cita papéis inexistentes em roles/: "
+            + ", ".join(unknown),
+            file=sys.stderr,
+        )
     return out
 
 
@@ -318,6 +352,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("cli", nargs="?", help="claude | kilo | codex")
     ap.add_argument("--target", help="destino alternativo (default: arquiteto/dist/<cli>); não se aplica a --check")
+    ap.add_argument("--local-out", help="grava só os papéis sobrescritos em cli/<cli>/models.local.json (mesclados) neste diretório")
     ap.add_argument("--list", action="store_true", help="mostra CLIs suportados")
     ap.add_argument("--check", action="store_true", help="verifica drift entre roles+models e dist/")
     args = ap.parse_args()
@@ -348,6 +383,16 @@ def main():
         cli = args.cli
         if cli not in BUILDERS:
             raise BuildError(f"CLI desconhecido: '{cli}' (suportados: {', '.join(sorted(BUILDERS))})")
+
+        if args.local_out:
+            generated = build_cli(cli, local=True, only_local=True)
+            target = Path(args.local_out)
+            target.mkdir(parents=True, exist_ok=True)
+            for name, content in generated.items():
+                with (target / name).open("w", encoding="utf-8", newline="\n") as fh:
+                    fh.write(content)
+            print(f"{len(generated)} papel(is) com override local em '{cli}'")
+            return 0
 
         generated = build_cli(cli)
         target = Path(args.target) if args.target else DIST_DIR / cli

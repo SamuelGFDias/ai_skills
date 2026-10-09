@@ -89,9 +89,4 @@ Antes de delegar, o arquiteto confere se os 9 papéis (`executor-mecanico`, `exe
 
 O arquiteto não precisa conhecer a configuração de todos os CLIs de antemão — lê o `models.json` do CLI detectado somente quando constata a ausência dos tipos.
 
-**Precedência de modelo e esforço no Claude Code** (verificado em 2026-10-06, Claude Code 2.1.292; fonte: docs `sub-agents` e `model-config`):
-
-- **Modelo:** `model` passado na chamada `Agent` > `model` do frontmatter do papel > env `CLAUDE_CODE_SUBAGENT_MODEL` > modelo da sessão. Por isso o arquiteto **não** passa `model` na chamada `Agent` com papel tipado — anularia o mapeamento do `models.json`. Constatado nos transcripts: `executor-mecanico` → `claude-haiku-4-5`, `investigador-padrao` → `claude-sonnet-5-5`, com a sessão em `claude-opus-5-5`.
-- **Esforço:** env `CLAUDE_CODE_EFFORT_LEVEL` > `effort` do frontmatter > esforço da sessão (`effortLevel` em `modelSettings` do `settings.json`). Se a env estiver definida, todos os papéis rodam no mesmo esforço — conferir com `env | grep CLAUDE_CODE_` quando o custo divergir do esperado.
-- **Haiku ignora `effort`** (não suporta níveis de esforço) — o `effort: low` do `executor-mecanico` é decorativo enquanto o papel estiver em haiku.
-- **Como observar:** o transcript não registra o esforço; `/tasks` mostra modelo + esforço na linha de cada subagente. O modelo efetivo pode ser extraído do transcript sem lê-lo inteiro: `grep -o '"model":"[^"]*"' <output_file> | sort | uniq -c`.
+**Modelo/esforço dos subagentes** (precedência no Claude Code, `CLAUDE_CODE_*`, override pessoal não versionado `cli/<cli>/models.local.json`): só ao diagnosticar custo/modelo divergente ou mudar a configuração, ler `references/modelos-e-esforco.md`. Não passar `model` na chamada `Agent` com papel tipado.
