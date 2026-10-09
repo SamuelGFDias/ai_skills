@@ -75,17 +75,50 @@ headroom install apply --profile default --port 8787 --backend anthropic \
 ```
 
 `start`/`restart`/`status` reusam a imagem gravada no state. **Não** rodar `install apply` sem
-`--image`: ele reverte para `ghcr.io/headroomlabs-ai/headroom:latest` e o Kompress quebra de novo.
+`--image`: ele reverte para `ghcr.io/headroomlabs-ai/headroom:latest`. Se o Kompress/memória
+estiverem degradados, ver a receita `docker run` na seção abaixo.
 
 ### Kompress: validar a compressão de verdade, não só o health
 
 Proxy "healthy" com `"kompress":{"ready":false,"backend":null}` **não** comprime — o modelo
-`chopratejas/kompress-v2-base` (HuggingFace) não baixou. Causa típica: o cache de `$HOME` do
-container não é gravável (mesmo problema do rc acima). Correção desta máquina: imagem derivada
-(`~/headroom-image/Dockerfile`) que torna `/tmp/headroom-home` gravável e aponta `HF_HOME` e
-`XDG_CACHE_HOME` para submounts de `~/.headroom` (mount persistente) — o modelo (~350 MB) baixa uma
-vez e fica. Conferir compressão de verdade nos headers de uma requisição (e.g. `curl` no `/v1` sem
-auth → 401, mas com `x-headroom-tokens-before/after/saved` diferente): `x-headroom-tokens-saved > 0`.
+`chopratejas/kompress-v2-base` (HuggingFace) não baixou. Causa: `HOME=/tmp/headroom-home` é do root,
+então o cache do HuggingFace falha com `[Errno 13] Permission denied: '/tmp/headroom-home/.cache'`.
+`/health` com `memory.status:"disabled"` tem causa parecida: o DB default fica num caminho sem escrita.
+
+Correção (validada em 2026-10-09, imagem `:latest` 0.36.5, sem imagem derivada): apontar `HF_HOME`,
+`XDG_CACHE_HOME` e `HEADROOM_MEMORY_DB_PATH` para dentro do mount `~/.headroom` (gravável). O modelo
+(~415 MB) baixa na **primeira requisição** (carga é adiada) e persiste em `~/.headroom/hf`; até lá o
+`/health` segue `degraded`. Conferir compressão de verdade nos headers de uma requisição:
+`x-headroom-tokens-saved > 0` (um `curl` com chave falsa dá 401 e não prova nada).
+
+### Receita `docker run` (quando `install apply` falha)
+
+`headroom install apply --env HF_HOME=... ` falhou aqui em toda tentativa (`Deployment 'default' did
+not become ready after start`, rollback automático, causa não achada — nem sem `--memory`), e deixa
+um symlink órfão em `~/.config/systemd/user/default.target.wants/`. Recriar o container à mão
+(mesmo nome/porta/restart; trocar uid:gid por `$(id -u):$(id -g)`):
+
+```bash
+docker rm -f headroom-default
+docker run -d --name headroom-default --restart unless-stopped \
+  --user $(id -u):$(id -g) -p 127.0.0.1:8787:8787 \
+  -e HOME=/tmp/headroom-home -e HF_HOME=/tmp/headroom-home/.headroom/hf \
+  -e XDG_CACHE_HOME=/tmp/headroom-home/.headroom/cache \
+  -e HEADROOM_CONFIG_DIR=/tmp/headroom-home/.headroom/config \
+  -e HEADROOM_WORKSPACE_DIR=/tmp/headroom-home/.headroom \
+  -e HEADROOM_PORT=8787 -e HEADROOM_MODE=cache -e HEADROOM_BACKEND=anthropic \
+  -e HEADROOM_TELEMETRY=off -e HEADROOM_MEMORY_ENABLED=1 \
+  -e HEADROOM_MEMORY_DB_PATH=/tmp/headroom-home/.headroom/memory.db \
+  -v $HOME/.headroom:/tmp/headroom-home/.headroom \
+  ghcr.io/headroomlabs-ai/headroom:latest \
+  --host 0.0.0.0 --port 8787 --mode cache --backend anthropic --no-telemetry --memory
+```
+
+Opcional: montar também `~/.claude`, `~/.codex`, `~/.gemini`, `~/.config/opencode` em
+`/tmp/headroom-home/<mesmo caminho>` (o deploy oficial faz isso). Em máquina nova, criar
+`~/.headroom` antes e adicionar o bloco de `export`s no rc. **Limite:** o container deixa de ser
+gerenciado pelo `headroom install` (`status` não sabe das env vars) e um `install apply` futuro
+reverte a correção.
 
 ## Interpretando o `headroom doctor` (não confiar às cegas)
 
