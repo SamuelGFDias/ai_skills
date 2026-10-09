@@ -20,9 +20,10 @@ trabalhar aqui, siga estas regras para manter o ambiente sem ruído e sem débit
 - **Remotes (ambos privados):** GitHub `git@github.com:SamuelGFDias/ai_skills.git`.
 - **Codex:** lê skills de `$HOME/.agents/skills/<nome>` (symlink/cópia, mecanismo nativo de skills
   do Codex CLI) — populado por `bin/sync-skills.sh codex` / `bin/sync-skills.ps1 -Cli codex`.
-- **Gemini CLI:** só descobre skills dentro de uma *extension* — o repo publica a sua própria em
-  `~/.gemini/extensions/ai-skills/skills/<nome>`, mantida por `bin/sync-skills.sh gemini` /
-  `bin/sync-skills.ps1 -Cli gemini`.
+- **Gemini CLI / Antigravity (`agy`):** descobre skills via *extension* em
+  `~/.gemini/extensions/ai-skills/skills/<nome>` e via config em `~/.gemini/config/skills/`,
+  mantidos por `bin/sync-skills.sh gemini` / `bin/sync-skills.ps1 -Cli gemini`. Detectado no
+  `install.sh` via comando `gemini` ou `agy`.
 - **opencode:** não tem destino próprio de skills — lê `~/.claude/skills` nativamente (compat
   documentada com Claude Code). Basta o alvo `claude` do sync já estar em dia; não precisa do
   binário `claude` instalado.
@@ -42,9 +43,9 @@ detectado na máquina — ver "Caminho recomendado" logo abaixo.
 ### Caminho recomendado: install.sh / install.ps1
 
 `bin/install.sh` (bash/WSL/Git Bash) e `bin/install.ps1` (PowerShell) detectam quais CLIs de IA
-suportados (`claude`, `kilo`, `codex`, `gemini`, `opencode`) estão instalados nesta máquina (via
+suportados (`claude`, `kilo`, `codex`, `gemini`/`agy`, `opencode`) estão instalados nesta máquina (via
 `command -v`/`Get-Command`) e rodam automaticamente, para cada um, o `sync-skills` + `sync-agents`
-correspondentes — inclusive para `codex` e `gemini`, que antes exigiam passos manuais, e para
+correspondentes — inclusive para `codex` e `gemini` (e Antigravity `agy`), que antes exigiam passos manuais, e para
 `opencode`, que só lê skills (via compat nativa com `~/.claude/skills`) e ganha DeepSeek como
 modelo default se ainda não tiver nenhum configurado. Idempotente, pode rodar quantas vezes quiser.
 Aceita `--dry-run`/`-DryRun` para só mostrar o que faria.
