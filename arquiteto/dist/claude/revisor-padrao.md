@@ -1,7 +1,7 @@
 ---
 name: revisor-padrao
 description: "Revisão read-only com contexto limpo de uma entrega integrada (lote de executores): confere o diff contra objetivo, critério de pronto e touch-list, e devolve veredito com achados ref:arquivo:linha por severidade. Nunca corrige nada. Use uma vez por lote, depois dos executores e antes do gate completo do arquiteto."
-model: sonnet
+model: claude-sonnet-5-5
 effort: medium
 disallowedTools: Edit, Write, NotebookEdit, Agent
 color: orange

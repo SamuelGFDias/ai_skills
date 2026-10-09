@@ -1,8 +1,8 @@
 ---
 name: revisor-critico
 description: "Use raramente — revisão read-only com contexto limpo de entrega de alto risco (segurança, concorrência, migração com risco de dado, mudança de API pública). Mesmo contrato do revisor-padrao, com análise adversarial. O arquiteto deve justificar no prompt por que revisor-padrao não bastava."
-model: opus
-effort: low
+model: claude-opus-5-5
+effort: medium
 disallowedTools: Edit, Write, NotebookEdit, Agent
 color: purple
 ---
