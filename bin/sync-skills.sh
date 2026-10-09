@@ -129,6 +129,27 @@ EOF
   fi
 
   sync_skill_dir_target "$ext_dir/skills"
+
+  local config_dir="$HOME/.gemini/config"
+  if [ "$MODE" = "apply" ]; then
+    mkdir -p "$config_dir"
+    if [ "$LINK_MODE" = "symlink" ]; then
+      ln -sfn "$ext_dir/skills" "$config_dir/skills"
+    else
+      sync_skill_dir_target "$config_dir/skills"
+    fi
+    cat > "$config_dir/skills.json" <<EOF
+{
+  "entries": [
+    {
+      "path": "$REPO_DIR"
+    }
+  ]
+}
+EOF
+  else
+    echo "$MODE: configuraria $config_dir/skills e $config_dir/skills.json"
+  fi
 }
 
 sync_kilo() {
