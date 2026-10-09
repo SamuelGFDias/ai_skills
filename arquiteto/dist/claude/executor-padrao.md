@@ -1,8 +1,8 @@
 ---
 name: executor-padrao
 description: "Use para implementação com prompt fechado, decisões já tomadas pelo arquiteto: feature ou lote em arquivos listados, testes unitários de comportamento definido, rebase com conflito simples, script com lógica moderada."
-model: haiku
-effort: max
+model: claude-haiku-5-5
+effort: high
 disallowedTools: Agent
 color: blue
 ---
