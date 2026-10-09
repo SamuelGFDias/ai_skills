@@ -6,6 +6,13 @@
 # atualiza o conteúdo apontado; o symlink sempre reflete a última versão —
 # sem rodar gerador nem copiar arquivos na mão.
 #
+# Override pessoal (não versionado): cli/<cli>/models.local.json, mesmo formato de models.json,
+# mesclado por papel/campo sobre ele (ex.: {"executor-padrao": {"model": "opus", "effort": "high"}}).
+# Os papéis citados nele NÃO viram symlink: são gerados já mesclados e copiados como arquivo real
+# no destino, então um git pull de models.json/dist nunca sobrescreve a sua escolha. Os demais papéis
+# continuam symlink. Para gerar o arquivo a partir dos defaults: bin/init-local-models.py <cli> [papéis...].
+# Mudou o arquivo local, ou roles/ de um papel sobrescrito? Rode este script de novo.
+#
 # Uso:
 #   bin/sync-agents.sh                   # cria/atualiza symlinks em todos os CLIs
 #   bin/sync-agents.sh claude            # só um CLI (claude|kilo|codex|gemini|opencode)
@@ -64,15 +71,38 @@ else
   CLIS=("${ALL_CLIS[@]}")
 fi
 
+LOCAL_TMP="$(mktemp -d)"
+trap 'rm -rf "$LOCAL_TMP"' EXIT
+
 for cli in "${CLIS[@]}"; do
   src="$DIST_DIR/$cli"
   dst="${TARGETS[$cli]}"
   [ -d "$src" ] || { echo "  AVISO: sem dist/$cli — rode build-agents.py e commite." >&2; continue; }
   mkdir -p "$dst"
+
+  # override local: gera só os papéis sobrescritos, já mesclados, num diretório temporário
+  local_dir="$LOCAL_TMP/$cli"
+  if [ -f "$REPO_DIR/cli/$cli/models.local.json" ]; then
+    python3 "$REPO_DIR/bin/build-agents.py" "$cli" --local-out "$local_dir"
+  fi
+
   for file in "$src"/*; do
     [ -f "$file" ] || continue
     name="$(basename "$file")"
     link="$dst/$name"
+
+    if [ -f "$local_dir/$name" ]; then
+      if [ ! -L "$link" ] && [ -f "$link" ] && cmp -s "$local_dir/$name" "$link"; then
+        continue  # override local já aplicado
+      fi
+      echo "$MODE: cp (override local) $local_dir/$name -> $link"
+      if [ "$MODE" = "apply" ]; then
+        rm -f "$link"  # rm antes do cp: se fosse symlink, cp escreveria em dist/ por cima do versionado
+        cp "$local_dir/$name" "$link"
+      fi
+      continue
+    fi
+
     if [ -L "$link" ] && [ "$(readlink "$link")" = "$file" ]; then
       continue  # já ok
     fi
