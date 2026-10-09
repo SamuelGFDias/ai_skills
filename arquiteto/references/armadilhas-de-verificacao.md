@@ -1,6 +1,6 @@
 # Armadilhas de verificação
 
-Complemento da regra 8 do `SKILL.md`. Cada item: sintoma, causa, correção. Vale tanto para o arquiteto verificando quanto para o prompt de um executor que monta script de gate.
+Complemento da regra 8 (`regras.md`). Cada item: sintoma, causa, correção. Vale tanto para o arquiteto verificando quanto para o prompt de um executor que monta script de gate.
 
 ## `pkill -f <padrão>` mata o próprio script
 
