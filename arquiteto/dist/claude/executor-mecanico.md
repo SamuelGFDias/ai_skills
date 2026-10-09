@@ -2,7 +2,7 @@
 name: executor-mecanico
 description: "Use para tarefas mecânicas com critério único e sem decisão: commit por caminho, merge fast-forward, rebase sem conflito, rodar um comando e reportar, mover/renomear/copiar arquivos, substituição literal de texto, preencher template."
 model: claude-haiku-5-5
-effort: low
+effort: medium
 disallowedTools: Agent
 color: green
 ---
