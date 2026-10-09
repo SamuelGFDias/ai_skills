@@ -1,0 +1,28 @@
+{
+  "count": 3,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "idtokencharset": 1,
+      "name": "Numeric",
+      "alphabet": "0-9",
+      "predefined": true,
+      "range": true
+    },
+    {
+      "idtokencharset": 2,
+      "name": "All printable ASCII",
+      "alphabet": "20-7E",
+      "predefined": true,
+      "range": true
+    },
+    {
+      "idtokencharset": 3,
+      "name": "SINDRAS_DIGITOS",
+      "alphabet": "0123456789",
+      "predefined": false,
+      "range": false
+    }
+  ]
+}

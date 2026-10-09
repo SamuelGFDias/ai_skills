@@ -1,0 +1,62 @@
+{
+  "count": 5,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 9,
+      "username": "admin",
+      "email": "admin@example.invalid",
+      "password": "pbkdf2_sha256$600000$fixturesalt$fixturehashfixturehash",
+      "is_active": true,
+      "is_staff": true,
+      "is_superuser": true,
+      "groups": [],
+      "ldap_user": "False",
+      "mask": null
+    },
+    {
+      "id": 5,
+      "username": "ctvl_cpf_total",
+      "email": "a@example.invalid",
+      "password": "pbkdf2_sha256$600000$fixturesalt$fixturehashfixturehash",
+      "is_active": true,
+      "groups": [
+        "app_sindras"
+      ],
+      "mask": null
+    },
+    {
+      "id": 3,
+      "username": "settorj_cns",
+      "email": "b@example.invalid",
+      "password": "pbkdf2_sha256$600000$fixturesalt$fixturehashfixturehash",
+      "is_active": true,
+      "groups": [
+        "app_settorj"
+      ],
+      "mask": "cns_3_left"
+    },
+    {
+      "id": 2,
+      "username": "sindras_svc_tokenize",
+      "email": "c@example.invalid",
+      "password": "pbkdf2_sha256$600000$fixturesalt$fixturehashfixturehash",
+      "is_active": true,
+      "groups": [],
+      "mask": null
+    },
+    {
+      "id": 1,
+      "username": "sindras_cns_3_left",
+      "email": "d@example.invalid",
+      "password": "pbkdf2_sha256$600000$fixturesalt$fixturehashfixturehash",
+      "is_active": true,
+      "groups": [
+        "app_sindras",
+        "app_settorj"
+      ],
+      "mask": "cns_3_left"
+    }
+  ]
+}

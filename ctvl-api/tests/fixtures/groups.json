@@ -1,0 +1,19 @@
+{
+  "count": 2,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 2,
+      "name": "app_settorj",
+      "users": "1",
+      "mask": ""
+    },
+    {
+      "id": 1,
+      "name": "app_sindras",
+      "users": "2",
+      "mask": ""
+    }
+  ]
+}

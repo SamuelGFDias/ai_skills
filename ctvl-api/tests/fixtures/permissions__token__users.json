@@ -1,0 +1,25 @@
+{
+  "count": 2,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 2,
+      "user": "sindras_svc_tokenize",
+      "key": "SINDRAS_KEY",
+      "asymkey": "",
+      "opaqueobj": "",
+      "canPost": true,
+      "canGet": false
+    },
+    {
+      "id": 1,
+      "user": "sindras_cns_3_left",
+      "key": "SINDRAS_KEY",
+      "asymkey": "",
+      "opaqueobj": "",
+      "canPost": false,
+      "canGet": true
+    }
+  ]
+}

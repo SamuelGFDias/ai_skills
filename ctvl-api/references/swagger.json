@@ -1,0 +1,3902 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "CT-VL admin RESTFul API Documentation",
+    "description": "This RESTful API exposes all the functionalities available in the GUI.<br>\n        The swagger `YAML` document can be found [here](/vts/admin/v1/doc/swagger.yaml).\n        <h4>Authorization</h4>You can retrieve a JWT by calling [/api/api-token-auth/](/api/api-token-auth/) with your username/password. Then insert the JWT contained in the authorization header.\n        > **Example:** <em>Bearer gf43d[...]ey7hw</em><br> ",
+    "version": "v1"
+  },
+  "host": "<host>",
+  "schemes": [
+    "https"
+  ],
+  "basePath": "/api",
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "securityDefinitions": {
+    "Bearer": {
+      "in": "header",
+      "name": "Authorization",
+      "type": "apiKey"
+    }
+  },
+  "security": [
+    {
+      "Bearer": []
+    }
+  ],
+  "paths": {
+    "/api-token-auth/": {
+      "post": {
+        "operationId": "api-token-auth_create",
+        "description": "Returns a JSON Web Token that can be used for authenticated requests.",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Get JWT"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Get JWT"
+            }
+          }
+        },
+        "tags": [
+          "api-token-auth"
+        ]
+      },
+      "parameters": []
+    },
+    "/asymkeys/": {
+      "get": {
+        "operationId": "asymkeys_list",
+        "description": "Returns a list of asymmetric keys",
+        "parameters": [
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "A search term.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The initial index from which to return the results.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Asymmetric Key"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "asymkeys"
+        ]
+      },
+      "post": {
+        "operationId": "asymkeys_create",
+        "description": "Create an asymmetric key",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Asymmetric Key"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Asymmetric Key"
+            }
+          }
+        },
+        "tags": [
+          "asymkeys"
+        ]
+      },
+      "parameters": []
+    },
+    "/asymkeys/{id}": {
+      "get": {
+        "operationId": "asymkeys_read",
+        "description": "Get an asymmetric key by id",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Asymmetric Key"
+            }
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "asymkeys"
+        ]
+      },
+      "put": {
+        "operationId": "asymkeys_update",
+        "description": "Update an asymmetric key",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Asymmetric Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Asymmetric Key"
+            }
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "asymkeys"
+        ]
+      },
+      "delete": {
+        "operationId": "asymkeys_delete",
+        "description": "Delete an asymmetric key",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Successful deletion"
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "asymkeys"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "A unique integer value identifying this Asymmetric Key.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/backup/create": {
+      "get": {
+        "operationId": "backup_create_list",
+        "description": "Returns an encrypted backup file of the current CT-VL.",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The initial index from which to return the results.",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "keyname",
+            "in": "path",
+            "description": "Key used to encrypt the backup",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/File"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "backup"
+        ]
+      },
+      "parameters": []
+    },
+    "/backup/create/{keyname}": {
+      "get": {
+        "operationId": "backup_create_read",
+        "description": "Returns an encrypted backup file of the current CT-VL.",
+        "parameters": [
+          {
+            "name": "keyname",
+            "in": "path",
+            "description": "Key used to encrypt the backup",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/File"
+            }
+          }
+        },
+        "tags": [
+          "backup"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "keyname",
+          "in": "path",
+          "required": true,
+          "type": "string"
+        }
+      ]
+    },
+    "/change_password/": {
+      "put": {
+        "operationId": "change_password_update",
+        "description": "An endpoint for changing password.",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Change Password"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Change Password"
+            }
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "change_password"
+        ]
+      },
+      "parameters": []
+    },
+    "/charsets/": {
+      "get": {
+        "operationId": "charsets_list",
+        "description": "Returns a list of tokenization character sets",
+        "parameters": [
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "A search term.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The initial index from which to return the results.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Tokenization Character Set"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "charsets"
+        ]
+      },
+      "post": {
+        "operationId": "charsets_create",
+        "description": "Create a character set",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Tokenization Character Set"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Tokenization Character Set"
+            }
+          }
+        },
+        "tags": [
+          "charsets"
+        ]
+      },
+      "parameters": []
+    },
+    "/charsets/{idtokencharset}": {
+      "get": {
+        "operationId": "charsets_read",
+        "description": "Get a character set by id",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Tokenization Character Set"
+            }
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "charsets"
+        ]
+      },
+      "put": {
+        "operationId": "charsets_update",
+        "description": "Update a character set",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Tokenization Character Set"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Tokenization Character Set"
+            }
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "charsets"
+        ]
+      },
+      "delete": {
+        "operationId": "charsets_delete",
+        "description": "Delete a character set",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Successful deletion"
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "charsets"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "idtokencharset",
+          "in": "path",
+          "description": "A unique integer value identifying this Tokenization Character Set.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/formats/": {
+      "get": {
+        "operationId": "formats_list",
+        "description": "Returns a list of formats available for tokenization",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The initial index from which to return the results.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Tokenization Format"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "formats"
+        ]
+      },
+      "parameters": []
+    },
+    "/groups/": {
+      "get": {
+        "operationId": "groups_list",
+        "description": "Returns a list of groups",
+        "parameters": [
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "A search term.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The initial index from which to return the results.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/User Group"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "groups"
+        ]
+      },
+      "post": {
+        "operationId": "groups_create",
+        "description": "Create a group",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/User Group"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/User Group"
+            }
+          }
+        },
+        "tags": [
+          "groups"
+        ]
+      },
+      "parameters": []
+    },
+    "/groups/{id}": {
+      "get": {
+        "operationId": "groups_read",
+        "description": "Get a group by id",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/User Group"
+            }
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "groups"
+        ]
+      },
+      "put": {
+        "operationId": "groups_update",
+        "description": "Update a group",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/User Group"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/User Group"
+            }
+          }
+        },
+        "tags": [
+          "groups"
+        ]
+      },
+      "delete": {
+        "operationId": "groups_delete",
+        "description": "Delete a group",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Successful deletion"
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "groups"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "A unique integer value identifying this group.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/keys/": {
+      "get": {
+        "operationId": "keys_list",
+        "description": "Returns a list of symmetric keys",
+        "parameters": [
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "A search term.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The initial index from which to return the results.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Symmetric Key"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "keys"
+        ]
+      },
+      "post": {
+        "operationId": "keys_create",
+        "description": "Create a symmetric key",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Symmetric Key"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Symmetric Key"
+            }
+          }
+        },
+        "tags": [
+          "keys"
+        ]
+      },
+      "parameters": []
+    },
+    "/keys/{idkey}": {
+      "get": {
+        "operationId": "keys_read",
+        "description": "Get a symmetric key by id",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Symmetric Key"
+            }
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "keys"
+        ]
+      },
+      "put": {
+        "operationId": "keys_update",
+        "description": "Update a symmetric key",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Symmetric Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Symmetric Key"
+            }
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "keys"
+        ]
+      },
+      "delete": {
+        "operationId": "keys_delete",
+        "description": "Delete a symmetric key",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Successful deletion"
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "keys"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "idkey",
+          "in": "path",
+          "description": "A unique integer value identifying this key.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/logout/": {
+      "post": {
+        "operationId": "logout_create",
+        "description": "Revoke the current user's session",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Logout"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Logout"
+            }
+          }
+        },
+        "tags": [
+          "logout"
+        ]
+      },
+      "parameters": []
+    },
+    "/masks/": {
+      "get": {
+        "operationId": "masks_list",
+        "description": "Returns a list of masking characters",
+        "parameters": [
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "A search term.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The initial index from which to return the results.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Mask"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "masks"
+        ]
+      },
+      "post": {
+        "operationId": "masks_create",
+        "description": "Create a masking character",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Mask"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Mask"
+            }
+          }
+        },
+        "tags": [
+          "masks"
+        ]
+      },
+      "parameters": []
+    },
+    "/masks/{idmask}": {
+      "get": {
+        "operationId": "masks_read",
+        "description": "Get a masking character by id",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Mask"
+            }
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "masks"
+        ]
+      },
+      "put": {
+        "operationId": "masks_update",
+        "description": "Update a masking character",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Mask"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Mask"
+            }
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "masks"
+        ]
+      },
+      "delete": {
+        "operationId": "masks_delete",
+        "description": "Delete a masking character",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Successful deletion"
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "masks"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "idmask",
+          "in": "path",
+          "description": "A unique integer value identifying this mask.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/opaqueobjs/": {
+      "get": {
+        "operationId": "opaqueobjs_list",
+        "description": "Returns a list of opaque objects",
+        "parameters": [
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "A search term.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The initial index from which to return the results.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Opaque Object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "opaqueobjs"
+        ]
+      },
+      "post": {
+        "operationId": "opaqueobjs_create",
+        "description": "Create an opaque object",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Opaque Object"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Opaque Object"
+            }
+          }
+        },
+        "tags": [
+          "opaqueobjs"
+        ]
+      },
+      "parameters": []
+    },
+    "/opaqueobjs/{id}": {
+      "get": {
+        "operationId": "opaqueobjs_read",
+        "description": "Get an opaque object by id",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Opaque Object"
+            }
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "opaqueobjs"
+        ]
+      },
+      "put": {
+        "operationId": "opaqueobjs_update",
+        "description": "Update an opaque object",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Opaque Object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Opaque Object"
+            }
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "opaqueobjs"
+        ]
+      },
+      "delete": {
+        "operationId": "opaqueobjs_delete",
+        "description": "Delete an opaque object",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Successful deletion"
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "opaqueobjs"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "A unique integer value identifying this Opaque Object.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/permissions/crypto/groups/": {
+      "get": {
+        "operationId": "permissions_crypto_groups_list",
+        "description": "Returns a list of group crypto permissions",
+        "parameters": [
+          {
+            "name": "group__name",
+            "in": "query",
+            "description": "Filter by group name",
+            "type": "string"
+          },
+          {
+            "name": "key__name",
+            "in": "query",
+            "description": "Filter by key name",
+            "type": "string"
+          },
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "A search term.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The initial index from which to return the results.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Group Crypto Permission"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "post": {
+        "operationId": "permissions_crypto_groups_create",
+        "description": "Create a group crypto permission",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Group Crypto Permission"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Group Crypto Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "parameters": []
+    },
+    "/permissions/crypto/groups/{id}": {
+      "get": {
+        "operationId": "permissions_crypto_groups_read",
+        "description": "Get a group crypto permission by id",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Group Crypto Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "put": {
+        "operationId": "permissions_crypto_groups_update",
+        "description": "Update a group crypto permission",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Group Crypto Permission"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Group Crypto Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "patch": {
+        "operationId": "permissions_crypto_groups_partial_update",
+        "description": "",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Group Crypto Permission"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Group Crypto Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "delete": {
+        "operationId": "permissions_crypto_groups_delete",
+        "description": "Delete a group crypto permission",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "A unique integer value identifying this Group crypto permission.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/permissions/crypto/users/": {
+      "get": {
+        "operationId": "permissions_crypto_users_list",
+        "description": "Returns a list of user crypto permissions",
+        "parameters": [
+          {
+            "name": "user__username",
+            "in": "query",
+            "description": "Filter by username",
+            "type": "string"
+          },
+          {
+            "name": "key__name",
+            "in": "query",
+            "description": "Filter by key name",
+            "type": "string"
+          },
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "A search term.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The initial index from which to return the results.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/User Crypto Permission"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "post": {
+        "operationId": "permissions_crypto_users_create",
+        "description": "Create a user crypto permission",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/User Crypto Permission"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/User Crypto Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "parameters": []
+    },
+    "/permissions/crypto/users/{id}": {
+      "get": {
+        "operationId": "permissions_crypto_users_read",
+        "description": "Get a user crypto permission by id",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/User Crypto Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "put": {
+        "operationId": "permissions_crypto_users_update",
+        "description": "Update a user crypto permission",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/User Crypto Permission"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/User Crypto Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "patch": {
+        "operationId": "permissions_crypto_users_partial_update",
+        "description": "",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/User Crypto Permission"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/User Crypto Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "delete": {
+        "operationId": "permissions_crypto_users_delete",
+        "description": "Delete a user crypto permission",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "A unique integer value identifying this User crypto permission.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/permissions/km/groups/": {
+      "get": {
+        "operationId": "permissions_km_groups_list",
+        "description": "Returns a list of group key management permissions",
+        "parameters": [
+          {
+            "name": "group__name",
+            "in": "query",
+            "description": "Filter by group name",
+            "type": "string"
+          },
+          {
+            "name": "key__name",
+            "in": "query",
+            "description": "Filter by key name",
+            "type": "string"
+          },
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "A search term.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The initial index from which to return the results.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Group Key Management Permission"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "post": {
+        "operationId": "permissions_km_groups_create",
+        "description": "Create a group key management permission",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Group Key Management Permission"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Group Key Management Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "parameters": []
+    },
+    "/permissions/km/groups/{id}": {
+      "get": {
+        "operationId": "permissions_km_groups_read",
+        "description": "Get a group key management permission by id",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Group Key Management Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "put": {
+        "operationId": "permissions_km_groups_update",
+        "description": "Update a group key management permission",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Group Key Management Permission"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Group Key Management Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "patch": {
+        "operationId": "permissions_km_groups_partial_update",
+        "description": "",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Group Key Management Permission"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Group Key Management Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "delete": {
+        "operationId": "permissions_km_groups_delete",
+        "description": "Delete a group key management permission",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "A unique integer value identifying this Group key management permission.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/permissions/km/users/": {
+      "get": {
+        "operationId": "permissions_km_users_list",
+        "description": "Returns a list of user key management permissions",
+        "parameters": [
+          {
+            "name": "user__username",
+            "in": "query",
+            "description": "Filter by username",
+            "type": "string"
+          },
+          {
+            "name": "key__name",
+            "in": "query",
+            "description": "Filter by key name",
+            "type": "string"
+          },
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "A search term.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The initial index from which to return the results.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/User Key Management Permission"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "post": {
+        "operationId": "permissions_km_users_create",
+        "description": "Create a user key management permission",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/User Key Management Permission"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/User Key Management Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "parameters": []
+    },
+    "/permissions/km/users/{id}": {
+      "get": {
+        "operationId": "permissions_km_users_read",
+        "description": "Get a user key management permission by id",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/User Key Management Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "put": {
+        "operationId": "permissions_km_users_update",
+        "description": "Update a user key management permission",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/User Key Management Permission"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/User Key Management Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "patch": {
+        "operationId": "permissions_km_users_partial_update",
+        "description": "",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/User Key Management Permission"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/User Key Management Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "delete": {
+        "operationId": "permissions_km_users_delete",
+        "description": "Delete a user key management permission",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "A unique integer value identifying this User key management permission.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/permissions/token/groups/": {
+      "get": {
+        "operationId": "permissions_token_groups_list",
+        "description": "Returns a list of group tokenization permissions",
+        "parameters": [
+          {
+            "name": "group__name",
+            "in": "query",
+            "description": "Filter by group name",
+            "type": "string"
+          },
+          {
+            "name": "key__name",
+            "in": "query",
+            "description": "Filter by key name",
+            "type": "string"
+          },
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "A search term.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The initial index from which to return the results.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Group Tokenization Permission"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "post": {
+        "operationId": "permissions_token_groups_create",
+        "description": "Create a group tokenization permission",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Group Tokenization Permission"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Group Tokenization Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "parameters": []
+    },
+    "/permissions/token/groups/{idgroupprofile}": {
+      "get": {
+        "operationId": "permissions_token_groups_read",
+        "description": "Get a group tokenization permission by id",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Group Tokenization Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "put": {
+        "operationId": "permissions_token_groups_update",
+        "description": "Update a group tokenization permission",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Group Tokenization Permission"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Group Tokenization Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "patch": {
+        "operationId": "permissions_token_groups_partial_update",
+        "description": "",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Group Tokenization Permission"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Group Tokenization Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "delete": {
+        "operationId": "permissions_token_groups_delete",
+        "description": "Delete a group tokenization permission",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "idgroupprofile",
+          "in": "path",
+          "description": "A unique integer value identifying this Group tokenization permission.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/permissions/token/users/": {
+      "get": {
+        "operationId": "permissions_token_users_list",
+        "description": "Returns a list of user tokenization permissions",
+        "parameters": [
+          {
+            "name": "user__username",
+            "in": "query",
+            "description": "Filter by username",
+            "type": "string"
+          },
+          {
+            "name": "key__name",
+            "in": "query",
+            "description": "Filter by key name",
+            "type": "string"
+          },
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "A search term.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The initial index from which to return the results.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/User Tokenization Permission"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "post": {
+        "operationId": "permissions_token_users_create",
+        "description": "Create a user tokenization permission",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/User Tokenization Permission"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/User Tokenization Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "parameters": []
+    },
+    "/permissions/token/users/{iduserprofile}": {
+      "get": {
+        "operationId": "permissions_token_users_read",
+        "description": "Get a user tokenization permission by id",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/User Tokenization Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "put": {
+        "operationId": "permissions_token_users_update",
+        "description": "Update a user tokenization permission",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/User Tokenization Permission"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/User Tokenization Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "patch": {
+        "operationId": "permissions_token_users_partial_update",
+        "description": "",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/User Tokenization Permission"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/User Tokenization Permission"
+            }
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "delete": {
+        "operationId": "permissions_token_users_delete",
+        "description": "Delete a user tokenization permission",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "permissions"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "iduserprofile",
+          "in": "path",
+          "description": "A unique integer value identifying this User tokenization permission.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/sessions/": {
+      "get": {
+        "operationId": "sessions_list",
+        "description": "Returns a list of active sessions",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The initial index from which to return the results.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Session"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "sessions"
+        ]
+      },
+      "parameters": []
+    },
+    "/sessions/{id}": {
+      "delete": {
+        "operationId": "sessions_delete",
+        "description": "Revoke an active session",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Successful deletion"
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "sessions"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "A unique integer value identifying this session.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/tokengroups/": {
+      "get": {
+        "operationId": "tokengroups_list",
+        "description": "Returns a list of tokenization groups",
+        "parameters": [
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "A search term.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The initial index from which to return the results.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Tokenization Group"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "tokengroups"
+        ]
+      },
+      "post": {
+        "operationId": "tokengroups_create",
+        "description": "Create a tokenization group",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Tokenization Group"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Tokenization Group"
+            }
+          }
+        },
+        "tags": [
+          "tokengroups"
+        ]
+      },
+      "parameters": []
+    },
+    "/tokengroups/{idtenant}": {
+      "get": {
+        "operationId": "tokengroups_read",
+        "description": "Get a tokenization group by id",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Tokenization Group"
+            }
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "tokengroups"
+        ]
+      },
+      "put": {
+        "operationId": "tokengroups_update",
+        "description": "Update a tokenization group",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Tokenization Group"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Tokenization Group"
+            }
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "tokengroups"
+        ]
+      },
+      "delete": {
+        "operationId": "tokengroups_delete",
+        "description": "Delete a tokenization group",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Successful deletion"
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "tokengroups"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "idtenant",
+          "in": "path",
+          "description": "A unique integer value identifying this Tokenization Group.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/tokentemplates/": {
+      "get": {
+        "operationId": "tokentemplates_list",
+        "description": "Returns a list of tokenization templates",
+        "parameters": [
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "A search term.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The initial index from which to return the results.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/Tokenization Template"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "tokentemplates"
+        ]
+      },
+      "post": {
+        "operationId": "tokentemplates_create",
+        "description": "Create a tokenization template",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Tokenization Template"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Tokenization Template"
+            }
+          }
+        },
+        "tags": [
+          "tokentemplates"
+        ]
+      },
+      "parameters": []
+    },
+    "/tokentemplates/{idtokentemplate}": {
+      "get": {
+        "operationId": "tokentemplates_read",
+        "description": "Get a tokenization template by id",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Tokenization Template"
+            }
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "tokentemplates"
+        ]
+      },
+      "put": {
+        "operationId": "tokentemplates_update",
+        "description": "Update a tokenization template",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Tokenization Template"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Tokenization Template"
+            }
+          }
+        },
+        "tags": [
+          "tokentemplates"
+        ]
+      },
+      "delete": {
+        "operationId": "tokentemplates_delete",
+        "description": "Delete a tokenization template",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Successful deletion"
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "tokentemplates"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "idtokentemplate",
+          "in": "path",
+          "description": "A unique integer value identifying this Tokenization Template.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/users/": {
+      "get": {
+        "operationId": "users_list",
+        "description": "Returns a list of users",
+        "parameters": [
+          {
+            "name": "ordering",
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "A search term.",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "The initial index from which to return the results.",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "required": [
+                "count",
+                "results"
+              ],
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "next": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "previous": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/User"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "users"
+        ]
+      },
+      "post": {
+        "operationId": "users_create",
+        "description": "Create a user",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/User"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/User"
+            }
+          }
+        },
+        "tags": [
+          "users"
+        ]
+      },
+      "parameters": []
+    },
+    "/users/reset_password/{id}": {
+      "put": {
+        "operationId": "users_reset_password_update",
+        "description": "An endpoint for resetting a user's password.",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Reset Password"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/Reset Password"
+            }
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "users"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "A unique integer value identifying this user.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    },
+    "/users/{id}": {
+      "get": {
+        "operationId": "users_read",
+        "description": "Get a user by id",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/User"
+            }
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "users"
+        ]
+      },
+      "put": {
+        "operationId": "users_update",
+        "description": "Update a user",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/User"
+            }
+          }
+        },
+        "tags": [
+          "users"
+        ]
+      },
+      "delete": {
+        "operationId": "users_delete",
+        "description": "Delete a user",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Successful deletion"
+          },
+          "404": {
+            "description": "Ressource not found"
+          }
+        },
+        "tags": [
+          "users"
+        ]
+      },
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "description": "A unique integer value identifying this user.",
+          "required": true,
+          "type": "integer"
+        }
+      ]
+    }
+  },
+  "definitions": {
+    "Get JWT": {
+      "required": [
+        "username",
+        "password"
+      ],
+      "type": "object",
+      "properties": {
+        "username": {
+          "title": "Username",
+          "type": "string",
+          "minLength": 1
+        },
+        "password": {
+          "title": "Password",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "Asymmetric Key": {
+      "required": [
+        "name"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "ID",
+          "type": "integer",
+          "readOnly": true
+        },
+        "name": {
+          "title": "Name",
+          "description": "Asymmetric key name",
+          "type": "string",
+          "maxLength": 64,
+          "minLength": 1
+        }
+      }
+    },
+    "File": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "title": "File",
+          "description": "Backup file",
+          "type": "string",
+          "readOnly": true,
+          "format": "uri"
+        }
+      }
+    },
+    "Change Password": {
+      "required": [
+        "old_password",
+        "new_password",
+        "new_password_confirm"
+      ],
+      "type": "object",
+      "properties": {
+        "old_password": {
+          "title": "Old password",
+          "description": "Current password",
+          "type": "string",
+          "minLength": 1
+        },
+        "new_password": {
+          "title": "New password",
+          "description": "New password",
+          "type": "string",
+          "minLength": 1
+        },
+        "new_password_confirm": {
+          "title": "New password confirm",
+          "description": "Confirm new password",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "Tokenization Character Set": {
+      "required": [
+        "name"
+      ],
+      "type": "object",
+      "properties": {
+        "idtokencharset": {
+          "title": "Idtokencharset",
+          "type": "integer",
+          "readOnly": true
+        },
+        "name": {
+          "title": "Name",
+          "description": "Tokenization character set name",
+          "type": "string",
+          "maxLength": 50,
+          "minLength": 1
+        },
+        "alphabet": {
+          "title": "Alphabet",
+          "description": "A sequence of characters or a range (in HEX digits) defining the character set",
+          "type": "string"
+        },
+        "predefined": {
+          "title": "Predefined value",
+          "description": "True if it's a predefined character set. False if it's a custom character set",
+          "type": "boolean"
+        },
+        "range": {
+          "title": "Character set is a range",
+          "description": "Character set type. True if it's a range, False if it's a sequence of alphanumeric characters",
+          "type": "boolean"
+        }
+      }
+    },
+    "Tokenization Format": {
+      "required": [
+        "name"
+      ],
+      "type": "object",
+      "properties": {
+        "idtokenformat": {
+          "title": "Idtokenformat",
+          "type": "integer",
+          "readOnly": true
+        },
+        "name": {
+          "title": "Name",
+          "description": "Tokenization format name",
+          "type": "string",
+          "maxLength": 50,
+          "minLength": 1
+        }
+      }
+    },
+    "User Group": {
+      "required": [
+        "name"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "ID",
+          "type": "integer",
+          "readOnly": true
+        },
+        "name": {
+          "title": "Name",
+          "description": "Group name",
+          "type": "string",
+          "maxLength": 200,
+          "minLength": 1
+        },
+        "users": {
+          "title": "Users",
+          "type": "string",
+          "readOnly": true
+        },
+        "mask": {
+          "title": "Mask",
+          "type": "string",
+          "readOnly": true
+        }
+      }
+    },
+    "Symmetric Key": {
+      "required": [
+        "name"
+      ],
+      "type": "object",
+      "properties": {
+        "idkey": {
+          "title": "Idkey",
+          "type": "integer",
+          "readOnly": true
+        },
+        "name": {
+          "title": "Name",
+          "description": "Symmetric key name",
+          "type": "string",
+          "maxLength": 64,
+          "minLength": 1
+        },
+        "seedkey": {
+          "title": "Seedkey",
+          "description": "Key that is used to generate the random tables. Only one key can have seedkey set to True.",
+          "type": "boolean"
+        }
+      }
+    },
+    "Logout": {
+      "required": [
+        "session_key"
+      ],
+      "type": "object",
+      "properties": {
+        "session_key": {
+          "title": "Session key",
+          "description": "JWT used by the authenticated user",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "Mask": {
+      "required": [
+        "name",
+        "showleft",
+        "showright",
+        "maskchar"
+      ],
+      "type": "object",
+      "properties": {
+        "idmask": {
+          "title": "Idmask",
+          "type": "integer",
+          "readOnly": true
+        },
+        "name": {
+          "title": "Name",
+          "description": "Mask name",
+          "type": "string",
+          "maxLength": 50,
+          "minLength": 1
+        },
+        "showleft": {
+          "title": "Showleft",
+          "description": "Number of unencrypted characters starting from the left",
+          "type": "integer"
+        },
+        "showright": {
+          "title": "Showright",
+          "description": "Number of unencrypted characters starting from the right.",
+          "type": "integer"
+        },
+        "maskchar": {
+          "title": "Maskchar",
+          "description": "Masking character",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "Opaque Object": {
+      "required": [
+        "name"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "ID",
+          "type": "integer",
+          "readOnly": true
+        },
+        "name": {
+          "title": "Name",
+          "description": "Opaque object name",
+          "type": "string",
+          "maxLength": 64,
+          "minLength": 1
+        }
+      }
+    },
+    "Group Crypto Permission": {
+      "required": [
+        "group"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "ID",
+          "type": "integer",
+          "readOnly": true
+        },
+        "group": {
+          "title": "Group",
+          "type": "string"
+        },
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "asymkey": {
+          "title": "Asymkey",
+          "type": "string"
+        },
+        "opaqueobj": {
+          "title": "Opaqueobj",
+          "type": "string"
+        },
+        "canDecrypt": {
+          "title": "Allow Decryption",
+          "type": "boolean"
+        },
+        "canEncrypt": {
+          "title": "Allow Encryption",
+          "type": "boolean"
+        },
+        "canSign": {
+          "title": "Allow Signature",
+          "type": "boolean"
+        },
+        "canVerify": {
+          "title": "Allow Verification",
+          "type": "boolean"
+        }
+      }
+    },
+    "User Crypto Permission": {
+      "required": [
+        "user"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "ID",
+          "type": "integer",
+          "readOnly": true
+        },
+        "user": {
+          "title": "User",
+          "type": "string",
+          "pattern": "^[\\w.@+-]+$"
+        },
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "asymkey": {
+          "title": "Asymkey",
+          "type": "string"
+        },
+        "opaqueobj": {
+          "title": "Opaqueobj",
+          "type": "string"
+        },
+        "canDecrypt": {
+          "title": "Allow Decryption",
+          "type": "boolean"
+        },
+        "canEncrypt": {
+          "title": "Allow Encryption",
+          "type": "boolean"
+        },
+        "canSign": {
+          "title": "Allow Signature",
+          "type": "boolean"
+        },
+        "canVerify": {
+          "title": "Allow Verification",
+          "type": "boolean"
+        }
+      }
+    },
+    "Group Key Management Permission": {
+      "required": [
+        "group"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "ID",
+          "type": "integer",
+          "readOnly": true
+        },
+        "group": {
+          "title": "Group",
+          "type": "string"
+        },
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "asymkey": {
+          "title": "Asymkey",
+          "type": "string"
+        },
+        "opaqueobj": {
+          "title": "Opaqueobj",
+          "type": "string"
+        },
+        "canCreate": {
+          "title": "Allow Key Creation",
+          "type": "boolean"
+        },
+        "canDestroy": {
+          "title": "Allow Key Deletion",
+          "type": "boolean"
+        },
+        "canModify": {
+          "title": "Allow Key Modification",
+          "type": "boolean"
+        },
+        "canExport": {
+          "title": "Allow Key Export",
+          "type": "boolean"
+        },
+        "canFind": {
+          "title": "Can Find",
+          "type": "boolean"
+        },
+        "canImport": {
+          "title": "Allow Key Import",
+          "type": "boolean"
+        }
+      }
+    },
+    "User Key Management Permission": {
+      "required": [
+        "user"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "ID",
+          "type": "integer",
+          "readOnly": true
+        },
+        "user": {
+          "title": "User",
+          "type": "string",
+          "pattern": "^[\\w.@+-]+$"
+        },
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "asymkey": {
+          "title": "Asymkey",
+          "type": "string"
+        },
+        "opaqueobj": {
+          "title": "Opaqueobj",
+          "type": "string"
+        },
+        "canCreate": {
+          "title": "Allow Key Creation",
+          "type": "boolean"
+        },
+        "canDestroy": {
+          "title": "Allow Key Deletion",
+          "type": "boolean"
+        },
+        "canModify": {
+          "title": "Allow Key Modification",
+          "type": "boolean"
+        },
+        "canExport": {
+          "title": "Allow Key Export",
+          "type": "boolean"
+        },
+        "canFind": {
+          "title": "Can Find",
+          "type": "boolean"
+        },
+        "canImport": {
+          "title": "Allow Key Import",
+          "type": "boolean"
+        }
+      }
+    },
+    "Group Tokenization Permission": {
+      "required": [
+        "group"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "integer"
+        },
+        "group": {
+          "title": "Group",
+          "type": "string"
+        },
+        "key": {
+          "title": "Key",
+          "description": "Symmetric key this permission applies to",
+          "type": "string"
+        },
+        "asymkey": {
+          "title": "Asymkey",
+          "description": "Asymmetric key this permission applies to",
+          "type": "string"
+        },
+        "opaqueobj": {
+          "title": "Opaqueobj",
+          "description": "Opaque Object this permission applies to",
+          "type": "string"
+        },
+        "canPost": {
+          "title": "Allow Tokenize",
+          "type": "boolean"
+        },
+        "canGet": {
+          "title": "Allow De-tokenize",
+          "type": "boolean"
+        }
+      }
+    },
+    "User Tokenization Permission": {
+      "required": [
+        "user"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "integer"
+        },
+        "user": {
+          "title": "User",
+          "type": "string",
+          "pattern": "^[\\w.@+-]+$"
+        },
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "asymkey": {
+          "title": "Asymkey",
+          "type": "string"
+        },
+        "opaqueobj": {
+          "title": "Opaqueobj",
+          "type": "string"
+        },
+        "canPost": {
+          "title": "Allow Tokenize",
+          "type": "boolean"
+        },
+        "canGet": {
+          "title": "Allow De-tokenize",
+          "type": "boolean"
+        }
+      }
+    },
+    "Session": {
+      "required": [
+        "user_agent",
+        "ip_address",
+        "created",
+        "expires"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "ID",
+          "type": "integer",
+          "readOnly": true
+        },
+        "user": {
+          "title": "User",
+          "type": "string",
+          "pattern": "^[\\w.@+-]+$",
+          "readOnly": true
+        },
+        "user_agent": {
+          "title": "User agent",
+          "type": "string",
+          "maxLength": 255,
+          "minLength": 1
+        },
+        "ip_address": {
+          "title": "Ip address",
+          "type": "string",
+          "maxLength": 50,
+          "minLength": 1
+        },
+        "created": {
+          "title": "Created",
+          "type": "string",
+          "format": "date-time"
+        },
+        "expires": {
+          "title": "Expires",
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "Tokenization Group": {
+      "required": [
+        "name",
+        "key"
+      ],
+      "type": "object",
+      "properties": {
+        "idtenant": {
+          "title": "Idtenant",
+          "type": "integer",
+          "readOnly": true
+        },
+        "name": {
+          "title": "Name",
+          "description": "Tokenization group name",
+          "type": "string",
+          "maxLength": 50,
+          "minLength": 1
+        },
+        "key": {
+          "title": "Key",
+          "type": "string"
+        }
+      }
+    },
+    "Tokenization Template": {
+      "required": [
+        "name",
+        "tenant",
+        "format",
+        "charset"
+      ],
+      "type": "object",
+      "properties": {
+        "idtokentemplate": {
+          "title": "Idtokentemplate",
+          "type": "integer",
+          "readOnly": true
+        },
+        "name": {
+          "title": "Name",
+          "type": "string",
+          "maxLength": 50,
+          "minLength": 1
+        },
+        "tenant": {
+          "title": "Tenant",
+          "description": "Tokenization group",
+          "type": "string"
+        },
+        "format": {
+          "title": "Format",
+          "description": "Tokenization format",
+          "type": "string"
+        },
+        "keepleft": {
+          "title": "Keepleft",
+          "description": "Number of character to leave unencrypted starting from the left",
+          "type": "integer"
+        },
+        "keepright": {
+          "title": "Keepright",
+          "description": "Number of character to leave unencrypted starting from the right",
+          "type": "integer"
+        },
+        "irreversible": {
+          "title": "Irreversible",
+          "description": "Set irreversible to true if you never want the token to be detokenized",
+          "type": "boolean"
+        },
+        "copyruntdata": {
+          "title": "Copyruntdata",
+          "description": "Return uncencrypted data instead of an error if teh input is smaller than 2 characters",
+          "type": "boolean"
+        },
+        "allowsmallinput": {
+          "title": "Allowsmallinput",
+          "description": "Allow inputs smaller than 6 characters",
+          "type": "boolean"
+        },
+        "charset": {
+          "title": "Charset",
+          "description": "Character set allowed",
+          "type": "string"
+        },
+        "prefix": {
+          "title": "Prefix",
+          "description": "An optional prefix to be added to all tokens",
+          "type": "string"
+        },
+        "startyear": {
+          "title": "Startyear",
+          "description": "The smallest year the input data is assumed to fall",
+          "type": "integer"
+        },
+        "endyear": {
+          "title": "Endyear",
+          "description": "The highest year the input data is assumed to fall",
+          "type": "integer"
+        },
+        "daterecordcount": {
+          "title": "Daterecordcount",
+          "type": "integer"
+        },
+        "datetablenum": {
+          "title": "Datetablenum",
+          "type": "integer"
+        },
+        "datetablenum_status": {
+          "title": "Datetablenum status",
+          "type": "string",
+          "readOnly": true
+        }
+      }
+    },
+    "User": {
+      "required": [
+        "username",
+        "email"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "title": "ID",
+          "type": "integer",
+          "readOnly": true
+        },
+        "username": {
+          "title": "Username",
+          "description": "Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.",
+          "type": "string",
+          "pattern": "^[\\w.@+-]+$",
+          "maxLength": 150,
+          "minLength": 1
+        },
+        "email": {
+          "title": "Email",
+          "description": "User's email",
+          "type": "string",
+          "format": "email",
+          "minLength": 1
+        },
+        "password": {
+          "title": "Password",
+          "type": "string",
+          "minLength": 1
+        },
+        "is_active": {
+          "title": "Active",
+          "description": "Designates whether this user should be treated as active. Unselect this instead of deleting accounts.",
+          "type": "boolean"
+        },
+        "is_staff": {
+          "title": "Staff status",
+          "description": "Designates whether the user can log into this admin site.",
+          "type": "boolean"
+        },
+        "is_superuser": {
+          "title": "Superuser status",
+          "description": "Designates that this user has all permissions without explicitly assigning them.",
+          "type": "boolean"
+        },
+        "groups": {
+          "description": "Groups the user belongs to",
+          "type": "array",
+          "items": {
+            "description": "Groups the user belongs to",
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "ldap_user": {
+          "title": "Ldap user",
+          "description": "Boolean value determining if it's an AD user",
+          "type": "string",
+          "readOnly": true
+        },
+        "mask": {
+          "title": "Mask",
+          "description": "Mask assigned to the user",
+          "type": "string",
+          "readOnly": true
+        }
+      }
+    },
+    "Reset Password": {
+      "required": [
+        "admin_password",
+        "new_password",
+        "new_password_confirm"
+      ],
+      "type": "object",
+      "properties": {
+        "admin_password": {
+          "title": "Admin password",
+          "description": "Password of the currently authenticated user (must be a superuser)",
+          "type": "string",
+          "minLength": 1
+        },
+        "new_password": {
+          "title": "New password",
+          "description": "New password",
+          "type": "string",
+          "minLength": 1
+        },
+        "new_password_confirm": {
+          "title": "New password confirm",
+          "description": "Confirm new password",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
