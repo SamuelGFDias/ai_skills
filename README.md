@@ -38,6 +38,7 @@ ai_skills/
 ├── replatforms/               # migração Delphi 7 → .NET + Angular (prompt em docs/)
 ├── speckit/                   # Spec-Driven Development com GitHub Spec Kit (comandos + instalação em docs/)
 ├── ses-gitlab-deps/           # instalação de jq/glab
+├── ses-ops/                   # operação/diagnóstico do ecossistema SES (agente + CLI de config por ambiente + ses-secret)
 ├── task-observer/             # observação contínua de skills
 └── vault-factory/             # abstração de cofres de secrets (+ providers/passbolt, pass-gopass)
 ```
