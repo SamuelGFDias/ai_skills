@@ -147,7 +147,7 @@ Skills com workflow genérico + plataforma específica são divididas em:
 - **Provider** (`providers/<plataforma>/arquivos.md`): comandos concretos.
 
 Relação atual: `issue-factory`→gitlab, `commiter`→gitlab, `nuget-factory`→nexus,
-`vault-factory`→passbolt+pass-gopass.
+`vault-factory`→passbolt+pass-gopass+vault.
 
 ## Validação antes de commit
 
