@@ -1,11 +1,11 @@
 {
-  "executor-mecanico": { "model": "haiku", "effort": "low", "disallowedTools": ["Agent"], "color": "green" },
-  "executor-padrao": { "model": "haiku", "effort": "max", "disallowedTools": ["Agent"], "color": "blue" },
-  "executor-complexo": { "model": "sonnet", "effort": "medium", "disallowedTools": ["Agent"], "color": "yellow" },
-  "executor-critico": { "model": "sonnet", "effort": "high", "disallowedTools": ["Agent"], "color": "red" },
-  "investigador-padrao": { "model": "sonnet", "effort": "medium", "disallowedTools": ["Edit", "Write", "NotebookEdit", "Agent"], "color": "cyan" },
-  "investigador-critico": { "model": "opus", "effort": "high", "disallowedTools": ["Edit", "Write", "NotebookEdit", "Agent"], "color": "magenta" },
-  "speckit-master": { "model": "sonnet", "effort": "high", "disallowedTools": ["Edit", "Write", "NotebookEdit", "Agent"], "color": "cyan" },
-  "revisor-padrao": { "model": "sonnet", "effort": "medium", "disallowedTools": ["Edit", "Write", "NotebookEdit", "Agent"], "color": "orange" },
-  "revisor-critico": { "model": "opus", "effort": "low", "disallowedTools": ["Edit", "Write", "NotebookEdit", "Agent"], "color": "purple" }
+  "executor-mecanico": {"model": "claude-haiku-5-5", "effort": "medium", "disallowedTools": ["Agent"], "color": "green"},
+  "executor-padrao": {"model": "claude-haiku-5-5", "effort": "high", "disallowedTools": ["Agent"], "color": "blue"},
+  "executor-complexo": {"model": "claude-sonnet-5-5", "effort": "medium", "disallowedTools": ["Agent"], "color": "yellow"},
+  "executor-critico": {"model": "claude-sonnet-5-5", "effort": "max", "disallowedTools": ["Agent"], "color": "red"},
+  "investigador-padrao": {"model": "claude-sonnet-5-5", "effort": "medium", "disallowedTools": ["Edit", "Write", "NotebookEdit", "Agent"], "color": "cyan"},
+  "investigador-critico": {"model": "claude-opus-5-5", "effort": "medium", "disallowedTools": ["Edit", "Write", "NotebookEdit", "Agent"], "color": "magenta"},
+  "speckit-master": {"model": "claude-sonnet-5-5", "effort": "high", "disallowedTools": ["Edit", "Write", "NotebookEdit", "Agent"], "color": "cyan"},
+  "revisor-padrao": {"model": "claude-sonnet-5-5", "effort": "medium", "disallowedTools": ["Edit", "Write", "NotebookEdit", "Agent"], "color": "orange"},
+  "revisor-critico": {"model": "claude-opus-5-5", "effort": "high", "disallowedTools": ["Edit", "Write", "NotebookEdit", "Agent"], "color": "purple"}
 }

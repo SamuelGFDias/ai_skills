@@ -59,6 +59,7 @@ Depois de mudar `roles/`, `cli/*/models.json` ou o fluxo, valide numa sessão no
 - [ ] Prompt de revisor de invariante: invariante em uma frase + enumerar todos os caminhos antes do diff + tabela caminho → protegido/furo/aviso (regra 13). Prompt de correção: varrer a família do achado, não só a instância (regra 13).
 - [ ] Contrato de retorno exigido (regra 6). Com papel tipado, uma linha basta (regra 17).
 - [ ] Ação sensível (push, merge, deleção, publicação) só com confirmação do usuário (regra 6).
+- [ ] Se um subagente falhou: gravar o relatório em `reports/falhas/` antes de encerrar a sessão e commitá-lo (regra 18).
 
 ## Regras (índice — texto completo em `references/regras.md`)
 
@@ -79,6 +80,7 @@ Depois de mudar `roles/`, `cli/*/models.json` ou o fluxo, valide numa sessão no
 15. O arquiteto sonda e não lê implementação.
 16. Arquiteto em sonnet por padrão e escalada para opus por gatilho.
 17. Prompt enxuto quando o papel tipado já carrega as regras.
+18. Falha de subagente vira relatório versionado em `reports/falhas/` (sessão + solicitação + resposta + análise do erro), para a revisão mensal decidir se sobe o nível do modelo/esforço. Formato em `reports/README.md`.
 
 ## Verificação de configuração dos subagentes
 
@@ -89,9 +91,4 @@ Antes de delegar, o arquiteto confere se os 9 papéis (`executor-mecanico`, `exe
 
 O arquiteto não precisa conhecer a configuração de todos os CLIs de antemão — lê o `models.json` do CLI detectado somente quando constata a ausência dos tipos.
 
-**Precedência de modelo e esforço no Claude Code** (verificado em 2026-10-06, Claude Code 2.1.292; fonte: docs `sub-agents` e `model-config`):
-
-- **Modelo:** `model` passado na chamada `Agent` > `model` do frontmatter do papel > env `CLAUDE_CODE_SUBAGENT_MODEL` > modelo da sessão. Por isso o arquiteto **não** passa `model` na chamada `Agent` com papel tipado — anularia o mapeamento do `models.json`. Constatado nos transcripts: `executor-mecanico` → `claude-haiku-4-5`, `investigador-padrao` → `claude-sonnet-5-5`, com a sessão em `claude-opus-5-5`.
-- **Esforço:** env `CLAUDE_CODE_EFFORT_LEVEL` > `effort` do frontmatter > esforço da sessão (`effortLevel` em `modelSettings` do `settings.json`). Se a env estiver definida, todos os papéis rodam no mesmo esforço — conferir com `env | grep CLAUDE_CODE_` quando o custo divergir do esperado.
-- **Haiku ignora `effort`** (não suporta níveis de esforço) — o `effort: low` do `executor-mecanico` é decorativo enquanto o papel estiver em haiku.
-- **Como observar:** o transcript não registra o esforço; `/tasks` mostra modelo + esforço na linha de cada subagente. O modelo efetivo pode ser extraído do transcript sem lê-lo inteiro: `grep -o '"model":"[^"]*"' <output_file> | sort | uniq -c`.
+**Modelo/esforço dos subagentes** (precedência no Claude Code, `CLAUDE_CODE_*`, override pessoal não versionado `cli/<cli>/models.local.json`): só ao diagnosticar custo/modelo divergente ou mudar a configuração, ler `references/modelos-e-esforco.md`. Não passar `model` na chamada `Agent` com papel tipado.
