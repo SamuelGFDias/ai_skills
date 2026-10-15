@@ -41,7 +41,8 @@ ai_skills/
 ├── ses-gitlab-deps/           # instalação de jq/glab
 ├── ses-ops/                   # operação/diagnóstico do ecossistema SES (agente + CLI de config por ambiente + ses-secret)
 ├── task-observer/             # observação contínua de skills
-└── vault-factory/             # abstração de cofres de secrets (+ providers/passbolt, pass-gopass)
+├── vault-factory/             # abstração de cofres de secrets (+ providers/passbolt, pass-gopass)
+└── windows-audio-mic/         # diagnosticar/corrigir microfone no Windows (mudo/padrão)
 ```
 
 ## Arquitetura: factory + provider
