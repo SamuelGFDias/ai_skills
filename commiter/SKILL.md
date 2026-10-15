@@ -52,9 +52,19 @@ git diff --cached --stat    # revisar o que vai no commit
 - **Nunca** adicionar rodapé de atribuição de IA (`Co-Authored-By: ...`) nem linha de coautoria.
   A mensagem termina no corpo escrito.
 - Se o repo usa conventional commits (`feat:`, `fix:`, `refactor:`...), usar; senão, seguir o padrão local.
+- **Se o commit implementa/corrige uma issue rastreada (GitLab ou GitHub), referenciar no corpo
+  com a palavra-chave de fechamento correta, não apenas `Refs`/`Ref`.** `Refs #N` só cria um link —
+  não fecha a issue. Para o merge da MR/PR executar o fechamento automático, usar uma das palavras
+  reconhecidas pela plataforma antes do número: `Closes #N`, `Fixes #N` ou `Resolves #N` (mesmas
+  palavras em GitLab e GitHub). Colocar isso no corpo do **commit** (não só na descrição da MR/PR) —
+  GitLab também escaneia mensagens de commit ao mergear, então a ação de fechamento sobrevive mesmo
+  que a descrição da MR use `Refs` por engano ou seja editada depois. Confirmar antes se o commit
+  de fato encerra a issue (se só avança parcialmente, `Refs #N` é o correto e a issue permanece aberta).
 
 ```bash
-git commit -m "feat: descrição concisa da mudança"
+git commit -m "feat: descrição concisa da mudança
+
+Closes #42"
 ```
 
 ### 4. Push seguro

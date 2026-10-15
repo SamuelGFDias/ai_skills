@@ -128,6 +128,15 @@ Entidades devem proteger invariantes:
 - Use value objects para isolar um conceito composto que pertence a entidade, mas nao precisa de identidade nem tabela separada, como endereco, contato, coordenada, intervalo ou configuracao embutida.
 - Use collections privadas com exposicao read-only quando a entidade controlar itens filhos.
 
+Metodo de atualizacao parcial (`Apply()`, `Atualizar` etc.) que mistura campos obrigatorios e opcionais: o guard de cada campo codifica "este campo pode ser esvaziado?", nao e decoracao. Classifique cada campo de proposito:
+
+- Obrigatorio: guard `!string.IsNullOrWhiteSpace(x)` — `""` nunca sobrescreve o valor atual.
+- Opcional-limpavel: guard `is not null` — `""` e valor valido e limpa o campo (normalize/`OnlyNumbers()` depois do guard, nao antes).
+
+Copiar o guard de obrigatorio para um campo opcional e bug silencioso: sem excecao, sem erro de validacao, a API devolve 200 e o banco fica inalterado — so o diff contra a linha do banco revela. Ao escrever ou revisar um `Apply()`, nao default em um unico guard para todo campo string.
+
+Diagnostico de "campo editado nao persiste" / "salvou com sucesso mas o valor antigo continua": primeiro confirme a fiacao do request ponta a ponta (nome do `FormControl` -> chave do FormData -> `[FromForm]`/`[FromBody]` -> Command -> parametro da entidade); depois, com a fiacao correta, confira o guard daquele campo no `Apply()`. Fiacao certa e condicao necessaria, nao suficiente.
+
 Nao deixe o dominio ser moldado por necessidades de tela, endpoint ou banco.
 
 ## Infra e persistencia
@@ -143,9 +152,13 @@ Infra implementa detalhes tecnicos:
 
 Para operacoes com arquivo/storage e banco, execute upload/persistencia em transacao logica com cleanup do arquivo remoto em caso de erro, quando o projeto tiver suporte a callback de compensacao.
 
+Antes de escrever SQL cru/ADO.NET ou EF raw SQL, leia as secoes "EF Core" e "PostgreSQL" de `references/armadilhas-toolchain.md`: slot nulo em `ExecuteSqlRawAsync` e `DBNull.Value`, e `SET` do Postgres que nao aceita bind parameter.
+
 ## Pacotes NuGet sugeridos
 
 Ao propor ou implementar backend .NET, verifique primeiro se o projeto ja usa algum pacote equivalente. Se fizer sentido adicionar dependencia, sugira ou instale a versao compativel com o target framework e com os pacotes ja existentes no projeto.
+
+Em repo com Central Package Management, ou com projeto de target framework mais estreito que o resto, leia `references/armadilhas-toolchain.md` (secao "NuGet com Central Package Management") antes de mexer em versao de pacote.
 
 Pacotes comuns que podem acelerar implementacoes:
 
@@ -189,6 +202,10 @@ Separe modelos por fronteira:
 
 Nao retorne entidade de dominio diretamente em controller. Nao injete DbContext em controller. Nao deixe DTO de API atravessar o dominio.
 
+Em record com enum discriminador (`Reason`, `Type`, `Mode`) e campos cujo significado varia por caso, nao documente um campo como "preenchido somente quando Reason e X" e depois reaproveite-o para outro caso. Ou o campo de contexto extra tem nome generico em relacao a todos os casos (`RelatedIdentifiers` em vez de `ReferencingTables`), ou cada caso tem o seu. Reaproveitar um campo estreitamente documentado para outro caso e lacuna de contrato: reporte como risco, nao ship como se fosse o desenho previsto — o aperto so aparece quando o SEGUNDO caso e implementado.
+
+Nao escreva saida de generator que dependa de propriedade MSBuild do consumidor (ver `references/armadilhas-toolchain.md`, secao "Roslyn source generator").
+
 ## Consultas
 
 Para telas de consulta, filtros e paginacao:
@@ -210,6 +227,8 @@ Priorize testes por comportamento:
 
 Ao implementar mudanca de comportamento, escreva ou ajuste teste antes do codigo de producao quando viavel. Execute pelo menos os testes diretamente afetados.
 
+Antes de escrever teste de integracao, leia "EF Core" em `references/armadilhas-toolchain.md`: seeding copiado de teste irmao nao transfere entre provider InMemory e banco real (FK/unique/default so o segundo aplica). Antes de alegar TDD RED, leia "Provar RED em working tree compartilhado" — o caminho e `git show` + ferramenta de escrita, nunca `git checkout`/`stash`/`reset`.
+
 ## Como propor uma implementacao
 
 Antes de editar ou sugerir codigo backend .NET:
@@ -220,6 +239,18 @@ Antes de editar ou sugerir codigo backend .NET:
 4. Planeje teste de comportamento.
 5. Implemente de dentro para fora quando a regra for de dominio; implemente de fora para dentro quando o contrato HTTP ja estiver definido.
 6. Preserve convencoes locais mesmo que o exemplo generico desta skill use outro nome.
+
+## Armadilhas de toolchain — referencia sob demanda
+
+`references/armadilhas-toolchain.md` guarda o detalhe das armadilhas que custam mais de uma tentativa. Leia a secao relevante antes de agir na area, nao a skill inteira:
+
+- **NuGet/CPM** — `VersionOverride` em vez de editar o manifesto central; TFM estreito e assemblies de referencia ausentes.
+- **Roslyn source generator** — `PrivateAssets="all"` que nao atravessa `ProjectReference`; quando dispensar o harness oficial; saida que nao pode depender de propriedade MSBuild do consumidor.
+- **Diagnostico** — valor errado porem plausivel que e fallback alcancavel, nao corrupcao; como montar o A/B decisivo.
+- **EF Core** — `DBNull.Value` vs `null` literal em raw SQL; seeding que nao transfere entre InMemory e banco real.
+- **PostgreSQL** — `SET`/`SET LOCAL` sem bind parameter.
+- **Documentacao XML** — `GenerateDocumentationFile` expoe CS1574, nao so CS1591; as duas causas tipicas.
+- **Provar RED** — `git show` + ferramenta de escrita em working tree compartilhado.
 
 ## Checklist de revisao
 

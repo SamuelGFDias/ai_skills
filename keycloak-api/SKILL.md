@@ -1,6 +1,6 @@
 ---
 name: keycloak-api
-description: Consulta e sincroniza a Admin REST API de instâncias Keycloak (token, roles de realm/client, groups, e espelhamento de roles/groups entre dois ambientes como dev→stg) sem que o client_secret seja digitado em texto puro na conversa. Realms e credenciais (client ou user) são cadastrados separadamente — um client/user referencia um realm por alias. Credenciais ficam num arquivo local protegido; scripts nunca imprimem secret ou token. Use quando o usuário pedir para consultar, comparar ou espelhar (replicar) roles/clients/groups entre ambientes Keycloak, ou para cadastrar/editar realms, clients ou usuários dessa skill.
+description: Consulta e sincroniza a Admin REST API de instâncias Keycloak (token, roles de realm/client, groups, e espelhamento de roles/groups entre dois ambientes como dev→stg) sem que o client_secret seja digitado em texto puro na conversa. Realms e credenciais (client ou user) são cadastrados separadamente — um client/user referencia um realm por alias. Credenciais ficam num arquivo local protegido; scripts nunca imprimem secret ou token. Use quando o usuário pedir para consultar, comparar ou espelhar (replicar) roles/clients/groups entre ambientes Keycloak, para cadastrar/editar realms, clients ou usuários dessa skill, ou para planejar/provar um realm de aplicação nova com DNS próprio (Frontend URL do realm, vhost nginx com allowlist, client, Google IdP, tema) na mesma instância.
 ---
 
 # Keycloak API
@@ -142,6 +142,11 @@ Todos aceitam qualquer `<credAlias>` — de um client ou de um user cadastrado, 
 - `kc list-groups <credAlias> [realmDestino]` — lista os groups do realm (árvore completa).
 - `kc group-detail <credAlias> <groupId> [realmDestino]` — detalha um group: subgrupos,
   membros, role mappings (realm + client).
+- `kc group-roles <credAlias|realmAlias> <groupPath> [clientIdName]` — alternativa mais
+  simples e legível a `group-detail` quando só se quer ver as roles mapeadas de um group (sem
+  members nem subgrupos): resolve o group por **path** (ex: `/Biae/Administrador`), não por
+  id como `group-detail` exige. Com `clientIdName` opcional, filtra a saída só pras roles
+  desse client. Ex: `kc group-roles sesrj-dev "/Biae/Administrador" biae`.
 
 `realmDestino` (opcional, nesses 5 comandos): consulta outro realm da **mesma instância**
 Keycloak da credencial, usando o token dela — cobre o padrão de admin do realm `master`, que
@@ -188,6 +193,22 @@ sugestão de usar o modo automático com um usuário master) em vez de só "Forb
   role num client. Idempotente (reporta "JÁ EXISTE" em vez de duplicar). Aceita também um
   realmAlias no lugar do credAlias — modo automático por realm (credencial de master), como
   os comandos de consulta acima.
+
+### Mapeamento pontual
+
+- `kc assign-group-roles <credAlias|realmAlias> <groupPath> <clientIdName> <roleName> [<roleName> ...]`
+  — mapeia uma ou mais roles de um client a um group **dentro do mesmo ambiente**, dada uma
+  lista explícita de `roleName`. Diferente de `kc mirror-group-roles` (que copia
+  client-role-mappings de um ambiente de origem para outro): aqui não há origem, é uso direto
+  no ambiente indicado. O group **precisa já existir** — ao contrário do mirror, este comando
+  não cria hierarquia automaticamente; se o group não existir, falha com mensagem clara em vez
+  de criá-lo (não há um ambiente de origem confiável que garanta que o group deveria existir).
+  Idempotente (roles já mapeadas são reportadas como "JÁ MAPEADA", não duplicadas). Aceita
+  também um realmAlias no lugar do credAlias — mesmo modo automático dos demais comandos.
+
+```
+kc assign-group-roles sesrj-dev "/Biae/Administrador" biae Subsecretaria_Listar Administracao_Subsecretaria_Criar Administracao_Subsecretaria_Excluir
+```
 
 ### Alteração pontual
 
@@ -265,6 +286,17 @@ source ~/.zshrc   # ou abrir um novo terminal
 ```
 
 Depois disso, `kc <subcomando> ...` funciona em qualquer diretório/shell (ex: `kc token sesrj-dev-biae`).
+
+## Realm para aplicação nova (DNS próprio na mesma instância)
+
+Conhecimento provado num Keycloak local, em `docs/realm-aplicacao-nova.md` (leia antes de planejar): o realm vem do
+caminho e não do Host; o hostname da instância é um só (`KC_HOSTNAME`); um realm novo pode anunciar outro DNS pela
+**Frontend URL do realm**, com um vhost nginx que libera só `/realms/<novo>/` e `/resources/`. Inclui os três caminhos
+(realm novo, segunda instância, hostname dinâmico), o checklist ordenado, o template do vhost, riscos e rollback.
+
+Prova antes de produção: `scripts/testar-realm-dominio-local.sh` (Keycloak e nginx descartáveis, termina em `TUDO OK`).
+Criar realm/client/IdP ainda não tem subcomando `kc`; ações em produção (Keycloak, nginx, DNS, certificado, Google) ficam
+com o usuário.
 
 ## Ao apresentar resultados ao usuário
 

@@ -38,6 +38,10 @@ comandos abaixo também aceita <realmAlias> — ver modo automático mais abaixo
   list-groups <credAlias|realmAlias> [realmDestino]   Lista os groups do realm (árvore completa).
   group-detail <credAlias|realmAlias> <groupId> [realmDestino]
                                                        Detalha um group: subgrupos, membros, role mappings.
+  group-roles <credAlias|realmAlias> <groupPath> [clientIdName]
+                                                       Lista de forma simples as roles mapeadas
+                                                       de um group/subgroup (por path, não id).
+                                                       Com clientIdName, filtra só esse client.
   client-roles <credAlias|realmAlias> <clientId> [realmDestino]
                                                        Lista as roles de um client pelo nome (ex: biae).
 
@@ -54,6 +58,13 @@ Criação pontual:
   create-client-role <credAlias|realmAlias> <clientId> <roleName> [descricao]
                                                        Cria uma role num client. Idempotente. Aceita
                                                        também um realmAlias (modo automático acima).
+
+Mapeamento pontual:
+  assign-group-roles <credAlias|realmAlias> <groupPath> <clientIdName> <roleName> [<roleName> ...]
+                                                       Mapeia uma ou mais roles de um client a um
+                                                       group já existente no mesmo ambiente. Idempotente
+                                                       (roles já mapeadas são reportadas, não duplicadas).
+                                                       Aceita também um realmAlias (modo automático).
 
 Alteração pontual:
   set-client-attr <credAlias|realmAlias> <clientId> <atributo>=<valor> [<atributo>=<valor> ...] [--apply] [realmDestino]
@@ -76,6 +87,8 @@ Exemplos:
   kc setup-realm
   kc setup-client
   kc client-roles sesrj-dev-biae biae
+  kc assign-group-roles sesrj-dev-biae "/Biae/Administrador" biae Subsecretaria_Listar
+  kc group-roles sesrj-dev-biae "/Biae/Administrador" biae
   kc set-client-attr sesrj-dev-biae biae client.session.idle.timeout=7200
   kc mirror-client-roles sesrj-dev-biae sesrj-stg-biae biae
   kc mirror-group-roles sesrj-dev-biae sesrj-stg-biae "/Biae" biae --recursive
@@ -115,8 +128,10 @@ case "$SUBCOMMAND" in
   realm-roles)           exec "$SCRIPT_DIR/kc-realm-roles.sh" "$@" ;;
   list-groups)           exec "$SCRIPT_DIR/kc-list-groups.sh" "$@" ;;
   group-detail)          exec "$SCRIPT_DIR/kc-group-detail.sh" "$@" ;;
+  group-roles)           exec "$SCRIPT_DIR/kc-group-roles.sh" "$@" ;;
   client-roles)          exec "$SCRIPT_DIR/kc-client-roles.sh" "$@" ;;
   create-client-role)    exec "$SCRIPT_DIR/kc-create-client-role.sh" "$@" ;;
+  assign-group-roles)    exec "$SCRIPT_DIR/kc-assign-group-roles.sh" "$@" ;;
   set-client-attr)       exec "$SCRIPT_DIR/kc-set-client-attr.sh" "$@" ;;
   mirror-client-roles)   exec "$SCRIPT_DIR/kc-mirror-client-roles.sh" "$@" ;;
   mirror-group-roles)    exec "$SCRIPT_DIR/kc-mirror-group-roles.sh" "$@" ;;

@@ -9,6 +9,9 @@ domínio. Cada skill é um diretório com `SKILL.md` (obrigatório) e, quando ap
 ```text
 ai_skills/
 ├── AGENTS.md                  # arquitetura do ambiente (leia ao trabalhar neste repo)
+├── bin/install.sh             # instala tudo que as skills precisam nos CLIs instalados na
+│                               # máquina — claude/kilo/codex/gemini/opencode (Linux/macOS/WSL)
+├── bin/install.ps1            # idem, para Windows
 ├── bin/sync-skills.sh         # (re)cria as skills em claude/kilo (Linux/macOS/WSL)
 ├── bin/sync-skills.ps1        # idem, para Windows
 ├── providers/                 # referência de plataformas (NÃO é skill carregável)
@@ -19,6 +22,7 @@ ai_skills/
 │   └── pass-gopass/arquivos.md# pass/gopass: cofre local GPG
 ├── arquiteto/                 # orquestração: subagentes graduados por modelo/esforço
 ├── audit-log/                 # biblioteca AuditLog (NuGet)
+├── azuredevops-api/            # work items + export de wiki Azure DevOps (CLI ado)
 ├── claude-mem-project-exclusion/ # excluir pasta e apagar memórias do plugin claude-mem
 ├── commiter/                  # workflow genérico de commit + push
 ├── cronograma-saude-rj-api/   # API REST Cronograma SES-RJ
@@ -35,6 +39,7 @@ ai_skills/
 ├── replatforms/               # migração Delphi 7 → .NET + Angular (prompt em docs/)
 ├── speckit/                   # Spec-Driven Development com GitHub Spec Kit (comandos + instalação em docs/)
 ├── ses-gitlab-deps/           # instalação de jq/glab
+├── ses-ops/                   # operação/diagnóstico do ecossistema SES (agente + CLI de config por ambiente + ses-secret)
 ├── task-observer/             # observação contínua de skills
 └── vault-factory/             # abstração de cofres de secrets (+ providers/passbolt, pass-gopass)
 ```
@@ -79,10 +84,13 @@ vivem em vaults (`vault-factory`).
    `AGENTS.md`, seção "Sincronização". Em resumo: `bin/sync-skills.sh` (bash/WSL/Git Bash) ou
    `bin/sync-skills.ps1` (PowerShell) para
    expor a skill aos CLIs. Sem argumento, sincroniza claude + kilo; use `claude` ou `kilo` para um
-   alvo só. Para o Claude Code, a skill é **copiada** (não symlink/junction) para
-   `~/.claude/skills/<nome>` e recriada a cada run. Para o Kilo, o script só garante que o caminho
-   do repo esteja em `skills.paths` de `~/.config/kilo/kilo.jsonc` — ele lê os `SKILL.md` direto da
-   fonte, sem cópia (ver `AGENTS.md`).
+   alvo só. Para o Claude Code, a skill vira **symlink** em `~/.claude/skills/<nome>` no
+   Linux/macOS/WSL, ou é **copiada** no Windows/Git Bash — o destino é recriado a cada run em
+   ambos os casos. Para o Kilo, o script só garante que o caminho do repo esteja em
+   `skills.paths` de `~/.config/kilo/kilo.jsonc` — ele lê os `SKILL.md` direto da fonte, sem
+   cópia nem symlink (ver `AGENTS.md`). Atalho: `bin/install.sh` / `bin/install.ps1` (sem
+   argumento) já cobre isso para todos os CLIs detectados na máquina, sem precisar escolher o
+   alvo manualmente.
 
 ## Publicação
 

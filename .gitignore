@@ -1,1 +1,6 @@
 bin/node_modules/
+atividade-factory/tmp/
+__pycache__/
+*.pyc
+.serena/
+arquiteto/cli/*/models.local.json

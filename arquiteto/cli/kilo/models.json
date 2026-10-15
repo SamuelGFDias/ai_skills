@@ -20,5 +20,11 @@
   },
   "speckit-master": {
     "model": "kilo/deepseek/deepseek-v4-pro"
+  },
+  "revisor-padrao": {
+    "model": "kilo/deepseek/deepseek-v4-flash"
+  },
+  "revisor-critico": {
+    "model": "kilo/deepseek/deepseek-v4-pro"
   }
 }

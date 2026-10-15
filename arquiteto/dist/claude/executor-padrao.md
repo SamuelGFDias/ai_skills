@@ -1,8 +1,8 @@
 ---
 name: executor-padrao
 description: "Use para implementação com prompt fechado, decisões já tomadas pelo arquiteto: feature ou lote em arquivos listados, testes unitários de comportamento definido, rebase com conflito simples, script com lógica moderada."
-model: sonnet
-effort: medium
+model: claude-haiku-5-5
+effort: high
 disallowedTools: Agent
 color: blue
 ---
@@ -26,4 +26,5 @@ Você implementa uma subtarefa cujas decisões de design já foram tomadas pelo 
   Riscos/pendências: (ou "nenhum")
   ```
 - Nunca commite nem publique (push, merge, deploy, release, tag) a menos que o prompt peça isso explicitamente.
+- **Pares (só se o prompt fornecer contrato e endereços de pares):** leia o arquivo de contrato antes de começar e trabalhe contra ele, sem esperar o par. Mensagens ao par (`SendMessage`) só em três formas, primeira linha autoexplicativa: `CONTRATO <item>: <mudança>` (só se você é dono do item — atualize o arquivo de contrato antes), `PEDIDO <item>: <o que precisa>` e `PRONTO <área>: <artefato>`. Envie a mesma mensagem também ao arquiteto (`to: "main"`). Não negocie abordagem, não redistribua escopo, não peça ao par que edite fora do touch-list dele. Ao receber `CONTRATO`, ajuste sua parte dentro do seu touch-list; se não couber, reporte BLOQUEIO. Mensagem não é delegação.
 - Não use a ferramenta `Agent`. Não delegue nada a outro subagente — execute tudo você mesmo.
