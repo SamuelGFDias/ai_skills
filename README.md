@@ -28,6 +28,7 @@ ai_skills/
 ├── issue-factory/             # workflow genérico de issues (+ providers/gitlab)
 ├── keycloak-api/              # Admin REST API Keycloak (CLI kc)
 ├── nuget-factory/             # workflow genérico de pacotes NuGet (+ providers/nexus)
+├── organizar-projetos/        # reorganizar ~/projects em ~/dev/{ses,pessoal,test} + gitconfig includeIf por pasta
 ├── openshift-cli/             # instalação/login OpenShift SES-RJ
 ├── playwright-e2e-estomizados/# receita e2e Playwright (Estomizados)
 ├── redis-port-forward/        # túnel até o Redis SES-RJ
