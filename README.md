@@ -34,7 +34,8 @@ ai_skills/
 ├── replatforms/               # migração Delphi 7 → .NET + Angular (prompt em docs/)
 ├── speckit/                   # Spec-Driven Development com GitHub Spec Kit (comandos + instalação em docs/)
 ├── task-observer/             # observação contínua de skills
-└── vault-factory/             # abstração de cofres de secrets (+ providers/passbolt, pass-gopass)
+├── vault-factory/             # abstração de cofres de secrets (+ providers/passbolt, pass-gopass)
+└── windows-audio-mic/         # diagnosticar/corrigir microfone no Windows (mudo/padrão)
 ```
 
 ## Arquitetura: factory + provider
