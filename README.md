@@ -14,10 +14,11 @@ ai_skills/
 ├── bin/install.ps1            # idem, para Windows
 ├── bin/sync-skills.sh         # (re)cria as skills em claude/kilo (Linux/macOS/WSL)
 ├── bin/sync-skills.ps1        # idem, para Windows
+├── bin/validate-skills.sh     # valida skills (SKILL.md, frontmatter, Tipo, segredo, py/sh, README); --staged/--full (só bash)
+├── bin/commit-skill.sh        # commit de uma skill com validação; dry-run por padrão, --yes e --push (só bash)
+├── bin/install-hooks.sh       # ativa .githooks/ neste clone, opcional por máquina (só bash)
+├── .githooks/                 # pre-commit (valida skills staged) e commit-msg (bloqueia atribuição de IA)
 ├── providers/                 # referência de plataformas (NÃO é skill carregável)
-│   ├── gitlab/arquivos.md     # GitLab: host, auth, projetos, labels, GraphQL
-│   ├── gitlab/automerge.md    # ferramenta gitlab-auto-merge.sh
-│   ├── nexus/arquivos.md      # Nexus: host, TFM bug, armadilhas
 │   ├── passbolt/arquivos.md   # Passbolt: CLI, pb find/import/export
 │   └── pass-gopass/arquivos.md# pass/gopass: cofre local GPG
 ├── arquiteto/                 # orquestração: subagentes graduados por modelo/esforço
@@ -25,21 +26,18 @@ ai_skills/
 ├── azuredevops-api/            # work items + export de wiki Azure DevOps (CLI ado)
 ├── claude-mem-project-exclusion/ # excluir pasta e apagar memórias do plugin claude-mem
 ├── commiter/                  # workflow genérico de commit + push
-├── cronograma-saude-rj-api/   # API REST Cronograma SES-RJ
+├── decisoes-com-usuario/      # decisões do usuário via grilling + AskUserQuestion (ou equivalente do agente)
 ├── dotnet-backend-architecture/  # padrão arquitetural .NET backend
 ├── hangfire-setup/            # Hangfire: abstrações + implementação (código em docs/)
 ├── headroom/                  # headroom (proxy de contexto)
-├── issue-factory/             # workflow genérico de issues (+ providers/gitlab)
+├── instalacao-appimage-linux/ # instalar AppImage (ícone, atalho, dock GNOME) + scripts/install.sh
+├── issue-factory/             # workflow genérico de issues
 ├── keycloak-api/              # Admin REST API Keycloak (CLI kc)
-├── nuget-factory/             # workflow genérico de pacotes NuGet (+ providers/nexus)
-├── organizar-projetos/        # reorganizar ~/projects em ~/dev/{ses,pessoal,test} + gitconfig includeIf por pasta
-├── openshift-cli/             # instalação/login OpenShift SES-RJ
+├── nuget-factory/             # workflow genérico de pacotes NuGet
 ├── playwright-e2e-estomizados/# receita e2e Playwright (Estomizados)
-├── redis-port-forward/        # túnel até o Redis SES-RJ
 ├── replatforms/               # migração Delphi 7 → .NET + Angular (prompt em docs/)
 ├── speckit/                   # Spec-Driven Development com GitHub Spec Kit (comandos + instalação em docs/)
-├── ses-gitlab-deps/           # instalação de jq/glab
-├── ses-ops/                   # operação/diagnóstico do ecossistema SES (agente + CLI de config por ambiente + ses-secret)
+├── t3-code-acesso-remoto/     # T3 Code: serviço em background, desktop em outro home, acesso mobile via Tailscale (docs/)
 ├── task-observer/             # observação contínua de skills
 ├── vault-factory/             # abstração de cofres de secrets (+ providers/passbolt, pass-gopass)
 └── windows-audio-mic/         # diagnosticar/corrigir microfone no Windows (mudo/padrão)
@@ -51,16 +49,12 @@ Skills que misturam **workflow genérico** e **detalhes de plataforma** são div
 
 - **Factory** (`*-factory`): o fluxo reutilizável, independente da tecnologia (ex.: `issue-factory`).
 - **Provider** (`providers/<plataforma>/arquivos.md`): comandos, URLs e credenciais concretos
-  (ex.: `providers/gitlab/arquivos.md`). Arquivos de provider **não têm `SKILL.md`** — são
   referência que as factories apontam.
 
 Relação atual:
 
 | Factory | Provider(s) |
 |---|---|
-| `issue-factory` | `providers/gitlab/arquivos.md` |
-| `commiter` | `providers/gitlab/arquivos.md`, `providers/gitlab/automerge.md` |
-| `nuget-factory` | `providers/nexus/arquivos.md` |
 | `vault-factory` | `providers/passbolt/arquivos.md`, `providers/pass-gopass/arquivos.md` |
 
 Regra: se uma skill depende de host/credencial de um sistema específico, o detalhe vai para
@@ -68,7 +62,6 @@ Regra: se uma skill depende de host/credencial de um sistema específico, o deta
 
 ## Confidencialidade
 
-**Todas as skills são `internal`** — o repo é privado (GitHub + GitLab SES). Todo `SKILL.md` deve
 carregar `**Tipo:** internal`. Nenhum segredo deve ser versionado (senhas, tokens, chaves) — segredos
 vivem em vaults (`vault-factory`).
 
@@ -96,7 +89,6 @@ vivem em vaults (`vault-factory`).
 ## Publicação
 
 O repo tem dois remotes (ambos privados): GitHub (`git@github.com:SamuelGFDias/ai_skills.git`) e
-GitLab SES (`git@gitlab-prod.saude.rj.gov.br:ses-rj/desenvolvimento/ai/skills.git`). `git push`
 envia aos dois.
 
 ```bash

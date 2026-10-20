@@ -1,6 +1,6 @@
 ---
 name: issue-factory
-description: Workflow genérico de gestão de issues (criar, comentar solução, fechar, milestones, datas, padrão de título) independente da plataforma. Os comandos concretos da plataforma ficam em providers/ — GitLab em providers/gitlab/arquivos.md. Use quando o usuário pedir para abrir, atualizar ou fechar issues em um tracker de tarefas.
+description: Workflow genérico de gestão de issues (criar, comentar solução, fechar, milestones, datas, padrão de título) independente da plataforma. Os comandos concretos da plataforma ficam em providers/ — GitHub em providers/github/arquivos.md. Use quando o usuário pedir para abrir, atualizar ou fechar issues em um tracker de tarefas.
 ---
 
 # Skill: issue-factory
@@ -17,7 +17,6 @@ arquivos `.md` pré-criados** — as demandas são descritas diretamente na conv
 
 Os comandos concretos (host, auth, projeto, labels, milestones, GraphQL) estão em:
 
-- **GitLab SES-RJ** → `providers/gitlab/arquivos.md` (ler antes de executar comandos `glab`).
 - **GitHub** → `providers/github/arquivos.md` (ler antes de executar comandos `gh`).
 
 Ao adaptar para outro tracker, manter este fluxo e trocar apenas a seção do provider.
@@ -35,8 +34,7 @@ informados via prompt**:
 | **Label de status** (ex: Backlog, In progress) | Sempre, salvo se já passado | — |
 | **Label do projeto** | Sempre, salvo se já passado | — |
 
-Onde cada label/milestone vive é definido pelo provider (ex.: GitLab separa labels entre o grupo
-`ses-rj/` e `ses-rj/desenvolvimento/` — ver `providers/gitlab/arquivos.md`).
+Onde cada label/milestone vive é definido pelo provider (ver `providers/github/arquivos.md`).
 
 ## Estrutura esperada de cada issue
 
@@ -88,7 +86,7 @@ Sempre validar o título contra este padrão antes de submeter.
 
 1. Verificar autenticação na plataforma (provider).
 2. **Verificar se já existe issue aberta sobre o assunto** antes de criar — a busca de duplicata é
-   **obrigatória, nunca pulável** (comando por provider: GitLab/GitHub). Buscar nos campos de título
+   **obrigatória, nunca pulável** (comando definido pelo provider). Buscar nos campos de título
    e descrição usando termos-chave da demanda. Se houver correspondência clara (mesmo escopo, aberta
    e ativa), **não criar duplicata**: reportar ao usuário a issue existente (número, título, link) e
    deixar que ele decida entre reaproveitar/atualizar a existente ou abrir nova (ex: a existente
@@ -150,13 +148,12 @@ que foi feito, arquivos alterados (ver provider).
 1. Remover o label de status (ex: `In progress`).
 2. Fechar a issue.
 
-Se a plataforma bloquear alteração de datas em issue fechada (ex: GitLab), o provider documenta o
-fluxo GraphQL: `REOPEN` → definir datas → `CLOSE`.
+Se a plataforma bloquear alteração de datas em issue fechada o provider documenta o fluxo
+alternativo (ex.: reabrir → definir datas → fechar).
 
 ## Fluxo — Definir Datas (start_date / due_date)
 
-Algumas plataformas suportam datas por CLI; outras só por API/GraphQL (ex: `start_date` no GitLab
-18.x só via `workItemUpdate`). Seguir sempre o método documentado no provider — nunca assumir que o
+Algumas plataformas suportam datas por CLI; outras só por API/GraphQL. Seguir sempre o método documentado no provider — nunca assumir que o
 CLI suporta o que a API restringe.
 
 ## Fluxo — Buscar Issues por Usuário em Todos os Projetos do Grupo

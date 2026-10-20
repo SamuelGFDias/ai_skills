@@ -17,8 +17,6 @@ trabalhar aqui, siga estas regras para manter o ambiente sem ruído e sem débit
   (pega automaticamente todo diretório com `SKILL.md`, direto da fonte — sem cópia). O sync com
   alvo `kilo` só garante que esse caminho está configurado; é idempotente e normalmente roda uma
   vez só.
-- **Remotes (ambos privados):** GitHub `git@github.com:SamuelGFDias/ai_skills.git` e GitLab SES
-  `git@gitlab-prod.saude.rj.gov.br:ses-rj/desenvolvimento/ai/skills.git`. `git push` envia aos dois.
 - **Codex:** lê skills de `$HOME/.agents/skills/<nome>` (symlink/cópia, mecanismo nativo de skills
   do Codex CLI) — populado por `bin/sync-skills.sh codex` / `bin/sync-skills.ps1 -Cli codex`.
 - **Gemini CLI / Antigravity (`agy`):** descobre skills via *extension* em
@@ -147,8 +145,7 @@ Skills com workflow genérico + plataforma específica são divididas em:
   `vault-factory`, `commiter`).
 - **Provider** (`providers/<plataforma>/arquivos.md`): comandos concretos.
 
-Relação atual: `issue-factory`→gitlab, `commiter`→gitlab, `nuget-factory`→nexus,
-`vault-factory`→passbolt+pass-gopass+vault.
+Relação atual: `vault-factory`→passbolt+pass-gopass+vault.
 
 ## Validação antes de commit
 
@@ -169,6 +166,12 @@ bin/sync-skills.sh all --dry-run
 # 5. dist/ dos subagentes em dia com roles/ + models.json (exit 0)
 python3 arquiteto/bin/build-agents.py --check
 ```
+
+A automação cobre os 5 itens acima: `bin/validate-skills.sh` (itens 1 a 3; `--full` acrescenta 4 e 5,
+este último quando arquiteto é alvo). Para commitar uma skill, use `bin/commit-skill.sh <skill> -m
+"<descrição>"`: é dry-run por padrão, `--yes` commita e `--push` publica. `bin/install-hooks.sh` é
+opcional por máquina e ativa `.githooks/` (valida skills staged e bloqueia atribuição de IA na mensagem).
+Essas ferramentas são só bash, sem par `.ps1`.
 
 ## Padrão de commit
 
