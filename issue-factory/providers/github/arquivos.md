@@ -6,9 +6,8 @@ Comandos concretos para o fluxo genérico de `issue-factory` quando o tracker é
 ## Pré-requisitos
 
 - `gh` CLI instalado e autenticado (`gh auth status`).
-- Repositório no formato `owner/repo` (ex: `SamuelGFDias/condominio_app`). GitHub não tem o
-  conceito de "grupo" do GitLab — labels e milestones vivem sempre dentro de um repositório
-  específico, nunca compartilhados entre repositórios.
+- Repositório no formato `owner/repo` (ex: `SamuelGFDias/condominio_app`). Labels e milestones
+  vivem sempre dentro de um repositório específico, nunca compartilhados entre repositórios.
 - Escopo `repo` no token (a maioria dos fluxos abaixo já funciona com o escopo padrão de
   `gh auth login`); operações em GitHub Projects (v2) exigem escopo `project`
   (`gh auth refresh -s project`), só necessário se o fluxo de projeto for usado.
@@ -63,9 +62,9 @@ gh search issues --repo owner/repo --state open "<termos-chave>"
 
 ## Fluxo — Criar Issue
 
-GitHub tem uma vantagem sobre o GitLab aqui: `gh issue create` aceita `-F/--body-file` nativo,
-então não é preciso o truque de `-d "$(cat ...)"` (usado no provider GitLab) para preservar
-UTF-8 e evitar truncamento — `--body-file` já lê o arquivo diretamente.
+`gh issue create` aceita `-F/--body-file` nativo, então não é preciso o truque de
+`-d "$(cat ...)"` para preservar UTF-8 e evitar truncamento — `--body-file` já lê o arquivo
+diretamente.
 
 ```bash
 mkdir -p .tmp
@@ -90,8 +89,8 @@ rm -f .tmp/issue_desc.md
 ```
 
 - `--label` aceita lista separada por vírgula, cada label precisa já existir no repositório
-  (criar antes com `gh label create`, ver acima) — diferente do GitLab, não há distinção de
-  labels "de grupo" vs. "de projeto", todas vivem no mesmo namespace do repo.
+  (criar antes com `gh label create`, ver acima) — não há distinção de labels
+  "de grupo" vs. "de projeto", todas vivem no mesmo namespace do repo.
 - `--milestone` só funciona se o milestone já existir (ver "Criar milestone" abaixo); passar o
   nome, não o número.
 - Sem `-d`/`-b` para corpo longo — sempre `--body-file` quando o corpo tiver Markdown
@@ -125,8 +124,8 @@ gh issue edit <numero> -R owner/repo --remove-label "in-progress"
 gh issue close <numero> -R owner/repo --reason completed
 ```
 
-Ao contrário do GitLab, fechar uma issue no GitHub **não** bloqueia editar milestone ou labels
-depois — não existe o problema de "reabrir para mexer em data" descrito no provider GitLab.
+Fechar uma issue no GitHub **não** bloqueia editar milestone ou labels depois — não é preciso
+"reabrir para mexer em data".
 
 ## Fluxo — Issues de Spec (pai + sub-issues nativas)
 
@@ -165,7 +164,7 @@ Fechar: filha com `gh issue close <n> --reason completed` depois de conferir o `
 
 GitHub só tem `due_on` (data de entrega) nativamente — **não existe campo de `start_date`** para
 milestone nem para issue via REST/`gh` (só é possível simular com um campo customizado em
-GitHub Projects v2, que é outra API). Não presumir paridade com o GitLab nesse ponto.
+GitHub Projects v2, que é outra API).
 
 ```bash
 # Criar milestone
@@ -195,13 +194,12 @@ gh search issues --owner org-ou-usuario --assignee usuario \
   --created ">=2026-07-01" --created "<=2026-07-31" --state all
 ```
 
-`gh search issues` cobre o caso que no GitLab exige varrer `groups/.../issues` manualmente —
-não precisa listar repositórios um a um antes.
+`gh search issues` cobre múltiplos repositórios de uma vez — não precisa listar repositórios um
+a um antes.
 
 ## Fluxo — Descobrir se uma Issue já foi Atribuída a Alguém no Passado
 
-Diferente do GitLab (onde o histórico de assignee só existe como nota de sistema, sem endpoint
-dedicado), o GitHub expõe isso diretamente na **timeline** da issue:
+O GitHub expõe isso diretamente na **timeline** da issue:
 
 ```bash
 gh api repos/{owner}/{repo}/issues/{numero}/timeline --paginate \
@@ -215,7 +213,7 @@ for e in events:
 ```
 
 Não precisa paralelizar com `xargs -P` para um volume pequeno de issues — só considerar
-paralelizar (mesmo padrão do provider GitLab) se o número de issues a consultar for grande
+paralelizar se o número de issues a consultar for grande
 (dezenas ou mais).
 
 ## Labels e Atribuição
@@ -235,12 +233,10 @@ gh label list -R owner/repo
 
 ## Observações
 
-- `-R owner/repo` é aceito por praticamente todo subcomando de `gh issue`/`gh label` — não
-  precisa exportar variável de ambiente equivalente ao `GITLAB_HOST` do provider GitLab, mas
+- `-R owner/repo` é aceito por praticamente todo subcomando de `gh issue`/`gh label` —
   fora de um diretório com remote GitHub configurado é obrigatório passar `-R` explicitamente.
 - Não existe GraphQL obrigatório para nada documentado aqui — todo fluxo roda via REST
   (`gh api`) ou comandos de alto nível (`gh issue`/`gh label`). GraphQL só entra em cena para
   GitHub Projects v2 (campos customizados), fora do escopo deste provider.
-- Issues e Pull Requests compartilham o mesmo namespace de número no GitHub (diferente do
-  GitLab, onde issues e work items compartilham IID) — `gh issue view <numero>` falha se o
+- Issues e Pull Requests compartilham o mesmo namespace de número no GitHub — `gh issue view <numero>` falha se o
   número for de um PR, usar `gh pr view <numero>` nesse caso.
