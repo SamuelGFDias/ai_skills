@@ -1,0 +1,12 @@
+{
+  "_comment": "Antigravity CLI (agy) — subagentes em ~/.gemini/config/agents/<papel>.md (agente Markdown: frontmatter YAML + corpo como prompt de sistema; formato em references/antigravity.md). `model` aceita só um TIER: inherit | flash_lite | flash | pro — qualquer outro valor (ex.: IDs de `agy models`) faz o agy descartar o agente em silêncio, e build-agents.py recusa. O tier só vale na invocação como subagente. Sem campo de esforço. Só modelos Gemini. Constatado em 2026-10-19 (agy 1.4.2): o tier `pro` respondeu como Gemini 3.8 Flash nesta conta, então pode estar caindo para flash.",
+  "executor-mecanico": { "model": "flash_lite" },
+  "executor-padrao": { "model": "flash" },
+  "executor-complexo": { "model": "pro" },
+  "executor-critico": { "model": "pro" },
+  "investigador-padrao": { "model": "flash" },
+  "investigador-critico": { "model": "pro" },
+  "speckit-master": { "model": "pro" },
+  "revisor-padrao": { "model": "flash" },
+  "revisor-critico": { "model": "pro" }
+}

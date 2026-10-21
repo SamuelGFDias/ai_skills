@@ -62,3 +62,16 @@ Abrir uma sessão **nova** (`claude`) num diretório vazio e rodar `/model sonne
 - Prompts tipados sem o contrato de retorno por extenso.
 
 Rodar `/tasks` durante o passo 3 também mostra o esforço de cada subagente. O esforço não aparece no transcript, e o haiku não tem esforço.
+
+## Variante Antigravity (`agy`)
+
+Não usa subagentes do Claude: o orquestrador é o próprio `agy`. Detalhes e armadilhas em `antigravity.md`.
+
+```bash
+bin/build-agents.py antigravity && bin/sync-agents.sh antigravity
+agy agent                              # esperado: os 9 papéis listados
+cd ~/.config/ai/skills/arquiteto       # leitura em -p só funciona dentro do workspace
+agy --output-format stream-json -p "Use invoke_subagent, em paralelo: investigador-padrao (conte os arquivos de roles/) e revisor-padrao (confira dist/antigravity). Aguarde os retornos."
+```
+
+Aprovação: `step_type=subagent` com os dois `type_name`, e o resultado de cada um no `transcript.jsonl` do `log_uri` (como `send_message`). Reprovação típica: `unknown agent` (model fora do tier), `failed to construct executor` (tool fora do registry) ou `user denied permission` (shell em `-p`).

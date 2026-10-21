@@ -222,6 +222,47 @@ def build_gemini(meta, body, cfg, role_path):
     return header + body + "\n"
 
 
+# Antigravity CLI (agy): agente Markdown customizado, frontmatter YAML + corpo como prompt de
+# sistema (formato constatado em agy 1.4.2; ver references/antigravity.md). `model` só aceita um
+# tier — fora disso o agy DESCARTA o agente em silêncio (aparece como "unknown agent"), então o
+# builder recusa o valor em vez de gerar um arquivo inutilizável. O `model` só vale quando o agente
+# é invocado como subagente (invoke_subagent); como agente principal (--agent) vale o modelo da sessão.
+# Sem campo de esforço (o agy não tem esforço no frontmatter). O `tools` abaixo é o allowlist.
+ANTIGRAVITY_TIERS = ("inherit", "flash_lite", "flash", "pro")
+
+# O agy só dá ao subagente as ferramentas listadas em `tools` (sem a lista, o executor ficou sem
+# run_command: "ferramenta ausente no escopo"). Nomes do agy 1.4.2 validados por execução: tool fora do
+# registry (ex.: command_status, sed_file, que aparecem no init do agente principal) faz o subagente
+# NÃO INICIAR ("unknown component: tool X not found in registry").
+# `send_message` é como o subagente devolve o resultado ao pai — não pode faltar. `invoke_subagent`
+# fica de fora de propósito: é o que impede a sub-delegação (regra 4). Papel readonly não recebe
+# as ferramentas de escrita, então o somente-leitura é imposto pela CLI e não só pelo prompt.
+ANTIGRAVITY_TOOLS_READ = (
+    "run_command", "view_file", "list_dir", "grep_search", "find_by_name", "send_message",
+)
+ANTIGRAVITY_TOOLS_WRITE = ("write_to_file", "replace_file_content", "multi_replace_file_content")
+
+
+def build_antigravity(meta, body, cfg, role_path):
+    tier = cfg["model"]
+    if tier not in ANTIGRAVITY_TIERS:
+        raise BuildError(
+            f"papel '{meta['name']}' ({role_path}): model '{tier}' inválido para o antigravity "
+            f"(use um tier: {', '.join(ANTIGRAVITY_TIERS)}); o agy descarta agente com model fora disso"
+        )
+    tools = ANTIGRAVITY_TOOLS_READ + (() if is_readonly(meta) else ANTIGRAVITY_TOOLS_WRITE)
+    header = (
+        "---\n"
+        f"name: {meta['name']}\n"
+        f"description: {quote_str(meta['description'])}\n"
+        f"model: {tier}\n"
+        "subagent: true\n"
+        f"tools: [{', '.join(tools)}]\n"
+        "---\n\n"
+    )
+    return header + body + "\n"
+
+
 def build_opencode(meta, body, cfg, role_path):
     perm_lines = ["  task: deny"]
     if is_readonly(meta):
@@ -242,9 +283,10 @@ BUILDERS = {
     "kilo": build_kilo,
     "codex": build_codex,
     "gemini": build_gemini,
+    "antigravity": build_antigravity,
     "opencode": build_opencode,
 }
-EXT = {"claude": ".md", "kilo": ".md", "codex": ".toml", "gemini": ".md", "opencode": ".md"}
+EXT = {"claude": ".md", "kilo": ".md", "codex": ".toml", "gemini": ".md", "antigravity": ".md", "opencode": ".md"}
 
 
 def build_cli(cli, local=False, only_local=False):
@@ -350,7 +392,7 @@ def check_drift(cli):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cli", nargs="?", help="claude | kilo | codex")
+    ap.add_argument("cli", nargs="?", help="claude | kilo | codex | gemini | antigravity | opencode")
     ap.add_argument("--target", help="destino alternativo (default: arquiteto/dist/<cli>); não se aplica a --check")
     ap.add_argument("--local-out", help="grava só os papéis sobrescritos em cli/<cli>/models.local.json (mesclados) neste diretório")
     ap.add_argument("--list", action="store_true", help="mostra CLIs suportados")

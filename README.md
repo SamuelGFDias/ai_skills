@@ -14,6 +14,10 @@ ai_skills/
 ├── bin/install.ps1            # idem, para Windows
 ├── bin/sync-skills.sh         # (re)cria as skills em claude/kilo (Linux/macOS/WSL)
 ├── bin/sync-skills.ps1        # idem, para Windows
+├── bin/validate-skills.sh     # valida skills (SKILL.md, frontmatter, Tipo, segredo, py/sh, README); --staged/--full (só bash)
+├── bin/commit-skill.sh        # commit de uma skill com validação; dry-run por padrão, --yes e --push (só bash)
+├── bin/install-hooks.sh       # ativa .githooks/ neste clone, opcional por máquina (só bash)
+├── .githooks/                 # pre-commit (valida skills staged) e commit-msg (bloqueia atribuição de IA)
 ├── providers/                 # referência de plataformas (NÃO é skill carregável)
 │   ├── gitlab/arquivos.md     # GitLab: host, auth, projetos, labels, GraphQL
 │   ├── gitlab/automerge.md    # ferramenta gitlab-auto-merge.sh
@@ -26,20 +30,28 @@ ai_skills/
 ├── claude-mem-project-exclusion/ # excluir pasta e apagar memórias do plugin claude-mem
 ├── commiter/                  # workflow genérico de commit + push
 ├── cronograma-saude-rj-api/   # API REST Cronograma SES-RJ
+├── decisoes-com-usuario/      # decisões do usuário via grilling + AskUserQuestion (ou equivalente do agente)
 ├── dotnet-backend-architecture/  # padrão arquitetural .NET backend
 ├── hangfire-setup/            # Hangfire: abstrações + implementação (código em docs/)
 ├── headroom/                  # headroom (proxy de contexto)
+├── instalacao-appimage-linux/ # instalar AppImage (ícone, atalho, dock GNOME) + scripts/install.sh
 ├── issue-factory/             # workflow genérico de issues (+ providers/gitlab)
 ├── keycloak-api/              # Admin REST API Keycloak (CLI kc)
 ├── nuget-factory/             # workflow genérico de pacotes NuGet (+ providers/nexus)
+├── organizar-projetos/        # reorganizar ~/projects em ~/dev/{ses,pessoal,test} + gitconfig includeIf por pasta
 ├── openshift-cli/             # instalação/login OpenShift SES-RJ
 ├── playwright-e2e-estomizados/# receita e2e Playwright (Estomizados)
 ├── redis-port-forward/        # túnel até o Redis SES-RJ
 ├── replatforms/               # migração Delphi 7 → .NET + Angular (prompt em docs/)
 ├── speckit/                   # Spec-Driven Development com GitHub Spec Kit (comandos + instalação em docs/)
 ├── ses-gitlab-deps/           # instalação de jq/glab
+├── ses-ops/                   # operação/diagnóstico do ecossistema SES (agente + CLI de config por ambiente + ses-secret)
+├── t3-code-acesso-remoto/     # T3 Code: serviço em background, desktop em outro home, acesso mobile via Tailscale (docs/)
+├── t3-code-orquestracao/      # T3 Code por dentro da thread: delegar a outro provider, papéis do arquiteto, threads/worktree, clonar pelo nome
 ├── task-observer/             # observação contínua de skills
-└── vault-factory/             # abstração de cofres de secrets (+ providers/passbolt, pass-gopass)
+├── us-legado-factory/         # US de sistemas legados a partir de código e docs (sob arquiteto; export azuredevops-api)
+├── vault-factory/             # abstração de cofres de secrets (+ providers/passbolt, pass-gopass)
+└── windows-audio-mic/         # diagnosticar/corrigir microfone no Windows (mudo/padrão)
 ```
 
 ## Arquitetura: factory + provider

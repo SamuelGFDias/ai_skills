@@ -11,8 +11,9 @@
 # Alvos (primeiro argumento posicional, default "all"):
 #   claude  -> linka (Linux/macOS/WSL) ou copia (Windows/Git Bash) cada skill (diretório com
 #              SKILL.md na raiz) para ~/.claude/skills/<nome>, recriando o destino a cada run;
-#              remove órfãos (skill removida do repo).
-#   kilo    -> garante que ~/.config/kilo/kilo.jsonc tenha o caminho deste repo em "skills.paths"
+#              remove só symlinks quebrados (skill removida do repo); diretórios reais e
+#              symlinks válidos que não são do repo são mantidos, com aviso.
+#   kilo   -> garante que ~/.config/kilo/kilo.jsonc tenha o caminho deste repo em "skills.paths"
 #              (o Kilo lê os SKILL.md direto da fonte, não precisa de cópia nem symlink).
 #   codex   -> linka/copia (mesmo critério de claude) cada skill para ~/.agents/skills/<nome> —
 #              diretório de escopo de usuário que o Codex CLI escaneia nativamente (skills
@@ -98,8 +99,17 @@ sync_skill_dir_target() {
     local found=0
     for n in "${names[@]:-}"; do [ "$n" = "$name" ] && found=1 && break; done
     if [ "$found" -eq 0 ]; then
-      echo "$MODE: rm $existing (órfão — $name não é mais skill)"
-      [ "$MODE" = "apply" ] && rm -rf "$existing"
+      # Só symlink quebrado é seguro de apagar: foi criado por este script e o repo removeu a
+      # skill. Diretório real ou symlink válido pode ser skill instalada por outra ferramenta
+      # (ex.: find-skills, codebase-memory) e nunca é removido aqui. No modo cópia (Windows)
+      # o destino é diretório real e não dá para distinguir cópia nossa de skill externa:
+      # só avisa.
+      if [ -L "$existing" ] && [ ! -e "$existing" ]; then
+        echo "$MODE: rm $existing (symlink quebrado — $name não é mais skill)"
+        [ "$MODE" = "apply" ] && rm -f "$existing"
+      else
+        echo "AVISO: $existing não é skill deste repo e foi mantido (só symlink quebrado é removido)" >&2
+      fi
     fi
   done
 }
