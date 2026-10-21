@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# pre-commit — valida as skills staged antes do commit (só bash; sem par .ps1).
+#
+# O que faz:
+#   1. bin/validate-skills.sh --staged: valida as skills com mudança staged (frontmatter, Tipo,
+#      segredo em texto claro, py_compile/bash -n, README de skill nova, symlink como aviso).
+#   2. se houver arquivos de arquiteto/ staged: python3 arquiteto/bin/build-agents.py --check
+#      (dist/ em dia com roles/ + models.json).
+#
+# Ativação por máquina: bin/install-hooks.sh (define core.hooksPath=.githooks).
+# Não use --no-verify para contornar; se o hook bloquear, corrija a causa.
+set -euo pipefail
+
+REPO_DIR="$(git rev-parse --show-toplevel)"
+VALIDADOR="$REPO_DIR/bin/validate-skills.sh"
+
+if [ ! -f "$VALIDADOR" ]; then
+  echo "pre-commit: $VALIDADOR ausente; não há como validar as skills." >&2
+  exit 1
+fi
+
+if ! bash "$VALIDADOR" --staged; then
+  echo "pre-commit: validação de skills falhou; commit bloqueado." >&2
+  exit 1
+fi
+
+STAGED="$(git diff --cached --name-only)"
+if [[ $'\n'"$STAGED"$'\n' == *$'\n'arquiteto/* ]]; then
+  if ! (cd "$REPO_DIR" && python3 arquiteto/bin/build-agents.py --check); then
+    echo "pre-commit: dist/ do arquiteto defasado em relação a roles/ + models.json." >&2
+    echo "pre-commit: rode 'python3 arquiteto/bin/build-agents.py' e commite o dist/ gerado." >&2
+    exit 1
+  fi
+fi
+
+exit 0

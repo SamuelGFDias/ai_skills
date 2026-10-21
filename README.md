@@ -23,34 +23,55 @@ ai_skills/
 │   ├── gitlab/automerge.md    # ferramenta gitlab-auto-merge.sh
 │   ├── nexus/arquivos.md      # Nexus: host, TFM bug, armadilhas
 │   ├── passbolt/arquivos.md   # Passbolt: CLI, pb find/import/export
-│   └── pass-gopass/arquivos.md# pass/gopass: cofre local GPG
+│   ├── pass-gopass/arquivos.md# pass/gopass: cofre local GPG
+│   └── vault/arquivos.md      # HashiCorp Vault (KV v2): nomes de chaves, ExternalSecret/ArgoCD
+├── angular-testes/            # teste unitário Angular SES-RJ (Karma/Jasmine, vitest, TestBed)
 ├── arquiteto/                 # orquestração: subagentes graduados por modelo/esforço
+│                              # (claude/kilo/codex/gemini/antigravity/opencode)
+├── atividade-factory/         # commits → issues por funcionalidade (GitLab)
 ├── audit-log/                 # biblioteca AuditLog (NuGet)
+├── backend-wiki-skills/       # roteador das skills de backend .NET
+├── bash-scripting-pitfalls/   # armadilhas de bash (source, set -e)
+├── clean-code-architecture-solid/ # Clean Code, Clean Architecture e SOLID
+├── configurar-video-jogos/    # GPU NVIDIA/PRIME e jogos da Steam (Flatpak)
 ├── azuredevops-api/            # work items + export de wiki Azure DevOps (CLI ado)
 ├── claude-mem-project-exclusion/ # excluir pasta e apagar memórias do plugin claude-mem
 ├── commiter/                  # workflow genérico de commit + push
 ├── cronograma-saude-rj-api/   # API REST Cronograma SES-RJ
+├── ctvl-api/                  # CT-VL (CipherTrust Vaulted Tokenization) pela API admin
+├── dependency-upgrade-spike/  # decidir upgrade de dependência sem confiar no changelog
 ├── decisoes-com-usuario/      # decisões do usuário via grilling + AskUserQuestion (ou equivalente do agente)
 ├── dotnet-backend-architecture/  # padrão arquitetural .NET backend
+├── dotnet-integration-tests/  # teste de integração .NET (xunit, Testcontainers)
+├── dotnet-project-rename/     # renomear projeto .NET sem quebrar o build
+├── dotnet-unit-tests/         # teste unitário .NET (xunit, NSubstitute)
 ├── hangfire-setup/            # Hangfire: abstrações + implementação (código em docs/)
+├── grill-me/                  # entrevista implacável para afinar plano/design
+├── grilling/                  # grill do usuário sobre plano/decisão/ideia
 ├── headroom/                  # headroom (proxy de contexto)
 ├── instalacao-appimage-linux/ # instalar AppImage (ícone, atalho, dock GNOME) + scripts/install.sh
-├── issue-factory/             # workflow genérico de issues (+ providers/gitlab)
+├── issue-factory/             # workflow genérico de issues (+ providers/gitlab, providers/github)
 ├── keycloak-api/              # Admin REST API Keycloak (CLI kc)
 ├── nuget-factory/             # workflow genérico de pacotes NuGet (+ providers/nexus)
-├── organizar-projetos/        # reorganizar ~/projects em ~/dev/{ses,pessoal,test} + gitconfig includeIf por pasta
 ├── openshift-cli/             # instalação/login OpenShift SES-RJ
+├── openshift-implementacao-factory/ # e-mail de solicitação de esteira no OpenShift SES-RJ
+├── organizar-projetos/        # reorganizar ~/projects em ~/dev/{ses,pessoal,test} + gitconfig includeIf por pasta
 ├── playwright-e2e-estomizados/# receita e2e Playwright (Estomizados)
+├── ramguard/                  # operação do ramguard (encerra processo pesado com RAM alta)
 ├── redis-port-forward/        # túnel até o Redis SES-RJ
 ├── replatforms/               # migração Delphi 7 → .NET + Angular (prompt em docs/)
 ├── speckit/                   # Spec-Driven Development com GitHub Spec Kit (comandos + instalação em docs/)
 ├── ses-gitlab-deps/           # instalação de jq/glab
 ├── ses-ops/                   # operação/diagnóstico do ecossistema SES (agente + CLI de config por ambiente + ses-secret)
+├── sql-data-cleanup/          # scripts SQL de dedupe/limpeza decididos por evidência
 ├── t3-code-acesso-remoto/     # T3 Code: serviço em background, desktop em outro home, acesso mobile via Tailscale (docs/)
 ├── t3-code-orquestracao/      # T3 Code por dentro da thread: delegar a outro provider, papéis do arquiteto, threads/worktree, clonar pelo nome
 ├── task-observer/             # observação contínua de skills
+├── tdd-first/                 # TDD antes do código de produção
 ├── us-legado-factory/         # US de sistemas legados a partir de código e docs (sob arquiteto; export azuredevops-api)
-├── vault-factory/             # abstração de cofres de secrets (+ providers/passbolt, pass-gopass)
+├── vault-factory/             # abstração de cofres de secrets (+ providers/passbolt, pass-gopass, vault)
+├── webpush-vapid-factory/     # Web Push VAPID (Angular + .NET)
+├── wiki-saude-rj/             # API GraphQL do Wiki.js SES-RJ
 └── windows-audio-mic/         # diagnosticar/corrigir microfone no Windows (mudo/padrão)
 ```
 
@@ -70,7 +91,7 @@ Relação atual:
 | `issue-factory` | `providers/gitlab/arquivos.md` |
 | `commiter` | `providers/gitlab/arquivos.md`, `providers/gitlab/automerge.md` |
 | `nuget-factory` | `providers/nexus/arquivos.md` |
-| `vault-factory` | `providers/passbolt/arquivos.md`, `providers/pass-gopass/arquivos.md` |
+| `vault-factory` | `providers/passbolt/arquivos.md`, `providers/pass-gopass/arquivos.md`, `providers/vault/arquivos.md` |
 
 Regra: se uma skill depende de host/credencial de um sistema específico, o detalhe vai para
 `providers/`; a skill mantém o fluxo genérico e aponta para o provider.
