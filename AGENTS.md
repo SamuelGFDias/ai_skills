@@ -87,6 +87,24 @@ bin\sync-skills.ps1 -Cli claude
 bash arquiteto/bin/sync-agents.sh              # barras normais aqui: o argumento é lido pelo bash
 ```
 
+### Instruções globais do agente (`global.md`)
+
+Uma skill pode ter um `global.md` na sua pasta (e há snippets avulsos em `bin/global/*.md`) com a
+instrução curta que o agente deve ter **em toda sessão** para saber quando chamar a skill. A
+primeira linha pode ser `<!-- desc: texto -->`, usada na pergunta de seleção.
+
+`bin/sync-global-config.sh` (chamado pelo `install.sh`) mantém isso no diretório global de cada
+agente. Você escolhe quais snippets ligar: a pergunta é interativa na primeira vez e a escolha fica
+em `~/.config/ai/skills-global.conf` (por máquina, fora do repo). Use `--list` para ver o estado e
+`--choose` para refazer a escolha.
+
+- **claude e gemini** importam arquivo: o conteúdo vai para `<dir-global>/ai-skills.md` e o
+  `CLAUDE.md`/`GEMINI.md` ganha só um bloco com `@ai-skills.md`.
+- **codex e opencode** não importam arquivo (conferido na documentação de cada um): o conteúdo vai
+  inline, num bloco `ai-skills:global` no `AGENTS.md`.
+- O resto do arquivo do usuário nunca é tocado. Enquanto algum snippet estiver sem escolha, o script
+  não altera nada. Sem terminal ele não pergunta.
+
 ### Quando rodar o quê
 
 - Mexeu só num `SKILL.md` (ou criou skill nova): basta `sync-skills`.
@@ -137,6 +155,11 @@ bash arquiteto/bin/sync-agents.sh              # barras normais aqui: o argument
 6. Nunca versionar segredo (senha, token, chave). Segredos vivem em vaults — ver `vault-factory`.
 7. Nunca adicionar rodapé de atribuição de IA em commits/PRs (`Co-Authored-By`, "Generated with ...").
    A mensagem termina no conteúdo escrito.
+8. Skill compartilhada descreve o procedimento e como descobrir cada valor; **valores de uma máquina
+   não entram**: hostname, tailnet, nome de dispositivo, porta, versão fixa, caminhos de dotfiles do
+   usuário (`~/.zshrc.d`, `~/.zshenv`), referências `op://` reais, nem log de validação com dados da
+   máquina. Use marcadores `<...>` com uma tabela "como descobrir". Setup por máquina vai para
+   `providers/`. O `validate-skills.sh` avisa quando encontra esses padrões.
 
 ## Arquitetura factory + provider
 
@@ -147,7 +170,7 @@ Skills com workflow genérico + plataforma específica são divididas em:
 - **Provider** (`providers/<plataforma>/arquivos.md`): comandos concretos.
 
 Relação atual: `issue-factory`→gitlab, `commiter`→gitlab, `nuget-factory`→nexus,
-`vault-factory`→passbolt+pass-gopass.
+`vault-factory`→passbolt+pass-gopass+vault.
 
 ## Validação antes de commit
 
@@ -168,6 +191,12 @@ bin/sync-skills.sh all --dry-run
 # 5. dist/ dos subagentes em dia com roles/ + models.json (exit 0)
 python3 arquiteto/bin/build-agents.py --check
 ```
+
+A automação cobre os 5 itens acima: `bin/validate-skills.sh` (itens 1 a 3; `--full` acrescenta 4 e 5,
+este último quando arquiteto é alvo). Para commitar uma skill, use `bin/commit-skill.sh <skill> -m
+"<descrição>"`: é dry-run por padrão, `--yes` commita e `--push` publica. `bin/install-hooks.sh` é
+opcional por máquina e ativa `.githooks/` (valida skills staged e bloqueia atribuição de IA na mensagem).
+Essas ferramentas são só bash, sem par `.ps1`.
 
 ## Padrão de commit
 

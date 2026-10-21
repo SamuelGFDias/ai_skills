@@ -69,8 +69,11 @@ function Sync-SkillDirTarget {
     }
 
     # 2) Remove copias orfas (nome nao existe mais como skill no repo)
+    #    "synced" e gerenciado pelo app Claude (skills sincronizadas da conta) -- nunca apagar.
+    $protegidos = @("synced")
     if (Test-Path $TargetDir) {
         Get-ChildItem -Path $TargetDir -Directory | ForEach-Object {
+            if ($protegidos -contains $_.Name) { return }
             if ($skillNames -notcontains $_.Name) {
                 Write-Output "${Mode}: rm $($_.FullName) (orfao -- $($_.Name) nao e mais skill)"
                 if ($Mode -eq "apply") { Remove-Item -Path $_.FullName -Recurse -Force }

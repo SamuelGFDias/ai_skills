@@ -9,6 +9,7 @@ Carregar sob demanda: diagnóstico de modelo/custo divergente, ou mudança de co
   - Gerar a partir dos defaults: `bin/init-local-models.py <cli> [papéis...]` (sem papéis = todos; deixe só os que vai mudar).
   - Aplicar: `bin/sync-agents.sh <cli>`. Papéis citados viram arquivo real no destino (não acompanham `git pull`); os demais seguem symlink. Mudou o arquivo local ou o `roles/` de um papel sobrescrito: rode o sync de novo. Remover o papel do arquivo e rodar o sync devolve o symlink.
   - `dist/` e `--check` ignoram o arquivo local, então nada pessoal é commitado.
+- **Antigravity (`agy`):** `model` só aceita tier (`inherit|flash_lite|flash|pro`) e não há esforço; valor inválido faz o agente sumir em silêncio. Detalhes, `tools` e testes em `antigravity.md`.
 - **Alias vs ID:** o alias `haiku` pode resolver para o Haiku 4.5 (sem níveis de esforço); use `claude-haiku-5-5` para garantir o 5.5.
 
 **Precedência de modelo e esforço no Claude Code** (verificado em 2026-10-06, Claude Code 2.1.292; fonte: docs `sub-agents` e `model-config`):
