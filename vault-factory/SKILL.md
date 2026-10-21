@@ -1,6 +1,6 @@
 ---
 name: vault-factory
-description: Abstrai leitura/escrita de secrets em cofres (Passbolt, pass/gopass) sem nunca imprimir segredos no chat, no histórico do shell ou em arquivos versionados. Provê os padrões de acesso inline e os comandos pb (find/import/export). Os detalhes de cada cofre ficam em providers/ — Passbolt em providers/passbolt/arquivos.md, pass/gopass em providers/pass-gopass/arquivos.md. Use quando o usuário pedir para acessar, ler, atualizar ou transferir secrets entre cofres e arquivos .env.
+description: Abstrai leitura/escrita de secrets em cofres (Passbolt, pass/gopass, HashiCorp Vault) sem nunca imprimir segredos no chat, no histórico do shell ou em arquivos versionados. Provê os padrões de acesso inline e os comandos pb (find/import/export). Os detalhes de cada cofre ficam em providers/ — Passbolt em providers/passbolt/arquivos.md, pass/gopass em providers/pass-gopass/arquivos.md, Vault em providers/vault/arquivos.md. Use quando o usuário pedir para acessar, ler, atualizar ou transferir secrets entre cofres e arquivos .env.
 ---
 
 # Skill: vault-factory
@@ -36,6 +36,7 @@ Os comandos concretos de cada cofre estão em arquivos separados — **ler o pro
 |---|---|---|
 | **Passbolt** (remoto, go-passbolt-cli) | `providers/passbolt/arquivos.md` | Secrets compartilhados; geração de `.env`; `pb find/import/export` |
 | **pass / gopass** (local, GPG) | `providers/pass-gopass/arquivos.md` | Tokens operacionais por caminho (ex.: `openshift/hml/token`), usados inline |
+| **HashiCorp Vault** (remoto, KV v2) | `providers/vault/arquivos.md` | Credenciais dos charts (ExternalSecret/ArgoCD); agentes veem só nomes de chaves; escrita com `kv patch` |
 
 Docs desta skill: `docs/autenticacao.md` (Passbolt: setup, MFA, rotação, troubleshooting) e
 `docs/importar-chave-gpg-sem-prompt.md` (chave GPG no keyring para pass/gopass sem pinentry).
@@ -46,11 +47,13 @@ O mesmo padrão vale para qualquer cofre — a diferença é só o comando de le
 
 ```bash
 # pass/gopass: substituição no próprio comando
-oc login --token="$(pass show openshift/hml/token)" ...
+oc login --token=$(pass show <cofre>/<caminho>/token)
 
 # Passbolt: injeta as secrets no env só do processo filho, nunca no shell interativo
 passbolt exec -- bash -c 'dotnet restore'
 ```
+
+**HashiCorp Vault:** agentes não leem valores (o login `vault-login` existe só no shell do usuário); em sessão de agente só listar nomes de chaves — ver `providers/vault/arquivos.md`.
 
 ## Comandos `pb` (find / import / export)
 

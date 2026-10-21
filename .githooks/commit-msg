@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# commit-msg — rejeita mensagem de commit com atribuição de IA (só bash; sem par .ps1).
+#
+# Bloqueia, case-insensitive e em qualquer linha da mensagem:
+#   - "Co-Authored-By:"  (qualquer variação)
+#   - "Generated with"   (ex.: rodapé "Generated with Claude Code")
+#   - o emoji de robô
+# Motivo: AGENTS.md, regra 7, e preferência global do usuário. A mensagem termina no conteúdo escrito
+# (assunto + corpo + "Closes #N" quando couber).
+#
+# Antes de checar, ignora linhas de comentário (#) e tudo a partir da linha de corte do git
+# ("# --- >8 ---"), para não contar o diff exibido por `git commit -v`.
+#
+# Ativação por máquina: bin/install-hooks.sh. Não use --no-verify para contornar.
+set -euo pipefail
+
+MSG_FILE="${1:?uso: commit-msg <arquivo-da-mensagem>}"
+ROBOT_EMOJI=$'\xf0\x9f\xa4\x96'
+
+MSG="$(sed -e '/^# -* >8 -*$/,$d' -e '/^#/d' "$MSG_FILE")"
+LOWER="$(printf '%s' "$MSG" | tr '[:upper:]' '[:lower:]')"
+
+HIT=""
+case "$LOWER" in
+  *co-authored-by:*) HIT="linha Co-Authored-By:" ;;
+esac
+if [ -z "$HIT" ]; then
+  case "$LOWER" in
+    *"generated with"*) HIT="rodapé 'Generated with'" ;;
+  esac
+fi
+if [ -z "$HIT" ]; then
+  case "$MSG" in
+    *"$ROBOT_EMOJI"*) HIT="emoji de robô (atribuição de IA)" ;;
+  esac
+fi
+
+if [ -n "$HIT" ]; then
+  cat >&2 <<EOF
+commit-msg: mensagem rejeitada — contém $HIT.
+Regra 7 do AGENTS.md (e preferência global do usuário): não adicionar rodapé de atribuição de IA
+em commits (Co-Authored-By, "Generated with ...", emoji de robô). A mensagem termina no conteúdo
+escrito: assunto + corpo + "Closes #N" quando couber. Remova a linha e tente de novo.
+EOF
+  exit 1
+fi
+
+exit 0

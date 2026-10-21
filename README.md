@@ -23,27 +23,42 @@ ai_skills/
 │   ├── gitlab/automerge.md    # ferramenta gitlab-auto-merge.sh
 │   ├── nexus/arquivos.md      # Nexus: host, TFM bug, armadilhas
 │   ├── passbolt/arquivos.md   # Passbolt: CLI, pb find/import/export
-│   └── pass-gopass/arquivos.md# pass/gopass: cofre local GPG
+│   ├── pass-gopass/arquivos.md# pass/gopass: cofre local GPG
+│   └── vault/arquivos.md      # HashiCorp Vault (KV v2): nomes de chaves, ExternalSecret/ArgoCD
 ├── arquiteto/                 # orquestração: subagentes graduados por modelo/esforço
+│                              # (claude/kilo/codex/gemini/antigravity/opencode)
+├── atividade-factory/         # commits → issues por funcionalidade (GitLab)
 ├── audit-log/                 # biblioteca AuditLog (NuGet)
+├── backend-wiki-skills/       # roteador das skills de backend .NET
+├── bash-scripting-pitfalls/   # armadilhas de bash (source, set -e)
+├── clean-code-architecture-solid/ # Clean Code, Clean Architecture e SOLID
+├── configurar-video-jogos/    # GPU NVIDIA/PRIME e jogos da Steam (Flatpak)
 ├── azuredevops-api/            # work items + export de wiki Azure DevOps (CLI ado)
 ├── claude-mem-project-exclusion/ # excluir pasta e apagar memórias do plugin claude-mem
 ├── commiter/                  # workflow genérico de commit + push
+├── dependency-upgrade-spike/  # decidir upgrade de dependência sem confiar no changelog
 ├── decisoes-com-usuario/      # decisões do usuário via grilling + AskUserQuestion (ou equivalente do agente)
 ├── dotnet-backend-architecture/  # padrão arquitetural .NET backend
+├── dotnet-project-rename/     # renomear projeto .NET sem quebrar o build
 ├── hangfire-setup/            # Hangfire: abstrações + implementação (código em docs/)
+├── grill-me/                  # entrevista implacável para afinar plano/design
+├── grilling/                  # grill do usuário sobre plano/decisão/ideia
 ├── headroom/                  # headroom (proxy de contexto)
 ├── instalacao-appimage-linux/ # instalar AppImage (ícone, atalho, dock GNOME) + scripts/install.sh
-├── issue-factory/             # workflow genérico de issues
+├── issue-factory/             # workflow genérico de issues (+ providers/github)
 ├── keycloak-api/              # Admin REST API Keycloak (CLI kc)
 ├── nuget-factory/             # workflow genérico de pacotes NuGet (+ providers/nexus)
+├── ramguard/                  # operação do ramguard (encerra processo pesado com RAM alta)
 ├── replatforms/               # migração Delphi 7 → .NET + Angular (prompt em docs/)
 ├── speckit/                   # Spec-Driven Development com GitHub Spec Kit (comandos + instalação em docs/)
+├── sql-data-cleanup/          # scripts SQL de dedupe/limpeza decididos por evidência
 ├── t3-code-acesso-remoto/     # T3 Code: serviço em background, desktop em outro home, acesso mobile via Tailscale (docs/)
 ├── t3-code-orquestracao/      # T3 Code por dentro da thread: delegar a outro provider, papéis do arquiteto, threads/worktree, clonar pelo nome
 ├── task-observer/             # observação contínua de skills
+├── tdd-first/                 # TDD antes do código de produção
 ├── us-legado-factory/         # US de sistemas legados a partir de código e docs (sob arquiteto; export azuredevops-api)
-├── vault-factory/             # abstração de cofres de secrets (+ providers/passbolt, pass-gopass)
+├── vault-factory/             # abstração de cofres de secrets (+ providers/passbolt, pass-gopass, vault)
+├── webpush-vapid-factory/     # Web Push VAPID (Angular + .NET)
 └── windows-audio-mic/         # diagnosticar/corrigir microfone no Windows (mudo/padrão)
 ```
 
@@ -61,7 +76,7 @@ Relação atual:
 | Factory | Provider(s) |
 |---|---|
 | `nuget-factory` | `providers/nexus/arquivos.md` |
-| `vault-factory` | `providers/passbolt/arquivos.md`, `providers/pass-gopass/arquivos.md` |
+| `vault-factory` | `providers/passbolt/arquivos.md`, `providers/pass-gopass/arquivos.md`, `providers/vault/arquivos.md` |
 
 Regra: se uma skill depende de host/credencial de um sistema específico, o detalhe vai para
 `providers/`; a skill mantém o fluxo genérico e aponta para o provider.
