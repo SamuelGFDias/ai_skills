@@ -50,6 +50,7 @@ ai_skills/
 ├── nuget-factory/             # workflow genérico de pacotes NuGet (+ providers/nexus)
 ├── ramguard/                  # operação do ramguard (encerra processo pesado com RAM alta)
 ├── replatforms/               # migração Delphi 7 → .NET + Angular (prompt em docs/)
+├── search-first/              # pesquisar fora antes de construir: relatório com fontes (upstream shimo4228, MIT)
 ├── speckit/                   # Spec-Driven Development com GitHub Spec Kit (comandos + instalação em docs/)
 ├── sql-data-cleanup/          # scripts SQL de dedupe/limpeza decididos por evidência
 ├── t3-code-acesso-remoto/     # T3 Code: serviço em background, desktop em outro home, acesso mobile via Tailscale (docs/)
