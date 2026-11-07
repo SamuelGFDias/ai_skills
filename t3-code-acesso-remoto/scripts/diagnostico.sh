@@ -50,7 +50,7 @@ if [ -f "$DESK_RUNTIME" ]; then
 else
   info "desktop ainda não gravou $DESK_RUNTIME (app fechado ou usando outro home)"
 fi
-for f in "$HOME/.local/share/applications/t3code.desktop" "$HOME/.config/autostart/t3code.desktop"; do
+for f in "$HOME/.local/share/applications/t3-code.desktop" "$HOME/.config/autostart/t3code.desktop"; do
   if [ -f "$f" ]; then
     if grep -q "^Exec=.*T3CODE_HOME=$DESKTOP_HOME" "$f"; then
       ok "$(basename "$(dirname "$f")")/$(basename "$f") aponta para $DESKTOP_HOME"
