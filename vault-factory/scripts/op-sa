@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# op-sa — roda o `op` (1Password CLI) com o service account desta máquina.
+# O token vem de ~/.config/op/service-account-token e vale só para esta chamada;
+# nunca é impresso nem fica no ambiente do shell pai.
+#   op-sa read "$<NOME>_REF"   # ex.: op://<cofre>/<item>/<campo>
+set -euo pipefail
+tok_file="${OP_SA_TOKEN_FILE:-$HOME/.config/op/service-account-token}"
+[ -r "$tok_file" ] || { echo "op-sa: token não encontrado em $tok_file" >&2; exit 1; }
+OP_SERVICE_ACCOUNT_TOKEN="$(tr -d '\r\n' < "$tok_file")"
+# Token vazio faria o `op` cair na sessão pessoal/app desktop sem erro: nunca chamar o `op` assim.
+[ -n "$OP_SERVICE_ACCOUNT_TOKEN" ] || { echo "op-sa: token vazio em $tok_file" >&2; exit 1; }
+export OP_SERVICE_ACCOUNT_TOKEN
+exec op "$@"

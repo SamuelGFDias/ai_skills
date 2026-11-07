@@ -36,8 +36,12 @@ resolve_resource_id() {
   matches="$(jq -c --arg q "${query,,}" '
       [.[] | select(((.name // .Name // "") | ascii_downcase) | contains($q))
        | {id: (.id // .ID), name: (.name // .Name)}]
-    ' <<<"$list_json")"
-  count="$(jq 'length' <<<"$matches")"
+    ' <<<"$list_json" 2>/dev/null)" || matches=""
+  count="$(jq 'length' <<<"$matches" 2>/dev/null)" || count=""
+  if ! [[ "$count" =~ ^[0-9]+$ ]]; then
+    echo "ERRO: resposta inválida de 'passbolt list resources'." >&2
+    return 1
+  fi
 
   if [ "$count" -eq 0 ]; then
     echo "ERRO: nenhum recurso encontrado com nome contendo \"$query\"." >&2
@@ -52,8 +56,12 @@ resolve_resource_id() {
   fi
 
   local resolved_id resolved_name
-  resolved_id="$(jq -r '.[0].id' <<<"$matches")"
+  resolved_id="$(jq -r '.[0].id // empty' <<<"$matches")"
   resolved_name="$(jq -r '.[0].name' <<<"$matches")"
+  if [ -z "$resolved_id" ]; then
+    echo "ERRO: recurso sem id na resposta de 'passbolt list resources'." >&2
+    return 1
+  fi
   echo "Recurso resolvido por nome: \"$resolved_name\" -> $resolved_id" >&2
 
   echo "$resolved_id"

@@ -1,13 +1,13 @@
 ---
 name: bash-scripting-pitfalls
-description: Armadilhas silenciosas de shell scripting em bash — colisão de variáveis ao usar `source` e função com `cond && ação` na última linha sob `set -e` — com exemplos errado/certo e checklist de revisão. Use ao escrever ou revisar script bash que sourceia outros scripts (runner/plugin/setup que exporta variáveis) ou que usa `set -e`/`set -euo pipefail` com funções chamadas como statement solto.
+description: Armadilhas silenciosas de shell scripting em bash — colisão de variáveis ao usar `source`, função com `cond && ação` na última linha sob `set -e` e verificação (hash, versão) que aceita entrada vazia — com exemplos errado/certo e checklist de revisão. Use ao escrever ou revisar script bash que sourceia outros scripts (runner/plugin/setup que exporta variáveis), que usa `set -e`/`set -euo pipefail` com funções chamadas como statement solto, ou que confere hash, checksum ou versão antes de seguir.
 ---
 
 # Skill: bash-scripting-pitfalls
 
 **Tipo:** open-source
 
-Duas classes de bug que não geram erro no ponto da causa: o sintoma aparece longe, em outro comando, e só em alguns branches. Aplicar o checklist ao final antes de considerar o script pronto.
+Três classes de bug que não geram erro no ponto da causa: o sintoma aparece longe, em outro comando, e só em alguns branches. Aplicar o checklist ao final antes de considerar o script pronto.
 
 ## 1. `source` compartilha o namespace inteiro
 
@@ -92,6 +92,39 @@ sync_for() {
 
 Diagnóstico: `bash -x`, comparando a chamada isolada de cada subcomando (retorna 0 fora do loop) com a execução completa.
 
+## 3. Verificação que aceita entrada vazia
+
+`[ "$obtido" = "$esperado" ]` é verdadeiro quando **os dois** lados estão vazios. Se o comando que
+produziria o valor falhou (ferramenta sem login, rede, `jq` sem campo) e a substituição de comando
+engoliu o erro, a verificação imprime "confere" sem ter conferido nada. O `set -e` não ajuda:
+substituições em `local x=$(...)`, em pipelines sem `pipefail` e em listas `|| true` não abortam.
+
+### Regras
+
+- Antes de comparar hash, checksum ou versão, exigir que **os dois lados** sejam não vazios e tenham
+  o formato esperado (ex.: 64 caracteres hexadecimais para sha256). Entrada vazia aborta, não compara.
+- Preferir `sha256sum -c` com o par `hash  arquivo` montado só depois dessa validação.
+- Testar o caminho de falha: rodar a verificação com o comando de origem quebrado e confirmar que o
+  script **falha**, e não que imprime sucesso.
+
+### Exemplo
+
+Errado:
+
+```bash
+DIG=$(consulta_digest)            # falhou: DIG vazio
+GOT=$(sha256sum "$arq" | cut -d' ' -f1)
+[ "$GOT" = "$DIG" ] && echo "hash confere"   # só passa se os dois estiverem vazios
+```
+
+Certo:
+
+```bash
+DIG=$(consulta_digest)
+[[ "$DIG" =~ ^[0-9a-f]{64}$ ]] || { echo "digest ausente ou inválido" >&2; exit 1; }
+echo "$DIG  $arq" | sha256sum -c - || exit 1
+```
+
 ## Checklist de revisão
 
 - [ ] Algum script é sourceado? As variáveis do filho têm prefixo único e nenhuma coincide com variável do pai?
@@ -100,4 +133,6 @@ Diagnóstico: `bash -x`, comparando a chamada isolada de cada subcomando (retorn
 - [ ] Sob `set -e`: cada função termina em comando que retorna 0 em todos os branches, sem `&&`/`||` de condição de estado na última linha?
 - [ ] Os retornos não-zero intencionais estão tratados no call site?
 - [ ] Foram executados todos os branches (inclusive o da condição falsa), e não só o primeiro argumento/caminho feliz?
+- [ ] Toda verificação (hash, checksum, versão) exige os dois lados não vazios e no formato esperado antes de comparar?
+- [ ] A verificação foi testada com o comando de origem quebrado, e o script falhou em vez de imprimir sucesso?
 - [ ] Rodou o script completo com `bash -x` ao menos uma vez?

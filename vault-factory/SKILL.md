@@ -1,6 +1,6 @@
 ---
 name: vault-factory
-description: Abstrai leitura/escrita de secrets em cofres (Passbolt, pass/gopass, HashiCorp Vault) sem nunca imprimir segredos no chat, no histórico do shell ou em arquivos versionados. Provê os padrões de acesso inline e os comandos pb (find/import/export). Os detalhes de cada cofre ficam em providers/ — Passbolt em providers/passbolt/arquivos.md, pass/gopass em providers/pass-gopass/arquivos.md, Vault em providers/vault/arquivos.md. Use quando o usuário pedir para acessar, ler, atualizar ou transferir secrets entre cofres e arquivos .env.
+description: Abstrai leitura/escrita de secrets em cofres (1Password, Passbolt, pass/gopass, HashiCorp Vault) sem nunca imprimir segredos no chat, no histórico do shell ou em arquivos versionados. A interface principal é o contrato `vault-read <ref>`, que lê o segredo por uma referência com esquema (op://, pass:, gopass:, passbolt:, vault:) sem que a skill consumidora saiba qual cofre está por trás; também provê os padrões de acesso inline e os comandos pb (find/import/export). Os detalhes de cada cofre ficam em providers/<nome>/arquivos.md e providers/<nome>/runbook-linux.md. Use quando o usuário pedir para acessar, ler, atualizar ou transferir secrets entre cofres e arquivos .env, ou quando uma skill precisar de credencial.
 ---
 
 # Skill: vault-factory
@@ -28,18 +28,31 @@ description: Abstrai leitura/escrita de secrets em cofres (Passbolt, pass/gopass
 - Se o usuário colar um secret no chat por engano, avisar que ele ficou no histórico e que o ideal é
   rotacionar.
 
+## Contrato `vault-read` (interface principal)
+
+Skills não conhecem o cofre: guardam a **referência** do segredo (ex.: variável `<SISTEMA>_<SEGREDO>_REF`) e leem com `vault-read <ref>`, que escreve o valor em stdout, sem quebra de linha final, e mais nada.
+
+```bash
+curl -H "Authorization: Bearer $(vault-read "$EXEMPLO_API_TOKEN_REF")" "<url>"
+```
+
+Esquemas: `op://<cofre>/<item>/<campo>`, `pass:<caminho>`, `gopass:<caminho>`, `passbolt:<id-ou-nome>[#campo]`, `vault:<mount>/<caminho>#<chave>`. Esquema desconhecido: exit 2; CLI ausente: exit 3 (a mensagem aponta o runbook); valor vazio: exit 1. O segredo nunca vai para argv nem para stderr. Contrato completo, códigos de saída e como adicionar um provider: `docs/contrato-provider.md`.
+
 ## Providers
 
 Os comandos concretos de cada cofre estão em arquivos separados — **ler o provider antes de executar**:
 
-| Cofre | Onde | Uso típico |
-|---|---|---|
-| **Passbolt** (remoto, go-passbolt-cli) | `providers/passbolt/arquivos.md` | Secrets compartilhados; geração de `.env`; `pb find/import/export` |
-| **pass / gopass** (local, GPG) | `providers/pass-gopass/arquivos.md` | Tokens operacionais por caminho (ex.: `openshift/hml/token`), usados inline |
-| **HashiCorp Vault** (remoto, KV v2) | `providers/vault/arquivos.md` | Credenciais dos charts (ExternalSecret/ArgoCD); agentes veem só nomes de chaves; escrita com `kv patch` |
+| Cofre | Esquema | Provider | Runbook (instalação/autenticação) | Uso típico |
+|---|---|---|---|---|
+| **1Password** | `op://` | `providers/1password/arquivos.md` | `providers/1password/runbook-linux.md` | Credencial AD e tokens; leitura de agente via `op-sa` |
+| **Passbolt** (remoto, go-passbolt-cli) | `passbolt:` | `providers/passbolt/arquivos.md` | `providers/passbolt/runbook-linux.md` | Secrets compartilhados; geração de `.env`; `pb find/import/export` |
+| **pass / gopass** (local, GPG) | `pass:` / `gopass:` | `providers/pass-gopass/arquivos.md` | `providers/pass-gopass/runbook-linux.md` | Segredos operacionais por caminho (ex.: `redis/<env>/senha`), usados inline |
+| **HashiCorp Vault** (remoto, KV v2) | `vault:` | `providers/vault/arquivos.md` | `providers/vault/runbook-linux.md` | Credenciais dos charts (ExternalSecret/ArgoCD); agentes veem só nomes de chaves; escrita com `kv patch` |
 
-Docs desta skill: `docs/autenticacao.md` (Passbolt: setup, MFA, rotação, troubleshooting) e
-`docs/importar-chave-gpg-sem-prompt.md` (chave GPG no keyring para pass/gopass sem pinentry).
+Docs desta skill: `docs/contrato-provider.md` (contrato `vault-read`), `docs/autenticacao.md` (Passbolt: setup, MFA, rotação, troubleshooting) e
+`docs/importar-chave-gpg-sem-prompt.md` (chave GPG no keyring para pass/gopass sem pinentry) e
+`docs/segredo-exposto.md` (segredo em texto claro num arquivo versionado: como achar todas as
+ocorrências, no working tree e no histórico, sem imprimir o valor).
 
 ## Padrões de acesso inline (independentes do cofre)
 
@@ -47,13 +60,15 @@ O mesmo padrão vale para qualquer cofre — a diferença é só o comando de le
 
 ```bash
 # pass/gopass: substituição no próprio comando
-oc login --token=$(pass show <cofre>/<caminho>/token)
+REDISCLI_AUTH="$(pass show redis/<env>/senha)" redis-cli ping   # REDISCLI_AUTH, não -a: -a expõe a senha em ps
 
 # Passbolt: injeta as secrets no env só do processo filho, nunca no shell interativo
 passbolt exec -- bash -c 'dotnet restore'
 ```
 
-**HashiCorp Vault:** agentes não leem valores (o login `vault-login` existe só no shell do usuário); em sessão de agente só listar nomes de chaves — ver `providers/vault/arquivos.md`.
+**1Password (`op`):** guarde só a referência (`op://<cofre>/<item>/<campo>`) em variável de ambiente e leia com `vault-read`. Agentes sem o app desktop leem pelo service account com o wrapper `op-sa` (criação e uso em `providers/1password/arquivos.md`).
+
+**HashiCorp Vault:** agentes não leem valores (o login é feito pelo usuário no próprio shell); em sessão de agente só listar nomes de chaves — ver `providers/vault/arquivos.md`.
 
 ## Comandos `pb` (find / import / export)
 
@@ -69,7 +84,7 @@ A skill expõe o CLI único `pb` (via `scripts/init.sh` → symlink em `~/.local
 
 Detalhes completos e exemplos: `providers/passbolt/arquivos.md`.
 
-Expor o `pb` fora da skill:
+Expor o `pb` e o `vault-read` fora da skill:
 
 ```bash
 ~/.config/ai/skills/vault-factory/scripts/init.sh

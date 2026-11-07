@@ -20,13 +20,16 @@
 # blocos antigos (delegacao-t3, uso-skills) são removidos na migração.
 #
 # Uso:
-#   bin/sync-global-config.sh [claude|codex|gemini|opencode|all] [--choose] [--list] [--dry-run]
+#   bin/sync-global-config.sh [claude|codex|gemini|opencode|all] [--choose] [--yes] [--list] [--dry-run]
 #     --choose   pergunta de novo por todos os snippets (não só os novos)
+#     --yes      não pergunta: snippet sem escolha salva entra ligado (S). Escolhas já salvas não
+#                mudam, nem com --choose
 #     --list     mostra os snippets e o estado salvo, sem alterar nada
 #     --dry-run  mostra o que faria; não pergunta, não grava seleção nem arquivos
 #   Sem terminal (stdin/stdout não-tty) o script não pergunta. Enquanto algum snippet estiver sem
 #   decisão salva, ele não altera arquivo nenhum (só avisa): a migração apagaria os blocos antigos
-#   sem pôr nada no lugar.
+#   sem pôr nada no lugar. Com --yes isso não acontece: o padrão S é gravado e o arquivo é atualizado.
+#   kilo não tem arquivo global mapeado: aceito só para não quebrar quem o passa; não faz nada.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -34,6 +37,7 @@ CONF_DIR="${AI_SKILLS_CONFIG_DIR:-$HOME/.config/ai}"
 CONF_FILE="$CONF_DIR/skills-global.conf"
 MODE="apply"
 CHOOSE=0
+YES=0
 LIST=0
 CLIS=()
 
@@ -46,9 +50,10 @@ for a in "$@"; do
   case "$a" in
     --dry-run) MODE="dry-run" ;;
     --choose) CHOOSE=1 ;;
+    --yes|-y) YES=1 ;;
     --list) LIST=1 ;;
     -h|--help) usage; exit 0 ;;
-    claude|codex|gemini|opencode|all) CLIS+=("$a") ;;
+    claude|codex|gemini|opencode|kilo|all) CLIS+=("$a") ;;
     *) die "argumento desconhecido: $a (use --help)" ;;
   esac
 done
@@ -99,7 +104,7 @@ choose_snippets() {
     st="$(state_of "$id")"
     if [ "$CHOOSE" -eq 0 ] && [ "$st" != unknown ]; then continue; fi
     desc="$(desc_of "$file")"
-    cur="n"; [ "$st" = enabled ] && cur="s"
+    cur="s"; [ "$st" = disabled ] && cur="n"
     printf '  %s%s\n    ligar? [s/n] (Enter = %s) ' "$id" "${desc:+ — $desc}" "$cur" > /dev/tty
     read -r ans < /dev/tty || ans=""
     case "$ans" in
@@ -109,6 +114,14 @@ choose_snippets() {
       *) echo "    resposta inválida: mantendo '$cur'" > /dev/tty
          if [ "$cur" = s ]; then set_state "$id" "+"; else set_state "$id" "-"; fi ;;
     esac
+  done < <(candidates)
+}
+
+# Com --yes: snippet sem escolha salva entra ligado (padrão S), sem perguntar e sem terminal.
+auto_choose_snippets() {
+  local id file
+  while IFS=$'\t' read -r id file; do
+    if [ "$(state_of "$id")" = unknown ]; then set_state "$id" "+"; fi
   done < <(candidates)
 }
 
@@ -280,7 +293,9 @@ if [ "$LIST" -eq 1 ]; then
   exit 0
 fi
 
-if [ "$MODE" = "apply" ] && is_tty; then
+if [ "$MODE" = "apply" ] && [ "$YES" -eq 1 ]; then
+  auto_choose_snippets
+elif [ "$MODE" = "apply" ] && is_tty; then
   choose_snippets
 elif [ "$MODE" = "apply" ] && [ "$CHOOSE" -eq 1 ]; then
   echo "AVISO: --choose precisa de terminal; ignorado." >&2
@@ -298,6 +313,8 @@ targets=()
 for c in "${CLIS[@]}"; do
   if [ "$c" = "all" ]; then
     for k in claude codex gemini opencode; do installed "$k" && targets+=("$k"); done
+  elif [ "$c" = "kilo" ]; then
+    log "kilo: sem arquivo global mapeado; nada a fazer"
   else
     targets+=("$c")
   fi

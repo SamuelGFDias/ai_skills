@@ -6,11 +6,29 @@
 # sync-agents.sh e bash-only (ver AGENTS.md, secao "Armadilhas no Windows") -- por isso
 # e sempre chamado via `bash`, mesmo neste script PowerShell.
 #
+# Rotina: no Windows nao ha cron de usuario; a rotina de `git pull` + re-sync fica numa tarefa do
+# Agendador de Tarefas, mantida por bin\update-daily.ps1. Este script registra/atualiza a MESMA
+# tarefa a cada run (nunca duplica). Parametros: -Time HH:MM (default 09:00), -Days 0-6/*/lista
+# (default *), -NoSync (nao roda sync apos pull) e -Schedule (liga a rotina; opt-in, desligada por padrao) e -NoSchedule (nao mexe na rotina). Log em
+# %LOCALAPPDATA%\ai-skills\update-daily.log. -Uninstall remove a tarefa; -Status mostra o log.
+#
 # Uso:
 #   pwsh bin/install.ps1
 #   pwsh bin/install.ps1 -DryRun
+#   pwsh bin/install.ps1 -Schedule -Time 07:30 -Days 1-5
+#   pwsh bin/install.ps1 -Schedule
+#   pwsh bin/install.ps1 -NoSchedule
+#   pwsh bin/install.ps1 -Uninstall
+#   pwsh bin/install.ps1 -Status
 param(
-    [switch]$DryRun
+    [switch]$DryRun,
+    [switch]$Schedule,
+    [switch]$NoSchedule,
+    [switch]$NoSync,
+    [switch]$Uninstall,
+    [switch]$Status,
+    [string]$Time = "09:00",
+    [string]$Days = "*"
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,6 +39,18 @@ $AllClis = @("claude", "kilo", "codex", "gemini", "opencode")
 $Found = @()
 $Missing = @()
 $ClaudeSkillsSynced = $false
+$UpdateDaily = Join-Path $RepoDir "bin\update-daily.ps1"
+
+# Rotina diaria: delegada a bin\update-daily.ps1 (la ficam Agendador, log, status).
+function Invoke-DailyUpdate([string[]]$ExtraArgs) {
+    if (-not (Test-Path $UpdateDaily)) {
+        Write-Warning "bin\update-daily.ps1 ausente -- rotina diaria nao registrada."
+        return 0
+    }
+    $dailyArgs = @("-NoProfile", "-File", $UpdateDaily) + $ExtraArgs
+    & pwsh @dailyArgs
+    return $LASTEXITCODE
+}
 
 function Test-CliExists([string]$Name) {
     if ($Name -eq "gemini") {
@@ -95,6 +125,18 @@ function Set-OpencodeDeepseekDefault {
 }
 
 Write-Output "=== install.ps1 -- detectando CLIs instalados ==="
+
+if ($Uninstall) {
+    Write-Output "=== rotina diaria (Agendador de Tarefas) ==="
+    $extra = @("-Uninstall", "-Time", $Time, "-Days", $Days)
+    if ($DryRun) { $extra += "-DryRun" }
+    exit (Invoke-DailyUpdate $extra)
+}
+
+if ($Status) {
+    exit (Invoke-DailyUpdate @("-Status", "-Time", $Time, "-Days", $Days))
+}
+
 foreach ($cli in $AllClis) {
     if (Test-CliExists $cli) { $Found += $cli } else { $Missing += $cli }
 }
@@ -105,8 +147,20 @@ Write-Output "Detectados: $foundText"
 Write-Output "Nao encontrados: $missingText"
 Write-Output ""
 
+if ($Schedule -and -not $NoSchedule) {
+    Write-Output "=== rotina diaria (git pull + re-sync via Agendador de Tarefas) ==="
+    $extra = @("-Install", "-Time", $Time, "-Days", $Days)
+    if ($DryRun) { $extra += "-DryRun" }
+    if ($NoSync) { $extra += "-NoSync" }
+    $code = Invoke-DailyUpdate $extra
+    if ($code -ne 0) {
+        Write-Warning "nao foi possivel registrar a rotina diaria (exit $code); o restante do install continua."
+    }
+    Write-Output ""
+}
+
 if ($Found.Count -eq 0) {
-    Write-Output "Nenhum CLI de IA suportado (claude|kilo|codex|gemini|opencode) encontrado no PATH. Nada a fazer."
+    Write-Output "Nenhum CLI de IA suportado (claude|kilo|codex|gemini|opencode) encontrado no PATH. Nada mais a fazer."
     exit 0
 }
 

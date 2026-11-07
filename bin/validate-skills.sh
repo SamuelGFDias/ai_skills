@@ -19,7 +19,8 @@
 #         (não existe no HEAD) sem menção "<nome>/" no README.md
 #   AVISO padrão de segredo em scripts (pode ser falso positivo); caminho absoluto de usuário
 #         (/home/<alguém>/) em arquivos da skill; sem symlink
-#         ~/.claude/skills/<nome> apontando para a skill
+#         ~/.claude/skills/<nome> apontando para a skill; comando de cofre pessoal (op read, pass show,
+#         pb find...) fora de vault-factory
 #
 # Saída: uma linha por checagem (OK / ERRO / AVISO), resumo final.
 # Exit: 0 sem erros (avisos não falham); 1 com algum ERRO; 2 uso inválido.
@@ -31,6 +32,8 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Regex de segredo do AGENTS.md (seção "Validação antes de commit", item 3), sem \s para portabilidade.
 VS_SECRET_RE='(password|secret|token)[[:space:]]*[:=][[:space:]]*["'\''][^"'\'']{6,}'
+# Placeholder <...> (com ou sem aspas) não é segredo; removido antes de testar VS_SECRET_RE.
+VS_PLACEHOLDER_RE='(password|secret|token)[[:space:]]*[:=][[:space:]]*(["'\''][<][^<>"'\'']*[>]["'\'']|[<][^<>[:space:]"'\'']*[>])'
 
 VS_MODE="default"
 VS_FULL=0
@@ -122,7 +125,7 @@ vs_alvos() {
     changed="$changed"$'\n'"$(git -C "$REPO_DIR" ls-files --others --exclude-standard)"
   fi
   printf '%s\n' "$changed" | awk -F/ '
-    NF > 1 && $1 !~ /^(bin|providers|backend-wiki-skills|\.githooks|\.agents|\.git|\.github)$/ { print $1 }
+    NF > 1 && $1 !~ /^(bin|providers|docker|backend-wiki-skills|\.githooks|\.agents|\.git|\.github)$/ { print $1 }
   ' | sort -u
   return 0
 }
@@ -188,6 +191,11 @@ vs_check_skill() {
   fi
 
   hits="$(cd "$REPO_DIR" && grep -rnIiE --exclude-dir=__pycache__ --exclude-dir=node_modules -e "$VS_SECRET_RE" -- "$skill" || true)"
+  hits="$(printf '%s\n' "$hits" | while IFS= read -r linha; do
+    if printf '%s\n' "$linha" | sed -E "s/$VS_PLACEHOLDER_RE//gI" | grep -qiE "$VS_SECRET_RE"; then
+      printf '%s\n' "$linha"
+    fi
+  done)"
   md_hits="$(printf '%s\n' "$hits" | awk -F: 'NF && $1 ~ /\.md$/ { print }')"
   other_hits="$(printf '%s\n' "$hits" | awk -F: 'NF && $1 !~ /\.md$/ { print }')"
   if [ -n "$md_hits" ]; then
@@ -250,12 +258,31 @@ vs_check_skill() {
 
   # Valores de uma máquina em skill compartilhada (AGENTS.md, regra 8). Padrões específicos para não
   # pegar placeholders: dotfiles do usuário, op:// com valor real (não <...>) e id real de tailnet.
-  hits="$(cd "$REPO_DIR" && grep -rnIE --exclude-dir=__pycache__ --exclude-dir=node_modules -e '\.zshrc\.d|\.zshenv' -e 'op://[^<[:space:]]' -e 'tail[0-9a-f]{5,}\.ts\.net' -- "$skill" || true)"
+  # Isenção restrita: vault-factory é dona do guia e do instalador de shell modular, então dotfile não conta lá.
+  vs_padroes_maquina=(-e 'op://[^<[:space:]]' -e 'tail[0-9a-f]{5,}\.ts\.net')
+  [ "$skill" = vault-factory ] || vs_padroes_maquina+=(-e '\.zshrc\.d|\.zshenv')
+  hits="$(cd "$REPO_DIR" && grep -rnIE --exclude-dir=__pycache__ --exclude-dir=node_modules "${vs_padroes_maquina[@]}" -- "$skill" || true)"
   if [ -n "$hits" ]; then
     vs_aviso "$skill: valor de máquina em skill compartilhada em $(printf '%s\n' "$hits" | cut -d: -f1,2 | paste -sd' ' -) (use marcador <...> ou mova para providers/; AGENTS.md regra 8)"
   else
     vs_ok "$skill: sem valores de máquina (dotfiles, op://, tailnet)"
   fi
+
+  # Comando de cofre pessoal fora de vault-factory/providers: skills
+  # consumidoras leem segredo por referência via vault-read. Só arquivo:linha; o conteúdo nunca é impresso.
+  case "$skill" in
+    vault-factory)
+      vs_ok "$skill: comando de cofre permitido nesta skill"
+      ;;
+    *)
+      hits="$(cd "$REPO_DIR" && grep -rnIE --include='*.md' --include='*.sh' --include='*.py' --include='*.js' --exclude-dir=__pycache__ --exclude-dir=node_modules --exclude-dir=tests -e '\bop (read|item|signin|whoami|inject|run)\b' -e '\bop-sa\b' -e '\bpass show\b' -e '\bgopass (show|insert|ls)\b' -e '\bpb (find|import|export)\b' -e 'GLAB_USE_OP_PLUGIN' -- "$skill" || true)"
+      if [ -n "$hits" ]; then
+        vs_aviso "$skill: comando de cofre específico fora de vault-factory/providers (usar vault-read; ver vault-factory/docs/contrato-provider.md) em $(printf '%s\n' "$hits" | cut -d: -f1,2 | paste -sd' ' -)"
+      else
+        vs_ok "$skill: sem comando de cofre específico"
+      fi
+      ;;
+  esac
 
   case "$(vs_estado_link "$skill")" in
     ok) vs_ok "$skill: symlink ~/.claude/skills/$skill" ;;

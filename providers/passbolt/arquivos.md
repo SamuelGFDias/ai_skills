@@ -1,5 +1,7 @@
 # Provider: Passbolt (go-passbolt-cli)
 
+Instalação e configuração (Linux/Fedora): ver [runbook-linux.md](runbook-linux.md), fonte canônica.
+
 Detalhes específicos do cofre Passbolt (`https://passbolt.example.com`) usados pela skill
 `vault-factory`. Este arquivo é **referência** — a skill aponta para cá.
 
@@ -80,12 +82,9 @@ manualmente apenas se o objetivo for zerar credenciais.
 
 ### Opção A — comando `configure`
 
-```bash
-passbolt configure \
-  --serverAddress https://passbolt.example.com \
-  --userPrivateKeyFile ~/.config/passbolt/passbolt_private.asc \
-  --userPassword 'SENHA_DA_CHAVE'
-```
+Fluxo no runbook, seção 4.2 ([runbook-linux.md](runbook-linux.md)): `configure` **sem** `--userPassword`. A passphrase só entra se o CLI a pedir de forma interativa; se não pedir, usar a Opção B. Comportamento a confirmar (runbook, seção 8).
+
+⚠️ Não passar passphrase nem seed TOTP como argumento: aparece no `ps` e no histórico do shell.
 
 ### Opção B — editar `~/.config/go-passbolt-cli/go-passbolt-cli.toml`
 
@@ -157,7 +156,14 @@ source ~/.zshrc   # ou abrir novo terminal
 - `passbolt: command not found` — binário fora do `PATH`; reinstalar ou usar `/usr/local/bin/passbolt`.
 - Erro de autenticação/certificado — conferir `serveraddress` no TOML e conectividade
   (`curl -I https://passbolt.example.com`).
-- MFA travando em scripts — `--mfaMode noninteractive-totp --mfaTotpToken <seed>`; interativo: modo
-  padrão `interactive-totp`.
+- MFA travando em scripts — o modo não interativo exige `--mfaTotpToken`; o CLI exige a flag, avalie o
+  risco (runbook, seção 8). ⚠️ Não passar passphrase nem seed TOTP como argumento: aparece no `ps` e no
+  histórico do shell.
 - Primeira configuração em máquina nova — exportar a chave privada no navegador Passbolt
   (Configurações → Chave privada) antes de rodar `configure`.
+
+## Referência no contrato (`vault-read`)
+
+Um segredo do Passbolt é referenciado como `passbolt:<id-ou-nome>`, em que `<id-ou-nome>` é o UUID do recurso ou um trecho do nome (case-insensitive, a mesma regra de `pb import` e `pb export`). Exemplo: `passbolt:<id-do-recurso>`.
+
+O valor do segredo nunca é impresso no chat: a referência aponta para o recurso, e a leitura acontece por `vault-read`, sem exibição do conteúdo.
