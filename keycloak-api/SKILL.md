@@ -38,6 +38,13 @@ dois, os scripts de setup avisam se colidir).
 
 ## Princípio de segurança
 
+- **Credencial de admin no cofre do usuário:** quando o agente precisar de uma credencial de usuário (ex.: login no
+  realm `master` para ler o `client_secret` de um client), ela é lida pela skill `vault-factory` com `vault-read` a
+  partir de uma referência com esquema guardada em variável de ambiente (de qualquer provider), nunca digitada nem
+  colada. O valor lido não é impresso: vai para variável de processo e, se for um secret obtido, para arquivo
+  `chmod 600` em `/dev/shm`.
+- **O host do realm pode estar desatualizado:** um `301` ao chamar o realm indica mudança de DNS. Corrija o
+  `BASE_URL` do realm (`kc setup-realm`).
 - **Nunca peça ao usuário para colar `client_secret` ou senha na mensagem de chat.** Se ele
   fizer isso mesmo assim, use normalmente mas avise que o ideal é rotacionar a credencial
   depois, pois ela ficou registrada no histórico da conversa.

@@ -45,19 +45,25 @@ Formas de obter/definir o token:
 
 ### Como o agente deve obter o token
 
-- O token desta instância fica no **1Password** (item **Envs kilo Skills**, vault **`Services IA`**, conta Personal; campo `wiki_saude_rj_token`). Os scripts (`lib.js`) buscam automaticamente, nesta ordem: variável de ambiente `WIKI_SAUDE_RJ_TOKEN` → cache local `~/.claude/secrets/wiki-saude-rj/token` (permissão `600`) → `op read "op://Services IA/Envs kilo Skills/wiki_saude_rj_token"` (via integração de CLI do app desktop do 1Password — sem service account; nesta máquina o desbloqueio é por biometria/app). Para materializar manualmente:
+Os scripts (`lib.js`) leem o token nesta ordem; a primeira fonte preenchida vence:
 
-  ```bash
-  mkdir -p ~/.claude/secrets/wiki-saude-rj
-  op read "op://Services IA/Envs kilo Skills/wiki_saude_rj_token" > ~/.claude/secrets/wiki-saude-rj/token
-  chmod 600 ~/.claude/secrets/wiki-saude-rj/token
-  ```
+1. variável de ambiente `WIKI_SAUDE_RJ_TOKEN`;
+2. arquivo local `~/.claude/secrets/wiki-saude-rj/token` (permissão `600`), gravado a partir do próprio cofre, sem colar o valor no chat;
+3. variável `WIKI_SAUDE_RJ_TOKEN_REF`, que guarda só a **referência** do segredo. Os scripts chamam `vault-read "$WIKI_SAUDE_RJ_TOKEN_REF"` (skill `vault-factory`) e usam o valor devolvido. A skill não sabe qual cofre está por trás: trocar de cofre é trocar a referência.
+
+Exemplo para o arquivo de ambiente do seu shell (só a referência, nunca o valor), com placeholders:
+
+```bash
+export WIKI_SAUDE_RJ_TOKEN_REF='op://<cofre>/<item>/<campo>'
+# ou, noutro cofre:
+export WIKI_SAUDE_RJ_TOKEN_REF='pass:<caminho>'
+```
 
 - Nunca exponha o token em outputs, logs ou arquivos versionados.
 
 ## Scripts utilitários (Node.js, recomendado)
 
-Existe um conjunto de scripts prontos em `~/.config/ai/skills/wiki-saude-rj/scripts/` (ligada no Claude Code pelo `bin/sync-skills.sh`) que leem o token automaticamente do arquivo de segredos (via `lib.js`). Requer **Node 18+** (usa `fetch` nativo). **Sempre prefira usar esses scripts** em vez de escrever requisições `curl` manualmente.
+Existe um conjunto de scripts prontos em `~/.config/ai/skills/wiki-saude-rj/scripts/` que leem o token pela ordem de autenticação acima (via `lib.js`). Requer **Node 18+** (usa `fetch` nativo). **Sempre prefira usar esses scripts** em vez de escrever requisições `curl` manualmente.
 
 ```bash
 SCRIPTS="$HOME/.config/ai/skills/wiki-saude-rj/scripts"
@@ -147,21 +153,28 @@ Fonte canônica (mantenha os arquivos em `scripts\` idênticos a estes blocos):
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 
 const TOKEN_PATH = path.join(os.homedir(), '.claude', 'secrets', 'wiki-saude-rj', 'token');
-const OP_REF = 'op://Services IA/Envs kilo Skills/wiki_saude_rj_token';
+const VAULT_READ_FALLBACK = path.join(os.homedir(), '.config', 'ai', 'skills', 'vault-factory', 'scripts', 'vault-read.sh');
 const ENDPOINT = 'https://wiki.saude.rj.gov.br/graphql';
 
-function fetchFrom1Password() {
+// Lê a referência pelo despachante vault-read (contrato em vault-factory/docs/contrato-provider.md).
+// execFileSync não usa shell; o stderr é descartado e o token nunca vai para mensagem de erro.
+function readVaultRef(ref) {
+  for (const bin of ['vault-read', VAULT_READ_FALLBACK]) {
+    try {
+      return execFileSync(bin, [ref], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || null;
+    } catch (e) {
+      if (e.code !== 'ENOENT') return null;
+    }
+  }
+  return null;
+}
+
+function readTokenFile() {
   try {
-    // Depende da integração de CLI do app desktop do 1Password (biometria/desbloqueio),
-    // sem service account — é o mecanismo padrão numa estação de trabalho pessoal.
-    const token = execSync(`op read "${OP_REF}"`, { encoding: 'utf8' }).trim();
-    if (!token) throw new Error('vazio');
-    fs.mkdirSync(path.dirname(TOKEN_PATH), { recursive: true });
-    fs.writeFileSync(TOKEN_PATH, token + '\n', { mode: 0o600 });
-    return token;
+    return fs.readFileSync(TOKEN_PATH, 'utf8').trim() || null;
   } catch (e) {
     return null;
   }
@@ -169,16 +182,20 @@ function fetchFrom1Password() {
 
 function loadToken() {
   if (process.env.WIKI_SAUDE_RJ_TOKEN) return process.env.WIKI_SAUDE_RJ_TOKEN;
-  try {
-    return fs.readFileSync(TOKEN_PATH, 'utf8').trim();
-  } catch (e) {
-    const token = fetchFrom1Password();
-    if (!token) {
-      console.error(`Token não encontrado em ${TOKEN_PATH}, na env WIKI_SAUDE_RJ_TOKEN nem no 1Password (${OP_REF}). Verifique o item "Envs kilo Skills".`);
-      process.exit(1);
-    }
-    return token;
+
+  const fromFile = readTokenFile();
+  if (fromFile) return fromFile;
+
+  const ref = process.env.WIKI_SAUDE_RJ_TOKEN_REF;
+  if (ref) {
+    const fromRef = readVaultRef(ref);
+    if (fromRef) return fromRef;
+    console.error('WIKI_SAUDE_RJ_TOKEN_REF está definida, mas o vault-read não entregou o token (ausente ou falha de leitura). Ver a skill vault-factory.');
+    process.exit(1);
   }
+
+  console.error(`Token não encontrado: defina a env WIKI_SAUDE_RJ_TOKEN, grave o token em ${TOKEN_PATH} ou defina WIKI_SAUDE_RJ_TOKEN_REF com uma referência de cofre (ver a skill vault-factory).`);
+  process.exit(1);
 }
 
 const TOKEN = loadToken();
@@ -667,6 +684,7 @@ Erros comuns encontrados nesta instância:
 
 ## Dicas
 
+- **Upload de imagem (funciona, validado em 2026-10-28):** a API GraphQL não tem mutation de upload (`AssetMutation` só tem `createFolder`, `renameAsset`, `deleteAsset`, `flushTempUploads`); o upload é `POST https://wiki.saude.rj.gov.br/u` (multipart, `Authorization: Bearer`). Fonte: `server/controllers/upload.js` do Wiki.js v2.5.301. O `folderId` **não** é campo próprio: vai num campo de texto chamado `mediaUpload` com **JSON** (`{"folderId":2}`), e o arquivo vai noutro campo também chamado `mediaUpload`; enviar o JSON antes do arquivo. Um `folderId` solto dá `400 Missing upload folder metadata.`. Um arquivo por requisição; sucesso é `200` com texto `ok` (não JSON); exige `write:assets`. Pastas: `id 1` = `assets`, `id 2` = `images`. Exemplo em Node: `form.append('mediaUpload', JSON.stringify({folderId: 2})); form.append('mediaUpload', new Blob([buf]), 'nome.png')`. O nome é normalizado para minúsculas, com espaços/`,;#` trocados por `_`.
 - Para descobrir campos e argumentos válidos de qualquer tipo, consulte a introspecção:
   ```graphql
   { __type(name: "PageQuery") { fields { name args { name type { name kind ofType { name } } } } } }
