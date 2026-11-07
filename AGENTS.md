@@ -65,6 +65,53 @@ pwsh bin/install.ps1        # ou -DryRun para só ver o que faria
 manutenção do repo — ver "Quando rodar o quê" abaixo) e não instalam dependências de skills
 individuais (jq, glab, oc etc.).
 
+### Rotina diária (cron): `git pull` + re-sync
+
+`bin/update-daily.sh` faz `git pull --ff-only` em todos os remotes do repo e, **só quando algum
+remote trouxe commits novos**, roda `bin/install.sh` para propagar skills/subagentes/instruções
+globais. Cada execução deixa um log.
+
+```bash
+cd ~/.config/ai/skills
+bin/install.sh                                        # instala tudo, sem mexer no cron (a rotina é opt-in)
+bin/install.sh --schedule --time 07:30 --days 1-5     # registra a rotina (cron), em outra hora/dias
+bin/install.sh --schedule                            # registra a rotina (cron 09:00, todos os dias)
+bin/install.sh --status                               # log + entrada de cron atual + estado do repo
+bin/install.sh --uninstall                            # remove a entrada do cron
+```
+
+Configuração (variáveis de ambiente, lidas por `install.sh` e `update-daily.sh`):
+
+| Variável | Flags | Efeito | Default |
+|---|---|---|---|
+| `AI_SKILLS_UPDATE_TIME` | `--time HH:MM` | hora do cron (`0:00`–`23:59`) | `09:00` |
+| `AI_SKILLS_UPDATE_DAYS` | `--days` | dias do cron: `*` ou `0`–`6` (0=dom), `1-5`, `1,3,5` | `*` |
+| `AI_SKILLS_UPDATE_SYNC` | `--no-sync` / `-NoSync` | `0` = não roda `install.sh` após o pull | `1` |
+| `AI_SKILLS_UPDATE_NICEIONICE` | — | `0` = não prefixa `nice -n 10 ionice -c3` | `1` |
+| `AI_SKILLS_LOG_DIR` | — | pasta do log | `~/.local/state/ai-skills` |
+| `AI_SKILLS_LOG_MAX_BYTES` | — | tamanho que dispara rotação (1 geração `.1`) | `1048576` |
+
+Como a entrada do cron é gerada (Linux/WSL):
+
+```cron
+0 9 * * * nice -n 10 ionice -c3 cd /caminho/absoluto/do/repo && bash /caminho/absoluto/do/repo/bin/update-daily.sh # ai-skills update-daily
+```
+
+- A entrada é **única** e marcada com `# ai-skills update-daily`: reinstalar substitui, nunca
+  duplica, e o resto do crontab do usuário fica intacto.
+- O `cd` + caminho absoluto existem porque o cron roda sem login shell; o script fixa `LANG` para o
+  log não misturar idiomas.
+- Nunca commita nem faz merge/rebase: se o histórico divergir ou houver alteração local em conflito,
+  o `pull --ff-only` aborta, o log registra e a execução sai com código 1 sem tocar no working tree.
+- Sem terminal, nada é interativo: o `sync-global-config.sh` não pergunta e não altera arquivo
+  enquanto algum snippet estiver sem escolha (o log mostra o aviso).
+- Log: `bin/update-daily.sh --status` mostra o fim do arquivo; o caminho aparece no topo da saída.
+
+No **Windows** não há cron de usuário: `pwsh bin\install.ps1 -Time 07:30 -Days 1-5` mantém uma
+tarefa única `ai-skills update-daily` no Agendador de Tarefas (`-Status`, `-Uninstall`,
+`-NoSchedule`, `-NoSync` são os equivalentes), com o mesmo log em `%LOCALAPPDATA%\ai-skills\`.
+No Git Bash sem cron, agende `bash bin/update-daily.sh` como achar melhor ou simplesmente não use `--schedule`.
+
 A sequência abaixo é o que o `install.sh`/`.ps1` roda por baixo dos panos, útil para rodar um
 passo isolado ou entender exatamente o que aconteceu:
 
@@ -104,7 +151,8 @@ em `~/.config/ai/skills-global.conf` (por máquina, fora do repo). Use `--list` 
 - **codex e opencode** não importam arquivo (conferido na documentação de cada um): o conteúdo vai
   inline, num bloco `ai-skills:global` no `AGENTS.md`.
 - O resto do arquivo do usuário nunca é tocado. Enquanto algum snippet estiver sem escolha, o script
-  não altera nada. Sem terminal ele não pergunta.
+  não altera nada. Sem terminal ele não pergunta. Com `--yes` (também repassado pelo `install.sh --yes`)
+  ele não pergunta e o snippet sem escolha entra ligado (padrão S); escolhas já salvas não mudam.
 
 ### Quando rodar o quê
 
@@ -163,7 +211,8 @@ em `~/.config/ai/skills-global.conf` (por máquina, fora do repo). Use `--list` 
    não entram**: hostname, tailnet, nome de dispositivo, porta, versão fixa, caminhos de dotfiles do
    usuário (`~/.zshrc.d`, `~/.zshenv`), referências `op://` reais, nem log de validação com dados da
    máquina. Use marcadores `<...>` com uma tabela "como descobrir". Setup por máquina vai para
-   `providers/`. O `validate-skills.sh` avisa quando encontra esses padrões.
+   `providers/`. O `validate-skills.sh` avisa quando encontra esses padrões. Exceção: `vault-factory` (guia e
+   instalador da configuração de shell modular).
 
 ## Arquitetura factory + provider
 
@@ -174,7 +223,13 @@ Skills com workflow genérico + plataforma específica são divididas em:
 - **Provider** (`providers/<plataforma>/arquivos.md`): comandos concretos.
 
 Relação atual: `issue-factory`→gitlab, `commiter`→gitlab, `nuget-factory`→nexus,
-`vault-factory`→passbolt+pass-gopass+vault.
+`vault-factory`→1password+passbolt+pass-gopass+vault.
+
+- Skills consumidoras leem segredo por referência com esquema via `vault-read`; não nomeiam um cofre
+  específico (comandos de cofre ficam em `providers/` e `vault-factory/`). O `validate-skills.sh` avisa
+  quando encontra comando de cofre pessoal fora desses lugares.
+- Todo provider de infraestrutura que exige instalação de CLI deve ter `providers/<nome>/runbook-linux.md`
+  com as 8 seções do runbook do 1Password.
 
 ## Validação antes de commit
 

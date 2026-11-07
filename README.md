@@ -12,6 +12,8 @@ ai_skills/
 ├── bin/install.sh             # instala tudo que as skills precisam nos CLIs instalados na
 │                               # máquina — claude/kilo/codex/gemini/opencode (Linux/macOS/WSL)
 ├── bin/install.ps1            # idem, para Windows
+├── bin/update-daily.sh        # rotina diária: git pull + install.sh se mudou, com log (--install em cron)
+├── bin/update-daily.ps1       # idem, para Windows (Agendador de Tarefas)
 ├── bin/sync-skills.sh         # (re)cria as skills em claude/kilo (Linux/macOS/WSL)
 ├── bin/sync-skills.ps1        # idem, para Windows
 ├── bin/validate-skills.sh     # valida skills (SKILL.md, frontmatter, Tipo, segredo, py/sh, README); --staged/--full (só bash)
@@ -22,9 +24,10 @@ ai_skills/
 │   ├── gitlab/arquivos.md     # GitLab: host, auth, projetos, labels, GraphQL
 │   ├── gitlab/automerge.md    # ferramenta gitlab-auto-merge.sh
 │   ├── nexus/arquivos.md      # Nexus: host, TFM bug, armadilhas
-│   ├── passbolt/arquivos.md   # Passbolt: CLI, pb find/import/export
-│   ├── pass-gopass/arquivos.md# pass/gopass: cofre local GPG
-│   └── vault/arquivos.md      # HashiCorp Vault (KV v2): nomes de chaves, ExternalSecret/ArgoCD
+│   ├── 1password/arquivos.md  # 1Password: op, service account (+ runbook-linux.md)
+│   ├── passbolt/arquivos.md   # Passbolt: CLI, pb find/import/export (+ runbook-linux.md)
+│   ├── pass-gopass/arquivos.md# pass/gopass: cofre local GPG (+ runbook-linux.md)
+│   └── vault/arquivos.md      # HashiCorp Vault (KV v2): nomes de chaves, ExternalSecret/ArgoCD (+ runbook-linux.md)
 ├── THIRD_PARTY_NOTICES.md     # licenças das skills adaptadas de terceiros (ECC, Cloudflare; MIT)
 ├── angular-developer/         # Angular: signals, forms, DI, rotas, SSR, testes (referências em references/) [ECC]
 ├── angular-testes/            # teste unitário Angular SES-RJ (Karma/Jasmine, vitest, TestBed)
@@ -34,15 +37,15 @@ ai_skills/
 │                              # (claude/kilo/codex/gemini/antigravity/opencode)
 ├── atividade-factory/         # commits → issues por funcionalidade (GitLab)
 ├── audit-log/                 # biblioteca AuditLog (NuGet)
+├── azuredevops-api/            # work items + export de wiki Azure DevOps (CLI ado)
 ├── backend-wiki-skills/       # roteador das skills de backend .NET
 ├── bash-scripting-pitfalls/   # armadilhas de bash (source, set -e)
-├── configurar-video-jogos/    # GPU NVIDIA/PRIME e jogos da Steam (Flatpak)
-├── azuredevops-api/            # work items + export de wiki Azure DevOps (CLI ado)
 ├── claude-guard-hooks/        # hooks PreToolUse: bloqueia atribuição de IA, --no-verify, vazamento de segredo; confirma comando destrutivo
 ├── claude-md/                 # criar, auditar e enxugar CLAUDE.md pelas recomendações da Anthropic
 ├── claude-mem-project-exclusion/ # excluir pasta e apagar memórias do plugin claude-mem
 ├── codebase-onboarding/       # guia de onboarding e CLAUDE.md/AGENTS.md inicial de um repo [ECC]
 ├── commiter/                  # workflow genérico de commit + push
+├── configurar-video-jogos/    # GPU NVIDIA/PRIME e jogos da Steam (Flatpak)
 ├── context-budget/            # auditoria do consumo de contexto (skills, agentes, MCP, regras) [ECC]
 ├── cronograma-saude-rj-api/   # API REST Cronograma SES-RJ
 ├── csharp-testing/            # testes C#/.NET genéricos: xUnit, FluentAssertions, mocks [ECC]
@@ -57,8 +60,8 @@ ai_skills/
 ├── dotnet-unit-tests/         # teste unitário .NET (xunit, NSubstitute)
 ├── grilling/                  # grill do usuário sobre plano/decisão/ideia
 ├── hangfire-setup/            # Hangfire: abstrações + implementação (código em docs/)
-├── healthcare-phi-compliance/ # padrões técnicos de proteção de dado de saúde [ECC]
 ├── headroom/                  # headroom (proxy de contexto)
+├── healthcare-phi-compliance/ # padrões técnicos de proteção de dado de saúde [ECC]
 ├── instalacao-appimage-linux/ # instalar AppImage (ícone, atalho, dock GNOME) + scripts/install.sh
 ├── issue-factory/             # workflow genérico de issues (+ providers/gitlab, providers/github)
 ├── keycloak-api/              # Admin REST API Keycloak (CLI kc)
@@ -66,7 +69,6 @@ ai_skills/
 ├── nuget-factory/             # workflow genérico de pacotes NuGet (+ providers/nexus)
 ├── openshift-cli/             # instalação/login OpenShift SES-RJ
 ├── openshift-implementacao-factory/ # e-mail de solicitação de esteira no OpenShift SES-RJ
-├── organizar-projetos/        # reorganizar ~/projects em ~/dev/{ses,pessoal,test} + gitconfig includeIf por pasta
 ├── playwright-e2e-estomizados/# receita e2e Playwright (Estomizados)
 ├── ramguard/                  # operação do ramguard (encerra processo pesado com RAM alta)
 ├── redis-port-forward/        # túnel até o Redis SES-RJ
@@ -74,16 +76,14 @@ ai_skills/
 ├── search-first/              # pesquisar fora antes de construir: relatório com fontes (upstream shimo4228, MIT)
 ├── security-audit/            # auditoria de segurança white-box com verificação independente e relatório [Cloudflare]
 ├── security-review/           # checklist de segurança (OWASP), regra de evidência e varredura de dependências [ECC]
-├── speckit/                   # Spec-Driven Development com GitHub Spec Kit (comandos + instalação em docs/)
 ├── ses-gitlab-deps/           # instalação de jq/glab
-├── ses-ops/                   # operação/diagnóstico do ecossistema SES (agente + CLI de config por ambiente + ses-secret)
+├── speckit/                   # Spec-Driven Development com GitHub Spec Kit (comandos + instalação em docs/)
 ├── sql-data-cleanup/          # scripts SQL de dedupe/limpeza decididos por evidência
 ├── t3-code-acesso-remoto/     # T3 Code: serviço em background, desktop em outro home, acesso mobile via Tailscale (docs/)
 ├── t3-code-orquestracao/      # T3 Code por dentro da thread: delegar a outro provider, papéis do arquiteto, threads/worktree, clonar pelo nome
 ├── task-observer/             # observação de skills, sob demanda (/task-observer)
 ├── tdd-first/                 # TDD: primeiro movimento por tipo de operação, runner, evidência RED/GREEN
-├── us-legado-factory/         # US de sistemas legados a partir de código e docs (sob arquiteto; export azuredevops-api)
-├── vault-factory/             # abstração de cofres de secrets (+ providers/passbolt, pass-gopass, vault)
+├── vault-factory/             # abstração de cofres de secrets (vault-read como interface; providers 1password, passbolt, pass-gopass, vault)
 ├── verification-loop/         # verificação em seis fases antes de PR [ECC]
 ├── webpush-vapid-factory/     # Web Push VAPID (Angular + .NET)
 ├── wiki-saude-rj/             # API GraphQL do Wiki.js SES-RJ
@@ -106,7 +106,7 @@ Relação atual:
 | `issue-factory` | `providers/gitlab/arquivos.md` |
 | `commiter` | `providers/gitlab/arquivos.md`, `providers/gitlab/automerge.md` |
 | `nuget-factory` | `providers/nexus/arquivos.md` |
-| `vault-factory` | `providers/passbolt/arquivos.md`, `providers/pass-gopass/arquivos.md`, `providers/vault/arquivos.md` |
+| `vault-factory` | `providers/1password/arquivos.md`, `providers/passbolt/arquivos.md`, `providers/pass-gopass/arquivos.md`, `providers/vault/arquivos.md` (cada um com `runbook-linux.md`; interface: `vault-read`) |
 
 Regra: se uma skill depende de host/credencial de um sistema específico, o detalhe vai para
 `providers/`; a skill mantém o fluxo genérico e aponta para o provider.
