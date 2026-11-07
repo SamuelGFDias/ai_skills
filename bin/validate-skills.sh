@@ -122,7 +122,7 @@ vs_alvos() {
     changed="$changed"$'\n'"$(git -C "$REPO_DIR" ls-files --others --exclude-standard)"
   fi
   printf '%s\n' "$changed" | awk -F/ '
-    NF > 1 && $1 !~ /^(bin|providers|\.githooks|\.agents|\.git|\.github)$/ { print $1 }
+    NF > 1 && $1 !~ /^(bin|providers|backend-wiki-skills|\.githooks|\.agents|\.git|\.github)$/ { print $1 }
   ' | sort -u
   return 0
 }
