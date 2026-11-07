@@ -5,7 +5,10 @@ Valida, numa sessão nova do Claude Code com os papéis instalados:
 - fluxo implementar + revisar;
 - contrato com mensagens entre pares;
 - revisor reprovando defeito plantado;
-- prompts enxutos.
+- prompts enxutos;
+- dimensionamento e execução direta no modo híbrido (prompt 2).
+
+O prompt 1 usa `--delegar-tudo` porque exercita a mecânica de delegação com só duas áreas, que no modo híbrido o arquiteto executaria direto (regra 1).
 
 Rodar sempre que mudar `roles/`, `cli/*/models.json` ou o fluxo em `SKILL.md`.
 
@@ -20,10 +23,10 @@ env | grep CLAUDE_CODE_ || true               # nenhuma CLAUDE_CODE_EFFORT_LEVEL
 
 Abrir uma sessão **nova** (`claude`) num diretório vazio e rodar `/model sonnet`, porque o arquiteto padrão é sonnet (regra 16).
 
-## Prompt a colar
+## Prompt 1 a colar (mecânica de delegação)
 
 ```text
-/arquiteto Teste de fumaça do próprio arquiteto. Siga a skill à risca e, no fim, entregue o relatório pedido no item 6.
+/arquiteto --delegar-tudo Teste de fumaça do próprio arquiteto. Siga a skill à risca e, no fim, entregue o relatório pedido no item 6.
 
 1. Configuração: confira se os 9 papéis tipados (executor-mecanico/padrao/complexo/critico, investigador-padrao/critico, speckit-master, revisor-padrao/critico) estão disponíveis como subagent_type. Se faltar algum, pare e me diga (não use fallback).
 
@@ -51,8 +54,17 @@ Abrir uma sessão **nova** (`claude`) num diretório vazio e rodar `/model sonne
    f) O que falhou ou divergiu do esperado.
 ```
 
+## Prompt 2 a colar (modo híbrido), na mesma sessão, depois do prompt 1
+
+```text
+/arquiteto No repo de fumaça do teste anterior, o cupom 'DEZ' deve passar a dar 15% de desconto. Ajuste e mantenha os asserts verdes. No fim, diga: o tier declarado, se executou direto ou delegou e por quê (citando a regra), e quais testes rodou.
+```
+
+Esperado: tier `trivial` ou `pequena`, execução direta sem nenhuma chamada `Agent`, teste que falha antes da mudança e passa depois (regra 5, mudança de comportamento: o assert antigo de 10% é alterado), e nenhum revisor.
+
 ## Critério de aprovação
 
+- Prompt 2: tier declarado em uma linha, execução direta sem `Agent`, assert de 10% alterado para 15% e verde.
 - Os 9 papéis disponíveis.
 - Modelo por papel conforme `cli/claude/models.json`.
 - O par B recebeu o `CONTRATO` e ajustou.
