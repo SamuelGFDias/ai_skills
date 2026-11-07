@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# arquiteto-hook: hooks da skill arquiteto (ativos só enquanto a skill está em uso).
+#   arquiteto-hook subagent-start -> SubagentStart: injeta no subagente a regra do grafo codebase-memory
+#                                    e o aviso de worktree (o índice cobre o checkout principal).
+#   arquiteto-hook pre-agent      -> PreToolUse (Agent): avisa, sem bloquear, se o prompt delegado
+#                                    viola o checklist (model explícito, sem proibição de sub-delegação,
+#                                    sem instrução do grafo).
+# Nunca bloqueia: qualquer erro sai com 0 e sem saída.
+set -euo pipefail
+export LC_ALL=C
+exec 2>/dev/null
+trap 'exit 0' EXIT
+
+# Papéis sem tools MCP na definição: o grafo não está disponível para eles.
+SEM_MCP_RE='^(security-reviewer|spec-reviewer|statusline-setup)$'
+PAPEIS_TIPADOS_RE='^(executor-(mecanico|padrao|complexo|critico)|investigador-(padrao|critico)|revisor-(padrao|critico)|speckit-master)$'
+
+TEXTO_GRAFO='Antes de qualquer grep/Glob/Explore: carregue o grafo com ToolSearch (query "select:mcp__codebase-memory__search_graph,mcp__codebase-memory__trace_path,mcp__codebase-memory__get_code_snippet,mcp__codebase-memory__get_architecture") e use-o para símbolos, chamadores, arquitetura e impacto. grep só para literais ou lacunas de cobertura; declare na resposta qual dos dois usou e por quê.'
+TEXTO_WORKTREE='ATENÇÃO: você está numa worktree (.claude/worktrees/...). O índice do codebase-memory cobre o checkout principal na main e NÃO enxerga o código desta branch. Para o que a branch mudou (diff, código novo), leia os arquivos e use git/grep na worktree; o grafo serve só para o contexto que existe na main.'
+
+mode_subagent_start() {
+  local input tipo cwd txt
+  input="$(cat)"
+  tipo="$(printf '%s' "$input" | jq -r '.agent_type // empty')"
+  cwd="$(printf '%s' "$input" | jq -r '.cwd // empty')"
+  if [[ "$tipo" =~ $SEM_MCP_RE ]]; then
+    exit 0
+  fi
+  txt="$TEXTO_GRAFO"
+  if [[ "$cwd" == *"/.claude/worktrees/"* ]]; then
+    txt="$txt $TEXTO_WORKTREE"
+  fi
+  jq -cn --arg t "$txt" \
+    '{hookSpecificOutput: {hookEventName: "SubagentStart", additionalContext: $t}}'
+}
+
+mode_pre_agent() {
+  local input tipo model prompt avisos=""
+  input="$(cat)"
+  tipo="$(printf '%s' "$input" | jq -r '.tool_input.subagent_type // empty')"
+  model="$(printf '%s' "$input" | jq -r '.tool_input.model // empty')"
+  prompt="$(printf '%s' "$input" | jq -r '.tool_input.prompt // empty')"
+  if [[ "$tipo" =~ $PAPEIS_TIPADOS_RE && -n "$model" ]]; then
+    avisos+="Papel tipado com model explícito ('$model') anula o mapeamento papel→modelo; remova o model. "
+  fi
+  if ! grep -qiE 'sub-?deleg' <<<"$prompt"; then
+    avisos+="O prompt não traz a proibição de sub-delegação (regra 4). "
+  fi
+  if ! [[ "$tipo" =~ $SEM_MCP_RE ]] && ! grep -qiE 'codebase-memory|grafo' <<<"$prompt"; then
+    avisos+="O prompt não manda usar o grafo codebase-memory antes de grep/Glob. "
+  fi
+  if [[ -n "$avisos" ]]; then
+    jq -cn --arg t "Checklist do arquiteto: $avisos" \
+      '{hookSpecificOutput: {hookEventName: "PreToolUse", additionalContext: $t}}'
+  fi
+}
+
+case "${1:-}" in
+  subagent-start) mode_subagent_start ;;
+  pre-agent) mode_pre_agent ;;
+esac

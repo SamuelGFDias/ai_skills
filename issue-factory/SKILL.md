@@ -1,6 +1,6 @@
 ---
 name: issue-factory
-description: Workflow genérico de gestão de issues (criar, comentar solução, fechar, milestones, datas, padrão de título) independente da plataforma. Os comandos concretos da plataforma ficam em providers/ — GitHub em providers/github/arquivos.md. Use quando o usuário pedir para abrir, atualizar ou fechar issues em um tracker de tarefas.
+description: Workflow genérico de gestão de issues (criar, comentar solução, fechar, milestones, datas, padrão de título) independente da plataforma. Os comandos concretos da plataforma ficam em providers/ — providers/github/arquivos.md. Use quando o usuário pedir para abrir, atualizar ou fechar issues em um tracker de tarefas.
 ---
 
 # Skill: issue-factory

@@ -5,7 +5,7 @@ Algumas skills deste repositório foram adaptadas de projetos de terceiros. Cada
 ## Everything Claude Code (ECC)
 
 - Fonte: https://github.com/affaan-m/ECC (pacote npm `ecc-universal` 2.2.3)
-- Skills adaptadas: `angular-developer`, `api-design`, `architecture-decision-records`, `codebase-onboarding`, `context-budget`, `csharp-testing`, `database-migrations`, `dotnet-patterns`, `healthcare-phi-compliance`, `search-first`, `security-review`, `verification-loop`.
+- Skills adaptadas: `angular-developer`, `api-design`, `architecture-decision-records`, `codebase-onboarding`, `context-budget`, `csharp-testing`, `database-migrations`, `dotnet-patterns`, `healthcare-phi-compliance`, `security-review`, `verification-loop`.
 - Trechos incorporados (sem cópia literal): checklists dos agents `silent-failure-hunter`, `security-reviewer` e `build-error-resolver` nos papéis do `arquiteto`; tabela de tiers do `orch-pipeline` na regra 19 do `arquiteto`; detecção do runner, relatório de evidência RED/GREEN e erros comuns de teste da `tdd-workflow` na `tdd-first`.
 
 Licença original:

@@ -39,7 +39,7 @@ Arquivo: `~/.config/go-passbolt-cli/go-passbolt-cli.toml`.
 
 ```toml
 serveraddress = 'https://passbolt.example.com'
-userpassword = 'SUA_SENHA_DA_CHAVE'
+userpassword = <SENHA_DA_CHAVE>   # a senha da chave, sem aspas no TOML
 userprivatekey = "-----BEGIN PGP PRIVATE KEY BLOCK-----\n...\n-----END PGP PRIVATE KEY BLOCK-----\n"
 ```
 

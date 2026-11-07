@@ -5,6 +5,8 @@ metadata:
   type: reference
 ---
 
+**Tipo:** internal
+
 # ramguard
 
 Servico systemd (`/etc/systemd/system/ramguard.service`) que roda `/usr/local/sbin/ramguard --tiers 90:20,95:10,98:2`: se o uso de RAM ficar acima de PCT por SEGUNDOS, envia SIGTERM (SIGKILL apos 5s) ao processo com maior `oom_score` e avisa via `notify-send`. Fonte versionada no repo `SO` (`~/SO/system/...`).
