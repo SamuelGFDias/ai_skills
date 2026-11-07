@@ -3,24 +3,11 @@
 
 Pré-requisito: ver [`../SKILL.md`](../SKILL.md#pré-requisitos).
 
-Flags conferidas em `t3 service install --help` e `t3 --help` (T3 CLI 0.1.1-nightly). O subcomando `install` ainda não foi executado numa máquina limpa; valide o resultado com os passos de verificação.
-
-## Versão 0.1.0 (release estável, a que vem com o CLI)
-
-Links conferidos na internet e no registry do npm. A instalação por `npx` ainda não foi executada aqui.
-
-- **npm (CLI):** https://www.npmjs.com/package/t3/v/0.1.0. Pacote `t3@0.1.0` publicado, dist-tag `latest`, repositório `pingdotgg/t3code` (`apps/server`).
-  ```bash
-  npx t3@0.1.0 --version
-  ```
-- **GitHub (release):** https://github.com/pingdotgg/t3code/releases/tag/v0.1.0. Publicada em 15/10, marcada como `Latest`. AppImage x64 confirmado pela API: `T3-Code-0.1.0-x86_64.AppImage` (sha256 `e38d9c5f…b744`). Runbook completo em [runbook-v0.1.0.md](runbook-v0.1.0.md).
-- **Local:** esta máquina tem o runtime `~/.t3/runtime/versions/0.1.0/` (binário de 15/10), que é a versão que veio com o CLI. O AppImage em `~/Applications/` é `0.1.1-nightly`, não 0.1.0.
-
-Não use builds de terceiros (ForkHub, `with-fh`, `ImBIOS`) como se fossem o 0.1.0 oficial.
+Versão alvo: a que você escolher (canal `stable` por padrão; `npm view t3 dist-tags` lista os canais). Instalação do zero: [runbook-linux.md](runbook-linux.md). Atualização de versão: [07-upgrade-versao.md](07-upgrade-versao.md).
 
 ## Instalação limpa (máquina nova)
 
-1. Instale o AppImage em `<HOME>/Applications/T3-Code.AppImage` (ver skill `instalacao-appimage-linux`).
+1. Instale o AppImage conforme o [runbook](runbook-linux.md), passos 1 e 2 (ou a skill `instalacao-appimage-linux`).
 2. Abra o app desktop uma vez. Ele grava o wrapper `~/.t3/bin/t3` e o runtime em `~/.t3/runtime/`. Confira:
    ```bash
    ~/.t3/bin/t3 --version
@@ -44,16 +31,18 @@ Não use builds de terceiros (ForkHub, `with-fh`, `ImBIOS`) como se fossem o 0.1
    ```bash
    grep -o '"port":[0-9]*' ~/.t3/userdata/server-runtime.json
    ```
-   Exemplo deste ambiente: `3773`.
 
 ## Máquina que já tem o serviço (repair)
 
-Se `t3 service status` disser `needs an update or repair` (por exemplo, a unit aponta para uma versão antiga em `~/.t3/runtime/versions/`), rode de novo o passo 3 da instalação limpa. O `install` reescreve a unit para a versão ativa. Antes, confira:
+Se `t3 service status` disser `needs an update or repair` (a unit aponta para um runtime antigo ou diferente do que você quer), faça o reparo com o binário **explícito** da versão alvo, nunca com o `t3` solto do PATH:
 
 ```bash
-~/.t3/bin/t3 service status
-systemctl --user cat t3code.service
+systemctl --user show t3code.service -p ExecStart --value | grep -o 'versions/[^/]*'   # antes
+~/.t3/runtime/versions/<versão-alvo>/t3 service install --base-dir ~/.t3
+systemctl --user show t3code.service -p ExecStart --value | grep -o 'versions/[^/]*'   # depois
 ```
+
+Para trocar de versão de forma normal, use [07-upgrade-versao.md](07-upgrade-versao.md). O `service install` é reparo, não upgrade.
 
 ## Diagnóstico de conflito
 

@@ -15,7 +15,7 @@
 #
 # Uso:
 #   bin/sync-agents.sh                   # cria/atualiza symlinks em todos os CLIs
-#   bin/sync-agents.sh claude            # só um CLI (claude|kilo|codex|gemini|opencode)
+#   bin/sync-agents.sh claude            # só um CLI (claude|kilo|codex|gemini|antigravity|opencode)
 #   bin/sync-agents.sh --dry-run         # só mostra o que faria (todos os CLIs)
 #   bin/sync-agents.sh claude --dry-run  # só mostra o que faria (um CLI)
 #   bin/sync-agents.sh --check           # valida drift do dist (roles+models vs commitado), todos os CLIs
@@ -31,10 +31,11 @@ declare -A TARGETS=(
   [kilo]="$HOME/.config/kilo/agent"
   [codex]="$HOME/.codex/agents"
   [gemini]="$HOME/.gemini/agents"
+  [antigravity]="$HOME/.gemini/config/agents"
   [opencode]="$HOME/.config/opencode/agent"
 )
 
-ALL_CLIS=(claude kilo codex gemini opencode)
+ALL_CLIS=(claude kilo codex gemini antigravity opencode)
 
 # --check pode vir em qualquer posição ($1 ou $2), seguido opcionalmente do nome do cli
 if [[ "${1:-}" == "--check" || "${2:-}" == "--check" ]]; then

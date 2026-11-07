@@ -47,7 +47,7 @@ O mesmo padrão vale para qualquer cofre — a diferença é só o comando de le
 
 ```bash
 # pass/gopass: substituição no próprio comando
-oc login --token="$(pass show openshift/hml/token)" ...
+oc login --token=$(pass show <cofre>/<caminho>/token)
 
 # Passbolt: injeta as secrets no env só do processo filho, nunca no shell interativo
 passbolt exec -- bash -c 'dotnet restore'

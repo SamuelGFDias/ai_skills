@@ -1,0 +1,89 @@
+# Exemplo de configuração declarativa do CT-VL (defaults + sistemas), versionável. SEM segredos.
+# Esquema completo: references/schema-config.md. Convenção de nomes: <sistema>_<datatype>[_<esquema>].
+#
+#   ctvl.sh plan  --offline --empty-state --file references/exemplo-config.yaml     # sem rede
+#   ctvl.sh plan  dev --file references/exemplo-config.yaml                         # contra o vault
+#   ctvl.sh apply dev --file references/exemplo-config.yaml --yes                   # aplica
+#
+# Observações de projeto:
+#  - sindras_* é o conjunto GENÉRICO (padrão/testes). O ideal é cada sistema ter a sua configuração
+#    (settorj_*, biae_*), herdando de `defaults` e sobrescrevendo só o que difere.
+#  - charset PENDENTE e máscaras "a_confirmar" bloqueiam o item no plan/apply até alguém decidir.
+versao: 1
+
+convencao:
+  sistemas: [sindras, biae, settorj]
+  datatypes: [cpf, cns]
+
+api:
+  # Formato das referências (nome ou id) na ESCRITA: A CONFIRMAR. Rode `ctvl.sh probe-refs <env>`
+  # e declare aqui o que for confirmado, ex.: tokengroup.key: name
+  refs: {}
+  detail_trailing_slash: false   # swagger lista /x/{id} sem barra final; A CONFIRMAR
+
+usuarios_padrao:
+  email_dominio: example.invalid   # e-mail é obrigatório na API; troque pelo domínio real do projeto
+  ativo: true
+
+recursos:
+  chaves:                          # a criação gera material de chave no cofre: combine com a equipe do vault
+    - {nome: SINDRAS_KEY}
+    - {nome: SETTORJ_KEY}
+
+defaults:
+  datatypes:
+    cpf:
+      template:
+        format: FPE
+        charset: PENDENTE          # decisão do projeto: ASCII imprimível x numérico (ver README do projeto)
+        keep_left: 3
+        keep_right: 2
+        irreversible: false
+        allow_small_input: false
+        preserve_null_or_1_char: false
+        prefix: ""
+      mascaras:                    # catálogo de esquemas; nome da máscara no vault: <datatype>_<esquema>
+        3_left_2_right: {show_left: 3, show_right: 2, mask_char: "*"}
+        minimo: {show_left: 0, show_right: 2, mask_char: "*", status: a_confirmar}
+      usuarios:                    # nome do usuário: <sistema>_cpf[_<esquema>]
+        - {esquema: null, permissoes: [tokenize, detokenize], finalidade: genérico de teste}
+        - {esquema: total, permissoes: [detokenize]}                 # sem máscara = vê o dado completo
+        - {esquema: 3_left_2_right, permissoes: [detokenize]}
+        - {esquema: minimo, permissoes: [detokenize]}
+    cns:
+      template:
+        format: FPE
+        charset: PENDENTE
+        keep_left: 3
+        keep_right: 0
+        irreversible: false
+        allow_small_input: false
+        preserve_null_or_1_char: false
+        prefix: ""
+      mascaras:
+        3_left: {show_left: 3, show_right: 0, mask_char: "*"}
+        minimo: {show_left: 3, show_right: 0, mask_char: "*", status: a_confirmar}   # alternativa: 0 em claro
+      usuarios:
+        - {esquema: null, permissoes: [tokenize, detokenize], finalidade: genérico de teste}
+        - {esquema: total, permissoes: [detokenize]}
+        - {esquema: 3_left, permissoes: [detokenize]}
+        - {esquema: minimo, permissoes: [detokenize]}
+  servico:                         # usuário de serviço por sistema: <sistema>_svc_<esquema>
+    - {esquema: tokenize, permissoes: [tokenize]}
+
+sistemas:
+  sindras:                         # genérico: herda tudo de defaults
+    tokengroup: SINDRAS
+    chave: SINDRAS_KEY
+    datatypes: [cpf, cns]
+
+  settorj:                         # exemplo de sistema com configuração própria
+    tokengroup: SETTORJ
+    chave: SETTORJ_KEY
+    datatypes: [cns]
+    overrides:
+      cns:
+        mascaras:                  # só este sistema mascara com "-": vira a máscara settorj_cns_3_left
+          3_left: {show_left: 3, show_right: 0, mask_char: "-"}
+        # usuarios_extra:          # acrescenta usuários à lista herdada (usuarios: substitui a lista toda)
+        #   - {esquema: auditoria, mascara: "3_left", permissoes: [detokenize]}

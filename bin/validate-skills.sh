@@ -248,6 +248,15 @@ vs_check_skill() {
     vs_ok "$skill: sem caminho absoluto de usuário"
   fi
 
+  # Valores de uma máquina em skill compartilhada (AGENTS.md, regra 8). Padrões específicos para não
+  # pegar placeholders: dotfiles do usuário, op:// com valor real (não <...>) e id real de tailnet.
+  hits="$(cd "$REPO_DIR" && grep -rnIE --exclude-dir=__pycache__ --exclude-dir=node_modules -e '\.zshrc\.d|\.zshenv' -e 'op://[^<[:space:]]' -e 'tail[0-9a-f]{5,}\.ts\.net' -- "$skill" || true)"
+  if [ -n "$hits" ]; then
+    vs_aviso "$skill: valor de máquina em skill compartilhada em $(printf '%s\n' "$hits" | cut -d: -f1,2 | paste -sd' ' -) (use marcador <...> ou mova para providers/; AGENTS.md regra 8)"
+  else
+    vs_ok "$skill: sem valores de máquina (dotfiles, op://, tailnet)"
+  fi
+
   case "$(vs_estado_link "$skill")" in
     ok) vs_ok "$skill: symlink ~/.claude/skills/$skill" ;;
     ausente) vs_aviso "$skill: falta symlink ~/.claude/skills/$skill (rode bin/sync-skills.sh claude)" ;;

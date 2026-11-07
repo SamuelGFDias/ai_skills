@@ -1,0 +1,17 @@
+{
+  "count": 2,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "idkey": 2,
+      "name": "SETTORJ_KEY",
+      "seedkey": false
+    },
+    {
+      "idkey": 1,
+      "name": "SINDRAS_KEY",
+      "seedkey": false
+    }
+  ]
+}

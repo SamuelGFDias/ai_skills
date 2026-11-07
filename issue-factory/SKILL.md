@@ -1,6 +1,6 @@
 ---
 name: issue-factory
-description: Workflow genérico de gestão de issues (criar, comentar solução, fechar, milestones, datas, padrão de título) independente da plataforma. Os comandos concretos da plataforma ficam em providers/ — GitHub em providers/github/arquivos.md. Use quando o usuário pedir para abrir, atualizar ou fechar issues em um tracker de tarefas.
+description: Workflow genérico de gestão de issues (criar, comentar solução, fechar, milestones, datas, padrão de título) independente da plataforma. Os comandos concretos da plataforma ficam em providers/ — GitLab em providers/gitlab/arquivos.md e GitHub em providers/github/arquivos.md. Use quando o usuário pedir para abrir, atualizar ou fechar issues em um tracker de tarefas.
 ---
 
 # Skill: issue-factory
@@ -17,6 +17,7 @@ arquivos `.md` pré-criados** — as demandas são descritas diretamente na conv
 
 Os comandos concretos (host, auth, projeto, labels, milestones, GraphQL) estão em:
 
+- **GitLab SES-RJ** → `providers/gitlab/arquivos.md` (ler antes de executar comandos `glab`).
 - **GitHub** → `providers/github/arquivos.md` (ler antes de executar comandos `gh`).
 
 Ao adaptar para outro tracker, manter este fluxo e trocar apenas a seção do provider.

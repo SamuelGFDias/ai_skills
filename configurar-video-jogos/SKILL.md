@@ -5,6 +5,8 @@ metadata:
   type: reference
 ---
 
+**Tipo:** internal
+
 # Configurar video e jogos (NVIDIA hibrida + Steam)
 
 Maquina de referencia: Fedora, Wayland, Intel UHD (GPU padrao) + NVIDIA RTX 4050 Max-Q, driver NVIDIA com modulos `nvidia`, `nvidia_drm`, `nvidia_modeset`, `nvidia_uvm`. Steam instalada como Flatpak `com.valvesoftware.Steam`.
@@ -59,9 +61,9 @@ __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia __VK_LAYER_NV_optim
 Aplicar em todos os jogos instalados (ignora runtimes, Proton e Steamworks):
 
 ```bash
-~/.claude/skills/configurar-video-jogos/scripts/steam_nvidia_opts.py --dry-run   # so mostra
-~/.claude/skills/configurar-video-jogos/scripts/steam_nvidia_opts.py             # grava
-~/.claude/skills/configurar-video-jogos/scripts/steam_nvidia_opts.py 570 105600  # so alguns appids
+~/.config/ai/skills/configurar-video-jogos/scripts/steam_nvidia_opts.py --dry-run   # so mostra
+~/.config/ai/skills/configurar-video-jogos/scripts/steam_nvidia_opts.py             # grava
+~/.config/ai/skills/configurar-video-jogos/scripts/steam_nvidia_opts.py 570 105600  # so alguns appids
 ```
 
 Regras do script:

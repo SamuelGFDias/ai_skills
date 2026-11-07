@@ -233,7 +233,7 @@ gh label list -R owner/repo
 
 ## Observações
 
-- `-R owner/repo` é aceito por praticamente todo subcomando de `gh issue`/`gh label` —
+- `-R owner/repo` é aceito por praticamente todo subcomando de `gh issue`/`gh label` — não
   fora de um diretório com remote GitHub configurado é obrigatório passar `-R` explicitamente.
 - Não existe GraphQL obrigatório para nada documentado aqui — todo fluxo roda via REST
   (`gh api`) ou comandos de alto nível (`gh issue`/`gh label`). GraphQL só entra em cena para

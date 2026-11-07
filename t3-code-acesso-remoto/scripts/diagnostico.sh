@@ -3,10 +3,10 @@
 # Não altera serviço, atalhos, Tailscale nem o app. Só lê e testa.
 #
 # uso: diagnostico.sh [nome-do-celular-na-tailnet]
-#   padrão do celular: iphone-xr (troque pelo nome do seu aparelho)
+#   sem argumento, o teste de ping do celular é pulado. Descubra o nome com `tailscale status`.
 set -uo pipefail
 
-PHONE=${1:-iphone-xr}
+PHONE=${1:-}
 SERVICE_HOME=${SERVICE_HOME:-$HOME/.t3}
 DESKTOP_HOME=${DESKTOP_HOME:-$HOME/.t3-desktop}
 T3_BIN=${T3_BIN:-$HOME/.t3/bin/t3}
@@ -105,13 +105,17 @@ print(v if v is not None else "")' "$1"; }
     CODE=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "https://$SELF_DNS/.well-known/t3/environment" 2>/dev/null || echo "000")
     if [ "$CODE" = "200" ]; then ok "https://$SELF_DNS/.well-known/t3/environment respondeu 200"; else warn "endpoint HTTPS respondeu $CODE"; fi
   fi
-  PING_OUT=$(mktemp)
-  if timeout 25 tailscale ping -c 1 --timeout 5s "$PHONE" >"$PING_OUT" 2>&1 && grep -q '^pong' "$PING_OUT"; then
-    ok "celular '$PHONE' respondeu ao ping pela tailnet ($(grep '^pong' "$PING_OUT" | head -1))"
+  if [ -z "$PHONE" ]; then
+    info "nenhum celular informado: ping pulado (passe o nome como argumento)"
   else
-    warn "celular '$PHONE' sem resposta ao ping (VPN do Tailscale no celular desligada?)"
+    PING_OUT=$(mktemp)
+    if timeout 25 tailscale ping -c 1 --timeout 5s "$PHONE" >"$PING_OUT" 2>&1 && grep -q '^pong' "$PING_OUT"; then
+      ok "celular '$PHONE' respondeu ao ping pela tailnet ($(grep '^pong' "$PING_OUT" | head -1))"
+    else
+      warn "celular '$PHONE' sem resposta ao ping (VPN do Tailscale no celular desligada?)"
+    fi
+    rm -f "$PING_OUT"
   fi
-  rm -f "$PING_OUT"
 else
   warn "comando tailscale não encontrado"
 fi

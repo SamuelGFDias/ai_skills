@@ -1,0 +1,17 @@
+{
+  "count": 2,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "idtenant": 2,
+      "name": "SETTORJ",
+      "key": "SETTORJ_KEY"
+    },
+    {
+      "idtenant": 1,
+      "name": "SINDRAS",
+      "key": "SINDRAS_KEY"
+    }
+  ]
+}

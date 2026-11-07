@@ -19,14 +19,24 @@ ai_skills/
 ├── bin/install-hooks.sh       # ativa .githooks/ neste clone, opcional por máquina (só bash)
 ├── .githooks/                 # pre-commit (valida skills staged) e commit-msg (bloqueia atribuição de IA)
 ├── providers/                 # referência de plataformas (NÃO é skill carregável)
+│   ├── gitlab/arquivos.md     # GitLab: host, auth, projetos, labels, GraphQL
+│   ├── gitlab/automerge.md    # ferramenta gitlab-auto-merge.sh
+│   ├── nexus/arquivos.md      # Nexus: host, TFM bug, armadilhas
 │   ├── passbolt/arquivos.md   # Passbolt: CLI, pb find/import/export
-│   └── pass-gopass/arquivos.md# pass/gopass: cofre local GPG
-├── THIRD_PARTY_NOTICES.md     # licenças das skills adaptadas de terceiros (ECC, MIT)
+│   ├── pass-gopass/arquivos.md# pass/gopass: cofre local GPG
+│   └── vault/arquivos.md      # HashiCorp Vault (KV v2): nomes de chaves, ExternalSecret/ArgoCD
+├── THIRD_PARTY_NOTICES.md     # licenças das skills adaptadas de terceiros (ECC, Cloudflare; MIT)
 ├── angular-developer/         # Angular: signals, forms, DI, rotas, SSR, testes (referências em references/) [ECC]
+├── angular-testes/            # teste unitário Angular SES-RJ (Karma/Jasmine, vitest, TestBed)
 ├── api-design/                # design de API REST: recursos, status, paginação, erros, versionamento [ECC]
 ├── architecture-decision-records/ # ADRs numerados em docs/adr/ [ECC]
 ├── arquiteto/                 # orquestração híbrida: executa direto o pequeno, delega a subagentes quando paga
+│                              # (claude/kilo/codex/gemini/antigravity/opencode)
+├── atividade-factory/         # commits → issues por funcionalidade (GitLab)
 ├── audit-log/                 # biblioteca AuditLog (NuGet)
+├── backend-wiki-skills/       # roteador das skills de backend .NET
+├── bash-scripting-pitfalls/   # armadilhas de bash (source, set -e)
+├── configurar-video-jogos/    # GPU NVIDIA/PRIME e jogos da Steam (Flatpak)
 ├── azuredevops-api/            # work items + export de wiki Azure DevOps (CLI ado)
 ├── claude-guard-hooks/        # hooks PreToolUse: bloqueia atribuição de IA, --no-verify, vazamento de segredo; confirma comando destrutivo
 ├── claude-md/                 # criar, auditar e enxugar CLAUDE.md pelas recomendações da Anthropic
@@ -34,30 +44,49 @@ ai_skills/
 ├── codebase-onboarding/       # guia de onboarding e CLAUDE.md/AGENTS.md inicial de um repo [ECC]
 ├── commiter/                  # workflow genérico de commit + push
 ├── context-budget/            # auditoria do consumo de contexto (skills, agentes, MCP, regras) [ECC]
-├── csharp-testing/            # testes C#/.NET: xUnit, FluentAssertions, mocks, integração [ECC]
+├── cronograma-saude-rj-api/   # API REST Cronograma SES-RJ
+├── csharp-testing/            # testes C#/.NET genéricos: xUnit, FluentAssertions, mocks [ECC]
+├── ctvl-api/                  # CT-VL (CipherTrust Vaulted Tokenization) pela API admin
 ├── database-migrations/       # migrations seguras e reversíveis, expand-contract, backfill em lotes [ECC]
 ├── decisoes-com-usuario/      # decisões do usuário via grilling + AskUserQuestion (ou equivalente do agente)
+├── dependency-upgrade-spike/  # decidir upgrade de dependência sem confiar no changelog
 ├── dotnet-backend-architecture/  # padrão arquitetural .NET backend
+├── dotnet-integration-tests/  # teste de integração .NET (xunit, Testcontainers)
 ├── dotnet-patterns/           # idioma C#/.NET: DI, async, nulabilidade, convenções [ECC]
+├── dotnet-project-rename/     # renomear projeto .NET sem quebrar o build
+├── dotnet-unit-tests/         # teste unitário .NET (xunit, NSubstitute)
+├── grilling/                  # grill do usuário sobre plano/decisão/ideia
 ├── hangfire-setup/            # Hangfire: abstrações + implementação (código em docs/)
 ├── healthcare-phi-compliance/ # padrões técnicos de proteção de dado de saúde [ECC]
 ├── headroom/                  # headroom (proxy de contexto)
 ├── instalacao-appimage-linux/ # instalar AppImage (ícone, atalho, dock GNOME) + scripts/install.sh
-├── issue-factory/             # workflow genérico de issues
+├── issue-factory/             # workflow genérico de issues (+ providers/gitlab, providers/github)
 ├── keycloak-api/              # Admin REST API Keycloak (CLI kc)
 ├── lgpd/                      # LGPD na prática de desenvolvimento: dado de saúde, logs, retenção, incidente
-├── nuget-factory/             # workflow genérico de pacotes NuGet
+├── nuget-factory/             # workflow genérico de pacotes NuGet (+ providers/nexus)
+├── openshift-cli/             # instalação/login OpenShift SES-RJ
+├── openshift-implementacao-factory/ # e-mail de solicitação de esteira no OpenShift SES-RJ
+├── organizar-projetos/        # reorganizar ~/projects em ~/dev/{ses,pessoal,test} + gitconfig includeIf por pasta
 ├── playwright-e2e-estomizados/# receita e2e Playwright (Estomizados)
+├── ramguard/                  # operação do ramguard (encerra processo pesado com RAM alta)
+├── redis-port-forward/        # túnel até o Redis SES-RJ
 ├── replatforms/               # migração Delphi 7 → .NET + Angular (prompt em docs/)
-├── search-first/              # pesquisar pacote/MCP/skill existente antes de codar [ECC]
+├── search-first/              # pesquisar fora antes de construir: relatório com fontes (upstream shimo4228, MIT)
 ├── security-audit/            # auditoria de segurança white-box com verificação independente e relatório [Cloudflare]
-├── security-review/           # checklist de segurança (OWASP) para auth, input, query, segredo [ECC]
+├── security-review/           # checklist de segurança (OWASP), regra de evidência e varredura de dependências [ECC]
 ├── speckit/                   # Spec-Driven Development com GitHub Spec Kit (comandos + instalação em docs/)
+├── ses-gitlab-deps/           # instalação de jq/glab
+├── ses-ops/                   # operação/diagnóstico do ecossistema SES (agente + CLI de config por ambiente + ses-secret)
+├── sql-data-cleanup/          # scripts SQL de dedupe/limpeza decididos por evidência
 ├── t3-code-acesso-remoto/     # T3 Code: serviço em background, desktop em outro home, acesso mobile via Tailscale (docs/)
+├── t3-code-orquestracao/      # T3 Code por dentro da thread: delegar a outro provider, papéis do arquiteto, threads/worktree, clonar pelo nome
 ├── task-observer/             # observação de skills, sob demanda (/task-observer)
 ├── tdd-first/                 # TDD: primeiro movimento por tipo de operação, runner, evidência RED/GREEN
-├── vault-factory/             # abstração de cofres de secrets (+ providers/passbolt, pass-gopass)
+├── us-legado-factory/         # US de sistemas legados a partir de código e docs (sob arquiteto; export azuredevops-api)
+├── vault-factory/             # abstração de cofres de secrets (+ providers/passbolt, pass-gopass, vault)
 ├── verification-loop/         # verificação em seis fases antes de PR [ECC]
+├── webpush-vapid-factory/     # Web Push VAPID (Angular + .NET)
+├── wiki-saude-rj/             # API GraphQL do Wiki.js SES-RJ
 └── windows-audio-mic/         # diagnosticar/corrigir microfone no Windows (mudo/padrão)
 ```
 
@@ -67,19 +96,24 @@ Skills que misturam **workflow genérico** e **detalhes de plataforma** são div
 
 - **Factory** (`*-factory`): o fluxo reutilizável, independente da tecnologia (ex.: `issue-factory`).
 - **Provider** (`providers/<plataforma>/arquivos.md`): comandos, URLs e credenciais concretos
+  (ex.: `providers/gitlab/arquivos.md`). Arquivos de provider **não têm `SKILL.md`** — são
   referência que as factories apontam.
 
 Relação atual:
 
 | Factory | Provider(s) |
 |---|---|
-| `vault-factory` | `providers/passbolt/arquivos.md`, `providers/pass-gopass/arquivos.md` |
+| `issue-factory` | `providers/gitlab/arquivos.md` |
+| `commiter` | `providers/gitlab/arquivos.md`, `providers/gitlab/automerge.md` |
+| `nuget-factory` | `providers/nexus/arquivos.md` |
+| `vault-factory` | `providers/passbolt/arquivos.md`, `providers/pass-gopass/arquivos.md`, `providers/vault/arquivos.md` |
 
 Regra: se uma skill depende de host/credencial de um sistema específico, o detalhe vai para
 `providers/`; a skill mantém o fluxo genérico e aponta para o provider.
 
 ## Confidencialidade
 
+**Todas as skills são `internal`** — o repo é privado (GitHub + GitLab SES). Todo `SKILL.md` deve
 carregar `**Tipo:** internal`. Nenhum segredo deve ser versionado (senhas, tokens, chaves) — segredos
 vivem em vaults (`vault-factory`).
 
@@ -107,6 +141,7 @@ vivem em vaults (`vault-factory`).
 ## Publicação
 
 O repo tem dois remotes (ambos privados): GitHub (`git@github.com:SamuelGFDias/ai_skills.git`) e
+GitLab SES (`git@gitlab-prod.saude.rj.gov.br:ses-rj/desenvolvimento/ai/skills.git`). `git push`
 envia aos dois.
 
 ```bash

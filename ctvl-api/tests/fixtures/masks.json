@@ -1,0 +1,28 @@
+{
+  "count": 3,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "idmask": 3,
+      "name": "legacy_mask",
+      "showleft": 1,
+      "showright": 1,
+      "maskchar": "#"
+    },
+    {
+      "idmask": 2,
+      "name": "cpf_3_left_2_right",
+      "showleft": 3,
+      "showright": 2,
+      "maskchar": "*"
+    },
+    {
+      "idmask": 1,
+      "name": "cns_3_left",
+      "showleft": 3,
+      "showright": 0,
+      "maskchar": "*"
+    }
+  ]
+}

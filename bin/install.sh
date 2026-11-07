@@ -15,6 +15,14 @@
 #                (só escreve "model" se o arquivo não existir ou ainda não tiver essa
 #                chave — nunca sobrescreve config já customizada pelo usuário)
 #
+#   Instruções globais (arquivo que o agente lê em toda sessão): delegado a
+#   bin/sync-global-config.sh. Cada skill pode ter um global.md; você escolhe quais ligar (pergunta
+#   interativa na primeira vez; a escolha fica em ~/.config/ai/skills-global.conf). claude e gemini
+#   recebem só um `@ai-skills.md` e o conteúdo vai para um arquivo próprio no diretório global;
+#   codex e opencode não importam arquivo, então recebem o bloco inline. Sem terminal, e enquanto
+#   houver snippet sem escolha, nada é alterado. Detalhes: bin/sync-global-config.sh --help.
+#   kilo não tem arquivo global mapeado aqui; não é alterado.
+#
 # Nenhum CLI detectado -> imprime aviso e sai com sucesso (não é erro).
 # Idempotente: pode rodar quantas vezes quiser.
 #
@@ -99,6 +107,14 @@ EOF
   fi
 }
 
+# Instruções de uso das skills nos arquivos globais do agente: delegado a
+# bin/sync-global-config.sh (seleção por máquina, snippets por skill em <skill>/global.md).
+sync_global_config_for() {
+  local cli="$1" args=("$1")
+  [ "$MODE" = "dry-run" ] && args+=(--dry-run)
+  "$REPO_DIR/bin/sync-global-config.sh" "${args[@]}"
+}
+
 echo "=== install.sh — detectando CLIs instalados ==="
 
 for cli in claude kilo codex gemini opencode; do
@@ -124,6 +140,7 @@ for cli in "${FOUND[@]}"; do
     claude|kilo|codex|gemini)
       sync_skills_for "$cli"
       sync_agents_for "$cli"
+      sync_global_config_for "$cli"
       ;;
     opencode)
       sync_agents_for "opencode"
@@ -132,6 +149,7 @@ for cli in "${FOUND[@]}"; do
         sync_skills_for "claude"
       fi
       configure_opencode_deepseek_default
+      sync_global_config_for "opencode"
       ;;
   esac
   echo

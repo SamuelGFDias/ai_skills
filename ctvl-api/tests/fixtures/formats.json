@@ -1,0 +1,15 @@
+{
+  "count": 2,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "idtokenformat": 2,
+      "name": "Random"
+    },
+    {
+      "idtokenformat": 1,
+      "name": "FPE"
+    }
+  ]
+}
