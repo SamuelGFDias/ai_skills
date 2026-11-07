@@ -25,7 +25,9 @@ Ao adaptar para outro servidor (nuget.org, Azure Artifacts...), manter este flux
 ## Princípio de segurança
 
 - **Nunca** peça a senha do feed em texto puro na conversa. Buscar no vault (ver `vault-factory`).
-- Ler a senha só via `passbolt exec -- <comando>` (env só no processo filho).
+- Ler a senha só por referência com esquema: `NEXUS_PASSWORD_REF` (`op://…`, `pass:…`, `gopass:…`,
+  `passbolt:…`, `vault:…#chave`), resolvida por `vault-read` (ver `vault-factory`) e entregue só ao
+  processo filho. `NEXUS_PASSBOLT_RESOURCE_ID` ainda é aceita, mas está depreciada.
 - **Nunca** gravar a senha em texto claro no `NuGet.Config`. Usar um placeholder de env var
   (ex.: `%NEXUS_NUGET_PASSWORD%`, suportado desde NuGet 4.8+) exportada só dentro do processo que
   roda `dotnet restore`/`add package`/`push`.
@@ -39,7 +41,7 @@ Ao adaptar para outro servidor (nuget.org, Azure Artifacts...), manter este flux
    '<nome>' não existe`). Alternativas que funcionam:
    - `dotnet add package <Nome> --source <nome-da-source>` (sem `--version`, resolve a última), ou
    - editar a `<PackageReference Include="..." Version="..." />` direto no `.csproj`.
-3. Restore/build normalmente, exportando a senha só para esse processo (padrão `passbolt exec` do provider).
+3. Restore/build normalmente, exportando a senha só para esse processo (padrão `vault-read` do provider).
 4. Se `dotnet add package`/`restore` disser **"Não há versões disponíveis"** mesmo o pacote existindo
    no feed (confirmável via search do provider), **não** assumir permissão/rede — checar primeiro o
    bug de metadados do provider (ex.: Nexus corrompe TFM de `net5.0+` e quebra a auto-seleção de versão).

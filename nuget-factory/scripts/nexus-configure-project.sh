@@ -19,6 +19,23 @@ INCLUIR_HOSTED="false"
 [[ "${2:-}" == "--hosted" ]] && INCLUIR_HOSTED="true"
 
 [[ -d "$PROJETO_DIR" ]] || { echo "Diretorio nao existe: $PROJETO_DIR" >&2; exit 1; }
+nexus_exige_usuario || exit 1
+if nexus_tem_quebra_linha "$NEXUS_USER"; then
+  echo "NEXUS_USER contem quebra de linha; nao suportada." >&2
+  exit 1
+fi
+
+# Escapa o texto para valor de atributo XML (& primeiro, para nao escapar duas vezes).
+xml_escapa() {
+  local texto="$1"
+  texto="${texto//&/"&amp;"}"
+  texto="${texto//</"&lt;"}"
+  texto="${texto//>/"&gt;"}"
+  texto="${texto//\"/"&quot;"}"
+  texto="${texto//\'/"&apos;"}"
+  printf '%s' "$texto"
+}
+USUARIO_XML="$(xml_escapa "$NEXUS_USER")"
 
 CONFIG_PATH="$PROJETO_DIR/NuGet.Config"
 
@@ -39,12 +56,12 @@ fi
   echo '  </packageSources>'
   echo '  <packageSourceCredentials>'
   echo '    <nexus-ses>'
-  echo "      <add key=\"Username\" value=\"${NEXUS_USER}\" />"
+  echo "      <add key=\"Username\" value=\"${USUARIO_XML}\" />"
   echo '      <add key="ClearTextPassword" value="%NEXUS_NUGET_PASSWORD%" />'
   echo '    </nexus-ses>'
   if [[ "$INCLUIR_HOSTED" == "true" ]]; then
     echo '    <nexus-ses-hosted>'
-    echo "      <add key=\"Username\" value=\"${NEXUS_USER}\" />"
+    echo "      <add key=\"Username\" value=\"${USUARIO_XML}\" />"
     echo '      <add key="ClearTextPassword" value="%NEXUS_NUGET_PASSWORD%" />'
     echo '    </nexus-ses-hosted>'
   fi
@@ -55,5 +72,6 @@ fi
 echo "OK: $CONFIG_PATH gerado."
 echo
 echo "Antes de rodar dotnet restore/add package/push, exporte a senha (sem ecoa-la):"
-echo '  export NEXUS_PASSWORD=passbolt://'"$NEXUS_PASSBOLT_RESOURCE_ID"
-echo '  passbolt exec -- bash -c '"'"'export NEXUS_NUGET_PASSWORD="$NEXUS_PASSWORD"; dotnet restore'"'"
+echo '  export NEXUS_PASSWORD_REF='"'<referência-da-senha>'"'   # op://..., pass:..., gopass:..., passbolt:..., vault:...#chave'
+echo '  NEXUS_NUGET_PASSWORD="$(vault-read "$NEXUS_PASSWORD_REF")" dotnet restore'
+echo '(NEXUS_PASSBOLT_RESOURCE_ID segue aceita, mas esta depreciada.)'
