@@ -9,7 +9,7 @@ ID="${1:?Uso: nexus-delete-component.sh <component-id>}"
 read -r -p "Confirma remocao do componente '$ID' no Nexus? [y/N] " resp
 [[ "$resp" =~ ^[Yy]$ ]] || { echo "Cancelado."; exit 0; }
 
-STATUS=$(nexus_exec 'curl -s -o /dev/null -w "%{http_code}" -u "'"$NEXUS_USER"':$NEXUS_PASSWORD" -X DELETE "'"$NEXUS_HOST"'/service/rest/v1/components/'"$ID"'"')
+STATUS=$(nexus_exec 'curl_user_cfg | curl -s -o /dev/null -w "%{http_code}" -K - -X DELETE "$NX_HOST/service/rest/v1/components/$NX_ID"' NX_HOST="$NEXUS_HOST" NX_ID="$ID")
 if [[ "$STATUS" == "204" ]]; then
   echo "OK: componente removido (204)."
 else

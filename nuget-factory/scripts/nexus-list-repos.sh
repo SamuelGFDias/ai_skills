@@ -6,6 +6,6 @@ source "$DIR/lib.sh"
 
 {
   echo -e "NAME\tFORMAT\tTYPE\tURL"
-  nexus_exec 'curl -s -u "'"$NEXUS_USER"':$NEXUS_PASSWORD" "'"$NEXUS_HOST"'/service/rest/v1/repositories"' \
+  nexus_exec 'curl_user_cfg | curl -s -K - "$NX_HOST/service/rest/v1/repositories"' NX_HOST="$NEXUS_HOST" \
     | jq -r '.[] | "\(.name)\t\(.format)\t\(.type)\t\(.url)"'
 } | column -t
