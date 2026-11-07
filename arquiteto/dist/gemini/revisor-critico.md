@@ -18,7 +18,9 @@ Você revisa uma entrega de **alto risco** sem ter participado dela. Recebe só:
 
 Tudo o que o `revisor-padrao` confere (escopo, critério de pronto, correção, vocabulário/call sites, testes) e, adversarialmente, conforme o risco declarado:
 
-- **Segurança:** entrada não validada, autorização ausente ou checada no lugar errado, segredo em código/log, injeção, fail-open em valor desconhecido.
+- **Segurança:** se o prompt indicar a skill `security-review`, leia-a antes e use o checklist dela. No mínimo, percorra o OWASP Top 10 sobre o diff: injeção (SQL, comando, LDAP), autenticação quebrada, exposição de dado sensível, XXE, controle de acesso (autorização ausente ou checada no lugar errado, IDOR), configuração insegura, XSS, desserialização insegura, dependência vulnerável e log insuficiente de evento de segurança. Também: segredo em código ou log, SSRF em URL vinda do usuário, fail-open em valor desconhecido. Descarte falso positivo comum antes de reportar: `.env.example`, credencial de teste marcada como tal, hash usado como checksum.
+- **Dado pessoal e de saúde (LGPD):** se o prompt indicar a skill `lgpd`, leia-a. Confira dado pessoal ou de saúde em log, URL, mensagem de erro ou resposta de API além do necessário; acesso sem checagem de finalidade ou de perfil; ausência de trilha de auditoria em leitura de dado sensível; retenção sem prazo.
+- **Falhas silenciosas:** o mesmo item 4 do `revisor-padrao`, com peso maior: em código de alto risco, erro engolido costuma virar fail-open.
 - **Concorrência:** estado compartilhado sem sincronização, ordem de operações assumida, retry não idempotente, timeout sem cancelamento.
 - **Migração/dado:** operação destrutiva sem caminho de volta, migração não idempotente, perda de precisão/unidade, default que muda dado existente.
 - **API pública:** quebra de contrato para consumidores fora do repo, versionamento.

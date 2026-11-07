@@ -2,9 +2,20 @@
 
 Detalhe das regras numeradas do checklist em `../SKILL.md`. A numeração é estável: outras skills, papéis e o task-observer citam "regra N". Regra nova entra no fim, com número novo, e ganha uma linha no índice e, se couber, no checklist do `SKILL.md`.
 
-1. **Nunca executar diretamente.**
-   - Proibido usar `Edit`, `Write`, `NotebookEdit` ou `Bash` para **implementar** (criar/alterar arquivo de código, commitar, publicar, chamar API externa). Rodar build e teste como **verificação** é permitido — ver o bullet seguinte.
-   - `Bash`/`Read`/`Grep`/`Explore` podem ser usados pelo arquiteto para **sondar contexto de decisão** (estrutura do repo, áreas de arquivo, dependências — sem ler implementação; ver regra 15) e para **verificar entrega**: `git status`/`diff`/`log`, build e teste. O que continua proibido é **implementar** — escrever ou alterar código, criar arquivo de projeto, commitar, publicar.
+1. **Executar ou delegar: delegar só quando a delegação paga.**
+   - **Por quê:** delegar não deixa a resposta mais inteligente. Dá paralelismo, contexto isolado ou um revisor sem pontos cegos, e custa tokens e latência, porque o subagente reconstrói o contexto que a sessão já tem. Evidência e fontes em `references/fundamentos-anthropic.md`. O modo antigo, "nunca executar", tratava toda delegação como ganho e pagava esse custo até em edição de uma linha.
+   - **Delegar** quando ao menos um destes vale:
+     1. **Saída ruidosa e descartável:** a tarefa gera muita saída intermediária da qual só a conclusão importa. Exemplos: investigar dez ou mais arquivos, varrer o repo, ler log longo. Vai para `investigador-*`.
+     2. **Três ou mais frentes independentes,** sem arquivo em comum e sem que uma precise da saída inteira da outra. Vão em paralelo, um executor por área (regra 9).
+     3. **Revisão com contexto limpo** de um lote não trivial (regra 13). Este é o único caso em que a delegação melhora a qualidade.
+     4. **Trabalho mecânico em volume** que um modelo mais barato faz sem decisão: commit por caminho já definido, issue, PR, cópia em massa. Vai para `executor-mecanico`.
+   - **Executar direto na sessão principal** quando nenhum dos quatro vale. Em especial:
+     - correção rápida ou mudança de uma área com decisão clara (tiers `trivial` e `pequena` da regra 19);
+     - trabalho sequencial em que o passo 2 depende da saída inteira do passo 1;
+     - iteração com o usuário, ou ajuste logo depois de uma entrega, quando o contexto carregado ainda é o que importa;
+     - quando escrever o prompt de delegação custaria tanto quanto fazer a mudança.
+   - **Quem executa direto segue as mesmas regras de verificação:** teste estreito antes de declarar pronto (regra 10), gate pelo log (regra 8), ação sensível só com confirmação (regra 6). Executar direto troca o executor, não abaixa o padrão de evidência.
+   - **Modo `--delegar-tudo` (opt-in):** se o usuário invocar `/arquiteto --delegar-tudo <tarefa>`, ou pedir explicitamente que nada seja executado na sessão principal, vale o comportamento antigo: o arquiteto não usa `Edit`/`Write`/`NotebookEdit` nem `Bash` para implementar, só para sondar e verificar. Serve para sessões longas em que o contexto principal precisa ficar limpo, ou para medir o custo dos papéis.
    - **Operações git que afetam o estado do working tree inteiro (stash, reset, clean, checkout fora do escopo, amend + force-push) só são delegadas livremente quando o subagente estiver isolado numa worktree própria** (`Agent` com `isolation: "worktree"` no Claude Code, ou equivalente no CLI em uso) — nesse caso ele é dono exclusivo daquele estado. Quando a operação precisa rodar sobre o working tree principal, compartilhado com outros subagentes potencialmente concorrentes, ela não é delegada solta: ou o arquiteto isola o subagente numa worktree dedicada para a tarefa, ou aguarda os demais agentes concorrentes terminarem antes de delegar no working tree principal.
    - **Checklist mínimo antes de delegar tarefa git que envolva troca de branch:** `git status --short` (working tree), `git rev-list --left-right --count` (divergência local/remota) e `git worktree list` (branch já em checkout em outra worktree). Se a branch estiver em outra worktree, delegar a operação com `git -C <worktree>` em vez de checkout — um checkout da branch em uso por outra worktree bloqueia o subagente.
    - Toda ação com efeito (código, comandos, arquivos, commits, chamadas externas) é delegada via `Agent`.
@@ -63,6 +74,27 @@ Detalhe das regras numeradas do checklist em `../SKILL.md`. A numeração é est
 5. **Prompts completos, não atalhos.**
    - Cada subagente começa sem memória desta conversa. O prompt precisa trazer objetivo, contexto relevante já levantado, arquivos/caminhos envolvidos e critério de pronto — nunca "implemente conforme discutido".
    - **Encadear skills de domínio:** se a subtarefa envolver commit/push, issues, secrets/vault, pacotes NuGet ou spec/plan/tasks sob Spec Kit, instruir o executor a ler a skill correspondente antes de executar — `commiter` (commit+push, sem rodapé de IA), `issue-factory` (issues), `vault-factory` (secrets sem vazar), `nuget-factory` (pacotes), `speckit` (Spec-Driven Development com GitHub Spec Kit). O executor começa sem memória; o caminho para o conhecimento certo precisa vir no prompt.
+   - **Skills de engenharia por gatilho:** além das de domínio, indicar no prompt a skill que cobre o assunto da subtarefa:
+
+     | gatilho | skill |
+     |---|---|
+     | código C#/.NET | `dotnet-backend-architecture` (arquitetura), `dotnet-patterns` (idioma), `csharp-testing` (testes) |
+     | Angular | `angular-developer` |
+     | migration ou mudança de schema | `database-migrations` |
+     | endpoint REST novo ou alterado | `api-design` |
+     | auth, entrada do usuário, query, caminho de arquivo, API externa, criptografia ou segredo | `security-review` |
+     | pedido de auditoria de segurança, pentest ou caça a vulnerabilidade num repositório | `security-audit` (tier `grande`) |
+     | dependência nova ou atualizada | seção "Dependências" da `security-review` |
+     | dado pessoal ou dado de saúde | `lgpd` |
+     | decisão de arquitetura a registrar | `architecture-decision-records` |
+     | dependência nova ou utilitário que pode já existir | `search-first` |
+
+   - **TDD como primeiro movimento, conforme o tipo de operação** (skill `tdd-first`). O tipo vai no prompt, e com ele o primeiro passo:
+     - **correção de defeito:** reproduzir o defeito num teste que falha, antes de tocar no código de produção;
+     - **feature nova:** teste do comportamento esperado primeiro;
+     - **mudança de comportamento existente:** alterar o teste antigo junto com o código, nunca deixá-lo verde por fixture herdada;
+     - **refatoração:** testes verdes antes e depois, sem mudar teste nenhum.
+     Sem teste possível (script de infra, texto, configuração), o prompt diz qual é a verificação substituta.
    - **Precedência de atribuição:** quando uma skill de domínio do usuário (ex.: `commiter`, que proíbe rodapé de atribuição de IA nos commits) conflitar com lembrete automático do sistema sobre atribuição, prevalece a skill/instrução do usuário nos commits. O prompt delegado diz explicitamente "sem rodapé de atribuição de IA nos commits" quando for o caso; o corpo de PR segue o lembrete do sistema se a skill não o cobrir.
    - **Contexto de projeto via `AGENTS.md`:** se o projeto-alvo tiver `AGENTS.md` na raiz, instruir o subagente a lê-lo primeiro em vez de reexplicar arquitetura/convenções/estrutura de pastas inline — o prompt então só acrescenta o que é específico da subtarefa (arquivos, critério de pronto, restrições). Isso evita reescrever o mesmo pano de fundo em cada prompt de um lote paralelo (ver gatilho de consolidação na regra 12). Sem `AGENTS.md` no projeto, o contexto completo permanece inline, como no bullet anterior.
    - **"Siga o padrão de X" exige prova de uso na origem.** "Existe em X" não é "faz algo em X": código morto e configuração decorativa atravessam a cópia sem resistência, e nomes de símbolo/variável que "batem" com a referência são evidência de cópia, não de correção. O prompt manda: para cada item copiado, apontar `arquivo:linha` do consumidor/call site na origem (injeção em construtor não é uso; checar também se a configuração existe nos ambientes não-locais); item sem consumidor é **reportado, não copiado**; havendo mais de uma implementação candidata, reportar todas e qual executa. Dependência nomeada do padrão (pacote, SDK) é requisito a validar tecnicamente, nunca a descartar em silêncio por "ainda não instalada". Divergir da referência é decisão do usuário — o executor reporta como risco/pergunta, não resolve sozinho.
@@ -144,7 +176,9 @@ Detalhe das regras numeradas do checklist em `../SKILL.md`. A numeração é est
     - Não perseguir miniaturização a qualquer custo: se 2 subtarefas são inseparáveis (mesmo arquivo, mesma decisão), delegá-las juntas em vez de forçar paralelismo artificial (ver regra 9).
 
 13. **Revisão com contexto limpo: a leitura pesada sai do arquiteto.**
-    - Depois que um lote de executores entrega (e antes do gate completo da regra 10), o arquiteto delega a leitura do diff a um `revisor-padrao` — ou `revisor-critico` quando o lote toca segurança, concorrência, migração de dado ou API pública. O arquiteto, no modelo mais caro, não relê o diff inteiro: lê o veredito estruturado e confere por amostragem só os achados `alto` (`Read` do `arquivo:linha` citado).
+    - Depois que um lote de executores entrega (e antes do gate completo da regra 10), o arquiteto delega a leitura do diff a um `revisor-padrao` — ou `revisor-critico` quando o lote toca segurança, concorrência, migração de dado ou API pública.
+    - **Gatilho de segurança concreto:** o lote "toca segurança" quando o diff mexe em autenticação ou autorização, tratamento de entrada do usuário, query de banco, caminho de arquivo montado a partir de entrada, chamada a API externa, criptografia, segredo ou credencial, ou dado pessoal ou de saúde. Nesses casos o revisor é o `revisor-critico` e o prompt manda ler a skill `security-review` (e a `lgpd`, se houver dado pessoal ou de saúde). Isso vale também quando o arquiteto executou o lote direto (regra 1).
+    - **O revisor sempre acha alguma coisa.** O prompt pede só achados de correção, escopo e segurança, com cenário concreto de falha, e manda pular estilo. Achado sem cenário concreto vai como `baixo` e não gera nova rodada. O arquiteto, no modelo mais caro, não relê o diff inteiro: lê o veredito estruturado e confere por amostragem só os achados `alto` (`Read` do `arquivo:linha` citado).
     - **Contexto limpo de verdade:** o prompt do revisor leva só objetivo, critério de pronto, touch-list, ref/intervalo (`git diff <base>..<head>`) e a verificação estreita autorizada. Nunca o raciocínio, o relatório ou o `Evidência` dos executores — herdá-los importa os mesmos pontos cegos. Domínio enumerado (tabela oficial de status/código) entra no prompt, porque é critério, não raciocínio.
     - **Uma revisão por lote integrado, não por mini-tarefa.** Lote só mecânico (rename, commit, cópia) dispensa revisor — `git diff --stat` contra o touch-list basta (regra 8).
     - **Revisor não corrige.** Achado `alto`/`medio` vira subtarefa nova de executor (com o achado `ref:arquivo:linha` e o cenário de falha no prompt); depois, uma re-revisão curta só do intervalo corrigido. Achado `baixo` vai para a síntese, sem re-delegar.
@@ -166,6 +200,7 @@ Detalhe das regras numeradas do checklist em `../SKILL.md`. A numeração é est
     - Em CLIs sem mensageria entre subagentes, o contrato sozinho cumpre o papel: mudança de contrato vira BLOQUEIO reportado ao arquiteto, que repassa.
 
 15. **Levantamento de contexto: o arquiteto sonda, não lê.**
+    - **Escopo desta regra:** vale para o que o arquiteto vai **delegar**. Quando ele executa direto (regra 1), lê o que a edição exige, como faria qualquer sessão. Ler para delegar e depois o executor reler é que paga três vezes.
     - **Por que o arquiteto levanta contexto antes:** para que os prompts saiam fechados (regras 5 e 7) — sem isso, N executores redescobrem o mesmo terreno e decidem sozinhos touch-list, abordagem e vocabulário. **Por que isso fica caro:** o arquiteto roda no modelo mais caro; ler arquivo inteiro nele e depois reescrever o conteúdo no prompt paga três vezes (leitura cara, escrita cara, releitura pelo executor).
     - **O arquiteto só levanta contexto de decisão** — o suficiente para decompor: quantas frentes, quais áreas de arquivo, qual a dependência entre elas. Ferramentas: `ls`, `git status/log/worktree list`, `grep -l`/`grep -c`, cabeçalho do `AGENTS.md`, `wc -l`. **Proibido ao arquiteto:** `Read` de arquivo de código inteiro e `grep` com conteúdo extenso para "entender a implementação" — isso é contexto de implementação.
     - **Contexto de implementação vai para `investigador-padrao`** (paralelo, modelo barato) **quando** a resposta muda a decomposição ou quando 2+ executores precisariam da mesma descoberta. O investigador devolve constatações `arquivo:linha` compactas, nunca o conteúdo dos arquivos.
@@ -176,7 +211,7 @@ Detalhe das regras numeradas do checklist em `../SKILL.md`. A numeração é est
     - Com as regras 13 e 15, o arquiteto não lê código antes nem diff depois — fica com decompor, decidir e julgar vereditos curtos. Isso cabe em **sonnet com esforço médio** no dia a dia.
     - **Gatilho de escalada, avaliado no início da tarefa:** se a tarefa envolver ao menos um de — migração com risco de dado, segurança/autorização, concorrência, mais de uma branch/worktree ativa a integrar, mudança de API pública, ou decomposição em que a ordem/fronteira das frentes não é óbvia — o arquiteto **avisa o usuário antes de delegar**: "recomendo `/model opus` para planejar esta tarefa; depois de aprovado o plano, dá para voltar a sonnet na execução". Não escala sozinho e não segue planejando em silêncio.
     - **Escalada por papel em vez de por sessão:** dúvida pontual de alto risco no meio da execução vai para `investigador-critico`/`executor-critico`/`revisor-critico` (opus, contexto limpo e curto) — o opus entra só na fatia que precisa dele.
-    - Com o arquiteto em sonnet, `executor-padrao`/`executor-complexo` rodam no mesmo modelo que ele: o ganho de delegar passa a vir do contexto limpo e curto de cada subagente, não da diferença de modelo — o que reforça não delegar tarefa que o arquiteto resolveria com uma sonda.
+    - Com o arquiteto em sonnet, `executor-complexo` roda no mesmo modelo que ele: o ganho de delegar passa a vir do contexto limpo e curto de cada subagente, não da diferença de modelo. Isso reforça a regra 1: tarefa de uma área que o arquiteto resolveria direto não vai para um executor no mesmo modelo.
 
 17. **Prompt enxuto quando o papel tipado já carrega as regras.**
     - O que o arquiteto escreve é token de saída do modelo mais caro, e cada prompt de um lote paralelo repete o mesmo cabeçalho. Os papéis tipados (`roles/*.md`, instalados via `dist/`) **já embutem** o contrato de retorno, as ferramentas permitidas, a proibição de sub-delegação, a regra de não commitar sem pedido e a regra de working tree compartilhado. Com papel tipado, o prompt **não reescreve** esses blocos. Uma linha basta: *"Execute diretamente; não delegue nem use Agent. Responda no bloco de retorno do seu papel."* A frase da regra 4 continua obrigatória por ser curta e por cobrir a troca para agente geral.
@@ -185,3 +220,18 @@ Detalhe das regras numeradas do checklist em `../SKILL.md`. A numeração é est
     - **Exceção:** sem papel tipado (fallback para `general-purpose`, ver "Verificação de configuração dos subagentes"), o contrato de retorno e as proibições vão por extenso, porque o agente geral não os conhece.
 
 18. **Falha de subagente vira relatório versionado.** Toda falha constatada (resultado errado, critério de pronto não atingido, achado `alto`/`medio` de revisor, BLOQUEIO por incapacidade, re-delegação) é registrada em `reports/falhas/AAAA-MM-DD-<papel>-<slug>.md` com sessão + solicitação + resposta + análise do erro + causa provável (modelo, esforço, prompt do arquiteto, contexto faltando, ambiente). Formato e revisão mensal em `reports/README.md`. O objetivo é decidir, por incidência, se vale subir o nível do modelo/esforço; falha causada por prompt do próprio arquiteto entra, mas não justifica subir modelo. Commitar o relatório junto com o trabalho da sessão; nunca registrar segredo.
+
+19. **Dimensionar antes de planejar: a cerimônia acompanha o raio de impacto.**
+    - **Por quê:** o fluxo padrão tem 11 passos, e quase todos já tinham exceção espalhada pelas regras (não investigar tarefa local na 15, lote mecânico sem revisor na 13, re-revisão dispensável na 13). Sem um passo único de dimensionamento, cada exceção virava julgamento solto, e a tendência era rodar o fluxo inteiro até em mudança de uma linha. O tier é a decisão única que aponta quais passos rodam.
+    - **Classificar pelos três sinais e ficar com o tier mais alto que algum deles atingir.** Declarar o tier em uma linha, para o usuário poder corrigir:
+
+      | tier | arquivos | dependência ou contrato novo | ambiguidade de design | quem executa | revisão |
+      |---|---|---|---|---|---|
+      | `trivial` | 1, poucas linhas | nenhum | nenhuma | arquiteto, direto | nenhuma; teste estreito basta |
+      | `pequena` | 1 área | nenhum | clara depois de ler o código | arquiteto, direto | só se cair no gatilho de segurança |
+      | `padrao` | 2 a 5, ou mais de uma área | talvez um módulo interno novo | uma escolha real | direto ou executores, pela regra 1 | `revisor-padrao` |
+      | `grande` | muitos, transversal | dependência externa, API pública, mais de uma branch | várias questões abertas | executores por área, com contrato (regra 14) | `revisor-padrao` ou `revisor-critico` |
+
+    - **Desempate:** gatilho de segurança (regra 13), migração com risco de dado ou API pública deixam a tarefa no mínimo em `padrao`, qualquer que seja o número de arquivos. O mesmo gatilho dispara a recomendação de `/model opus` da regra 16.
+    - **Plano em matriz e gate de aprovação só no `grande`:** antes de disparar, o arquiteto mostra uma tabela `frente | papel | touch-list | paralela? | verificação` e pede aprovação com `AskUserQuestion`. Do `trivial` ao `padrao`, o plano vai numa linha e a execução segue sem parar, salvo ação sensível (regra 6).
+    - **Reclassificar quando o tier se mostrar errado.** Se a sondagem ou um executor revelar que a tarefa é maior que o tier declarado, parar, declarar o tier novo e seguir os passos dele. Não continuar no tier menor só porque já começou.
