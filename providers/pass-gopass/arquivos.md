@@ -1,5 +1,7 @@
 # Provider: pass / gopass (cofre local GPG)
 
+Instalação e configuração (Linux/Fedora): ver [runbook-linux.md](runbook-linux.md), fonte canônica.
+
 Detalhes do cofre de senhas local baseado em GPG (`pass` no Linux, `gopass` no Windows), usado por
 skills como `nuget-factory`. Este arquivo é **referência** —
 a skill `vault-factory` aponta para cá.
@@ -45,3 +47,12 @@ oc whoami -t | pass insert -e openshift/hml/token   # o token vai do oc para o p
 - O Passbolt é o cofre "mestre" compartilhado; `pass`/`gopass` são o cofre local derivado para
   tokens operacionais (login automático).
 - As duas stacks convivem: a chave é a mesma, e a skill `vault-factory` abstrai a leitura de ambos.
+
+## Referência no contrato (`vault-read`)
+
+O despachante `vault-read` aceita dois esquemas para os segredos deste cofre:
+
+| Esquema | Significado |
+|---|---|
+| `pass:<caminho>` | Segredo no store do `pass` (`~/.password-store`), caminho `<serviço>/<ambiente>/<nome>` |
+| `gopass:<caminho>` | Segredo no store do `gopass`, mesmo padrão de caminho |
