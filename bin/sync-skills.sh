@@ -85,6 +85,8 @@ sync_skill_dir_target() {
       if [ "$MODE" = "apply" ]; then
         rm -rf "$dest"
         cp -R "$skill_dir" "$dest"
+        # Marcador: só o que o sync criou pode ser removido como órfão depois.
+        : > "$dest/.ai-skills-sync"
       fi
     fi
   done
@@ -97,7 +99,18 @@ sync_skill_dir_target() {
     local name; name="$(basename "$existing")"
     local found=0
     for n in "${names[@]:-}"; do [ "$n" = "$name" ] && found=1 && break; done
-    if [ "$found" -eq 0 ]; then
+    # Só é órfão o que este sync criou: symlink para dentro do repo, ou cópia com o
+    # marcador. Skill local que nunca veio do repo (ex.: instalada à mão, ou um
+    # diretório gerenciado por outro app) não é tocada.
+    local ours=0
+    if [ -L "$existing" ]; then
+      case "$(readlink "$existing")" in "$REPO_DIR"/*) ours=1 ;; esac
+    elif [ -f "$existing/.ai-skills-sync" ]; then
+      ours=1
+    fi
+    if [ "$found" -eq 0 ] && [ "$ours" -eq 0 ]; then
+      echo "$MODE: mantém $existing (não veio do repo)"
+    elif [ "$found" -eq 0 ]; then
       echo "$MODE: rm $existing (órfão — $name não é mais skill)"
       [ "$MODE" = "apply" ] && rm -rf "$existing"
     fi

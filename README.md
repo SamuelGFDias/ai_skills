@@ -21,24 +21,42 @@ ai_skills/
 ├── providers/                 # referência de plataformas (NÃO é skill carregável)
 │   ├── passbolt/arquivos.md   # Passbolt: CLI, pb find/import/export
 │   └── pass-gopass/arquivos.md# pass/gopass: cofre local GPG
-├── arquiteto/                 # orquestração: subagentes graduados por modelo/esforço
+├── THIRD_PARTY_NOTICES.md     # licenças das skills adaptadas de terceiros (ECC, MIT)
+├── angular-developer/         # Angular: signals, forms, DI, rotas, SSR, testes (referências em references/) [ECC]
+├── api-design/                # design de API REST: recursos, status, paginação, erros, versionamento [ECC]
+├── architecture-decision-records/ # ADRs numerados em docs/adr/ [ECC]
+├── arquiteto/                 # orquestração híbrida: executa direto o pequeno, delega a subagentes quando paga
 ├── audit-log/                 # biblioteca AuditLog (NuGet)
 ├── azuredevops-api/            # work items + export de wiki Azure DevOps (CLI ado)
+├── claude-guard-hooks/        # hooks PreToolUse: bloqueia atribuição de IA, --no-verify, vazamento de segredo; confirma comando destrutivo
+├── claude-md/                 # criar, auditar e enxugar CLAUDE.md pelas recomendações da Anthropic
 ├── claude-mem-project-exclusion/ # excluir pasta e apagar memórias do plugin claude-mem
+├── codebase-onboarding/       # guia de onboarding e CLAUDE.md/AGENTS.md inicial de um repo [ECC]
 ├── commiter/                  # workflow genérico de commit + push
+├── context-budget/            # auditoria do consumo de contexto (skills, agentes, MCP, regras) [ECC]
+├── csharp-testing/            # testes C#/.NET: xUnit, FluentAssertions, mocks, integração [ECC]
+├── database-migrations/       # migrations seguras e reversíveis, expand-contract, backfill em lotes [ECC]
 ├── decisoes-com-usuario/      # decisões do usuário via grilling + AskUserQuestion (ou equivalente do agente)
 ├── dotnet-backend-architecture/  # padrão arquitetural .NET backend
+├── dotnet-patterns/           # idioma C#/.NET: DI, async, nulabilidade, convenções [ECC]
 ├── hangfire-setup/            # Hangfire: abstrações + implementação (código em docs/)
+├── healthcare-phi-compliance/ # padrões técnicos de proteção de dado de saúde [ECC]
 ├── headroom/                  # headroom (proxy de contexto)
 ├── instalacao-appimage-linux/ # instalar AppImage (ícone, atalho, dock GNOME) + scripts/install.sh
 ├── issue-factory/             # workflow genérico de issues
 ├── keycloak-api/              # Admin REST API Keycloak (CLI kc)
+├── lgpd/                      # LGPD na prática de desenvolvimento: dado de saúde, logs, retenção, incidente
 ├── nuget-factory/             # workflow genérico de pacotes NuGet
 ├── replatforms/               # migração Delphi 7 → .NET + Angular (prompt em docs/)
+├── search-first/              # pesquisar pacote/MCP/skill existente antes de codar [ECC]
+├── security-audit/            # auditoria de segurança white-box com verificação independente e relatório [Cloudflare]
+├── security-review/           # checklist de segurança (OWASP) para auth, input, query, segredo [ECC]
 ├── speckit/                   # Spec-Driven Development com GitHub Spec Kit (comandos + instalação em docs/)
 ├── t3-code-acesso-remoto/     # T3 Code: serviço em background, desktop em outro home, acesso mobile via Tailscale (docs/)
-├── task-observer/             # observação contínua de skills
+├── task-observer/             # observação de skills, sob demanda (/task-observer)
+├── tdd-first/                 # TDD: primeiro movimento por tipo de operação, runner, evidência RED/GREEN
 ├── vault-factory/             # abstração de cofres de secrets (+ providers/passbolt, pass-gopass)
+├── verification-loop/         # verificação em seis fases antes de PR [ECC]
 └── windows-audio-mic/         # diagnosticar/corrigir microfone no Windows (mudo/padrão)
 ```
 

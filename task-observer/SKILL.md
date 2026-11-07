@@ -1,24 +1,7 @@
 ---
 name: task-observer
-description: >
-  Monitors task execution for skill improvement opportunities. Use this skill
-  during ANY multi-step task, agentic workflow, or substantive work session where
-  the agent is using tools and producing deliverables. It captures patterns, user
-  corrections, workflow insights, and methodology worth preserving as reusable
-  skills. Also triggers during post-task feedback discussions and when the user
-  explicitly mentions skill observations, improvements, the observation log,
-  skill taxonomy, or asks the agent to watch for skill opportunities. Also known
-  as "One Skill to Rule Them All" — trigger on this phrase too. IMPORTANT:
-  this skill should be invoked at the start of every task-oriented session — if
-  you are about to use tools to produce deliverables, invoke this skill first.
-  Does NOT apply to a Task-tool/Agent-tool subagent executing one bounded,
-  delegated slice of an orchestrator's plan — such a subagent lacks visibility
-  into the user's request and later feedback, so it should not invoke this
-  skill or write to the log on its own; only the orchestrating session
-  observes and logs, informed by what subagents report back to it. For
-  reliable activation, pair this description with a CLAUDE.md instruction
-  or harness-level session-start hook (see Recommended Activation Setup) —
-  description-level matching alone is not enforceable.
+description: "Monitors task execution for skill improvement opportunities: captures patterns, user corrections, workflow insights, and methodology worth preserving as reusable skills, and runs the weekly review of the observation log. Invoked on demand with /task-observer (model invocation disabled on 2026-11-07 to save context in ordinary sessions). Does NOT apply to a subagent executing a delegated slice of an orchestrator's plan; only the orchestrating session observes and logs."
+disable-model-invocation: true
 ---
 
 # Task Observer — Continuous Skill Discovery & Improvement

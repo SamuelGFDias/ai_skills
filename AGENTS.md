@@ -180,9 +180,9 @@ Essas ferramentas são só bash, sem par `.ps1`.
 
 ## Skills-chave para consulta
 
-- `arquiteto` — orquestração com subagentes graduados (modelo/esforço).
-- `task-observer` — observação contínua de oportunidades de melhoria das skills (invocar no início
-  de sessão orientada a tarefa).
+- `arquiteto` — orquestração híbrida: executa direto o que é pequeno e delega a subagentes graduados (modelo/esforço) quando paga.
+- `task-observer` — observação de oportunidades de melhoria das skills. Só sob demanda, com
+  `/task-observer` (invocação automática desligada para economizar contexto).
 - `vault-factory` — leitura de secrets sem expor no chat/histórico.
 - `speckit` — Spec-Driven Development (GitHub Spec Kit): qual comando `/speckit.*` rodar a partir do
   estado dos artefatos. Consumida pelo subagente `speckit-master` do `arquiteto`.
