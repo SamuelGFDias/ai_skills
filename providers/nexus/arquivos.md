@@ -6,8 +6,10 @@ a skill aponta para cá para os comandos concretos.
 ## Dados do ambiente
 
 - Host: `https://nexus.saude.rj.gov.br`
-- Usuário: `samuel.dias`
-- Senha: vault **"Nexus"** no Passbolt (recurso `3ccc4fa5-4c5c-47b9-aa21-735f5cd9a89d`)
+- Usuário: `<usuário-nexus>`, lido da variável de ambiente `NEXUS_USER` (sem valor padrão no repositório).
+- Senha: referida por `NEXUS_PASSWORD_REF=<referência-da-senha>` (qualquer esquema do `vault-read`:
+  `op://…`, `pass:…`, `gopass:…`, `passbolt:<id-do-recurso>`, `vault:<mount>/<caminho>#<chave>`).
+  Legado, **depreciado**: `NEXUS_PASSBOLT_RESOURCE_ID=<id-do-recurso>` (vira `passbolt://<id>` com aviso).
 - Repositórios NuGet relevantes:
   | Nome | Tipo | Uso |
   |---|---|---|
@@ -17,9 +19,9 @@ a skill aponta para cá para os comandos concretos.
 
 ## Segurança
 
-- **Nunca** pedir a senha em texto puro na conversa. Buscar sempre no Passbolt (vault "Nexus").
-- Ler a senha via `passbolt exec -- <comando>` (injeta env só no processo filho) — ver
-  `vault-factory`/`providers/passbolt/arquivos.md`.
+- **Nunca** pedir a senha em texto puro na conversa. Ler sempre pela referência (`NEXUS_PASSWORD_REF`).
+- Ler a senha com `vault-read "$NEXUS_PASSWORD_REF"` e injetar só no processo filho (env) — ver
+  `vault-factory` e o provider do cofre escolhido.
 - **Nunca** gravar a senha em texto claro no `NuGet.Config`. Usar `%NEXUS_NUGET_PASSWORD%` como
   placeholder (suportado desde NuGet 4.8+) e exportar a env var só dentro do processo que roda
   `dotnet restore`/`add package`/`push`.
@@ -49,8 +51,8 @@ nexus configure-project <dir> [--hosted]  # gera NuGet.Config no projeto
    - editar a `<PackageReference Include="..." Version="..." />` direto no `.csproj`.
 3. Restore/build, exportando a senha só para o processo:
    ```bash
-   export NEXUS_PASSWORD=passbolt://3ccc4fa5-4c5c-47b9-aa21-735f5cd9a89d
-   passbolt exec -- bash -c 'export NEXUS_NUGET_PASSWORD="$NEXUS_PASSWORD"; dotnet restore'
+   export NEXUS_PASSWORD_REF='<referência-da-senha>'
+   NEXUS_NUGET_PASSWORD="$(vault-read "$NEXUS_PASSWORD_REF")" dotnet restore
    ```
 4. Se `dotnet add package`/`restore` disser **"Não há versões disponíveis"** mesmo o pacote existindo
    (confirmável via `nexus search <nome>`), ver **Bug de TFM** abaixo antes de assumir permissão/rede.
@@ -63,9 +65,9 @@ nexus configure-project <dir> [--hosted]  # gera NuGet.Config no projeto
 4. Push usando a source nomeada, **sem `--api-key`** — o Nexus exige Basic Auth real, não o header
    `X-NuGet-ApiKey`:
    ```bash
-   export NEXUS_PASSWORD=passbolt://3ccc4fa5-4c5c-47b9-aa21-735f5cd9a89d
-   passbolt exec -- bash -c 'export NEXUS_NUGET_PASSWORD="$NEXUS_PASSWORD"; \
-     dotnet nuget push nupkgs/<Pacote>.<versao>.nupkg --source nexus-ses-hosted'
+   export NEXUS_PASSWORD_REF='<referência-da-senha>'
+   NEXUS_NUGET_PASSWORD="$(vault-read "$NEXUS_PASSWORD_REF")" \
+     dotnet nuget push nupkgs/<Pacote>.<versao>.nupkg --source nexus-ses-hosted
    ```
    `--api-key "usuario:senha"` ou NuGet API Key da UI **não funciona** (dá `401`) — descoberto
    empiricamente em 2026-08-19.
@@ -125,20 +127,27 @@ Se o `.csproj` usa `<Nullable>enable</Nullable>`/`ImplicitUsings`, trocar por
 ## Exemplos de chamadas REST
 
 ```bash
-export NEXUS_PASSWORD=passbolt://3ccc4fa5-4c5c-47b9-aa21-735f5cd9a89d
+export NEXUS_USER='<usuário-nexus>'
+export NEXUS_PASSWORD_REF='<referência-da-senha>'
+NEXUS_PASSWORD="$(vault-read "$NEXUS_PASSWORD_REF")"   # só dentro de subshell/script, nunca em echo
 
 # Config de um repositorio (writePolicy)
-passbolt exec -- bash -c 'curl -s -u "samuel.dias:$NEXUS_PASSWORD" \
-  "https://nexus.saude.rj.gov.br/service/rest/v1/repositories/nuget/hosted/nuget-hosted"'
+curl -s -K - <<<"user = \"$NEXUS_USER:$NEXUS_PASSWORD\"" \
+  "https://nexus.saude.rj.gov.br/service/rest/v1/repositories/nuget/hosted/nuget-hosted"
 
 # Versoes de um pacote no feed v3 (flatcontainer)
-passbolt exec -- bash -c 'curl -s -u "samuel.dias:$NEXUS_PASSWORD" \
-  "https://nexus.saude.rj.gov.br/repository/nuget-group/v3/content/<nome-minusculo>/index.json"'
+curl -s -K - <<<"user = \"$NEXUS_USER:$NEXUS_PASSWORD\"" \
+  "https://nexus.saude.rj.gov.br/repository/nuget-group/v3/content/<nome-minusculo>/index.json"
 
 # Metadado de registration (inspecionar o bug de TFM)
-passbolt exec -- bash -c 'curl -s -u "samuel.dias:$NEXUS_PASSWORD" \
-  "https://nexus.saude.rj.gov.br/repository/nuget-group/v3/registration/0/<nome-minusculo>/index.json"'
+curl -s -K - <<<"user = \"$NEXUS_USER:$NEXUS_PASSWORD\"" \
+  "https://nexus.saude.rj.gov.br/repository/nuget-group/v3/registration/0/<nome-minusculo>/index.json"
 ```
+
+Por que `-K -` e não `-u "usuario:senha"`: com `-u`, a senha vai no argv do `curl` e aparece no `ps`.
+Com `-K -`, o `curl` lê a configuração (`user = ...`) do stdin. O here-string chega por pipe, não por
+argv, e `NEXUS_PASSWORD` fica só no ambiente do shell, vinda de `vault-read`. Limitação: dentro da
+sintaxe de configuração do `curl`, `"` e `\` na senha precisam de escape (`\"`, `\\`).
 
 ## Expor o comando `nexus` fora da skill
 

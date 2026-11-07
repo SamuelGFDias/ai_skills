@@ -54,6 +54,12 @@ else
   done
 fi
 
+# vault-read é a interface principal da skill: sempre exposto, mesmo com .expose listando só o pb.
+case " ${TO_EXPOSE[*]} " in
+  *" vault-read "*) ;;
+  *) TO_EXPOSE+=("vault-read") ;;
+esac
+
 for name in "${TO_EXPOSE[@]}"; do
   script="$SCRIPT_DIR/$name.sh"
   if [ ! -f "$script" ]; then

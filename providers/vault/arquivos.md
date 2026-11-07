@@ -1,5 +1,7 @@
 # Provider: HashiCorp Vault (cofre remoto SES-RJ, KV v2)
 
+Instalação e configuração do cliente `vault`: `providers/vault/runbook-linux.md`.
+
 Detalhes do cofre HashiCorp Vault da SES-RJ (`https://vault-ses.saude.rj.gov.br`) usados pela skill `vault-factory`. Este arquivo é **referência** — a skill aponta para cá.
 
 ## Servidor e login
@@ -90,3 +92,17 @@ vault kv patch -mount=secret prod/<app>-prod CHAVE=@/caminho/valor.txt
 - `kv put` em secret existente apaga as outras chaves. Use `kv patch`.
 - Agente não herda o login: não tentar ler o vault de dentro da sessão.
 - O ExternalSecret atualiza a cada 1h, e o pod precisa reiniciar para usar o valor novo.
+
+## Referência no contrato (`vault-read`)
+
+Quando um arquivo `.env` ou um contrato de configuração aponta para um segredo do Vault, a referência usa o esquema:
+
+```
+vault:<mount>/<caminho>#<chave>
+```
+
+- `<mount>`: mount do KV v2 (hoje `secret`).
+- `<caminho>`: caminho dentro do mount, como `prod/<app>-prod` ou `hml/<app>-<env>`.
+- `<chave>`: nome da chave dentro do secret. É o nome que a variável de ambiente recebe no pod.
+
+Exemplo de forma, sem valor: `vault:secret/hml/<app>-hml#<chave>`. A referência só contém nomes. O valor é lido pelo despachante `vault-read`, que é de `vault-factory/`, e nunca aparece em arquivo versionado ou no chat.

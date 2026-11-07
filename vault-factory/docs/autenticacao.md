@@ -20,18 +20,11 @@ Antes de configurar, exporte a chave privada pela interface web do Passbolt:
 **Configurações → Chave privada → Exportar**. Salve o arquivo `.asc` (ex: em
 `~/.config/passbolt/passbolt_private.asc`, `chmod 600`).
 
-## Opção A — comando `configure` (recomendado)
+## Opção A — comando `configure`
 
-```bash
-passbolt configure \
-  --serverAddress https://passbolt.saude.rj.gov.br \
-  --userPrivateKeyFile ~/.config/passbolt/passbolt_private.asc \
-  --userPassword 'SUA_SENHA_DA_CHAVE'
-```
+Fluxo no runbook, seção 4.2 (`../../providers/passbolt/runbook-linux.md`): `configure` **sem** `--userPassword`. A passphrase só entra se o CLI a pedir de forma interativa; se não pedir, usar a Opção B. O comportamento ainda precisa ser confirmado (runbook, seção 8).
 
-Isso grava `serveraddress` e `userpassword` no TOML. Como a chave foi passada via
-`--userPrivateKeyFile` (flag global, não persistida), ela **não** fica embutida no TOML — o CLI lê o
-arquivo `.asc` a cada execução.
+⚠️ Não passar passphrase nem seed TOTP como argumento: aparece no `ps` e no histórico do shell.
 
 ## Opção B — editar o TOML diretamente
 
@@ -39,12 +32,14 @@ Arquivo: `~/.config/go-passbolt-cli/go-passbolt-cli.toml`.
 
 ```toml
 serveraddress = 'https://passbolt.saude.rj.gov.br'
-userpassword = <SENHA_DA_CHAVE>   # a senha da chave, sem aspas no TOML
+userpassword = "<SENHA>"
 userprivatekey = "-----BEGIN PGP PRIVATE KEY BLOCK-----\n...\n-----END PGP PRIVATE KEY BLOCK-----\n"
 ```
 
-- `userprivatekey` pode ser a chave embutida (com `\n` escapado) **ou** omitida, usando
-  `--userPrivateKeyFile` toda vez que rodar um comando.
+- `userprivatekey` fica **embutida** (com `\n` no lugar das quebras de linha). É o estado ideal: os
+  scripts `pb` chamam o CLI sem `--userPrivateKeyFile`, então a chave precisa estar no TOML. Omiti-la
+  exige a flag em todo comando, o que não é o fluxo padrão (ver `../../providers/passbolt/runbook-linux.md`,
+  seções 4.1 e 8).
 - `chmod 600 ~/.config/go-passbolt-cli/go-passbolt-cli.toml` — o arquivo guarda segredos em texto
   puro.
 
@@ -60,11 +55,9 @@ Se `list users` retornar a lista, autenticação OK. O primeiro acesso pode pedi
 
 ## MFA em scripts/automação
 
-Modo não-interativo, passando o seed TOTP:
+O modo não-interativo (`--mfaMode noninteractive-totp`) exige a flag `--mfaTotpToken`, que recebe a seed em argv. O CLI exige a flag; avalie o risco (ver `../../providers/passbolt/runbook-linux.md`, seção 8, Pendências).
 
-```bash
-passbolt <comando> --mfaMode noninteractive-totp --mfaTotpToken <seed>
-```
+⚠️ Não passar passphrase nem seed TOTP como argumento: aparece no `ps` e no histórico do shell.
 
 Para uso manual, deixar o modo padrão (`interactive-totp`) já resolve.
 
@@ -79,7 +72,7 @@ tiver sido exposta (ex: colada em texto puro num chat, log ou terminal compartil
 - **`passbolt: command not found`** — binário fora do `PATH`; ver instalação em `SKILL.md`.
 - **Erro de autenticação/certificado** — conferir `serveraddress` no TOML e conectividade:
   `curl -sS -o /dev/null -w "%{http_code}" https://passbolt.saude.rj.gov.br/` (esperado `302`).
-- **MFA travando em script** — usar `--mfaMode noninteractive-totp --mfaTotpToken <seed>`.
+- **MFA travando em script** — o modo não interativo exige `--mfaTotpToken`; o CLI exige a flag, avalie o risco (ver `../../providers/passbolt/runbook-linux.md`, seção 8). ⚠️ Não passar passphrase nem seed TOTP como argumento: aparece no `ps` e no histórico do shell.
 - **Máquina nova, nenhuma credencial ainda** — exportar a chave privada pelo navegador Passbolt
   antes de rodar `configure`.
 
