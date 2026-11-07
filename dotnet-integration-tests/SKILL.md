@@ -5,6 +5,8 @@ description: "Use ao escrever ou revisar teste de integração em projeto .NET d
 
 # Skill: dotnet-integration-tests
 
+**Tipo:** internal
+
 > **Regra dura, não negociável: projeto de teste sempre em `/tests/` na raiz do repositório,
 > nunca dentro de `/src/` junto dos outros projetos.** Ex.: `tests/<NomeDoProjeto>.Tests.Integration/`
 > — nunca `src/<NomeDoProjeto>.Tests.Integration/`. Mesma regra de `dotnet-unit-tests`, sem exceção.

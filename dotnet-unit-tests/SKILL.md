@@ -5,6 +5,8 @@ description: "Use ao escrever ou revisar teste unitário em projeto .NET da SES-
 
 # Skill: dotnet-unit-tests
 
+**Tipo:** internal
+
 > **Regra dura, não negociável: projeto de teste sempre em `/tests/` na raiz do repositório,
 > nunca dentro de `/src/` junto dos outros projetos.** Ex.: `tests/<NomeDoProjeto>.Application.Tests/`
 > — nunca `src/<NomeDoProjeto>.Application.Tests/`. Essa regra vale para toda skill de teste,

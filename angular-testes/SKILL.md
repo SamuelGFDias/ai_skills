@@ -5,6 +5,8 @@ description: "Use ao escrever ou revisar teste unitário Angular em projeto da S
 
 # Skill: angular-testes
 
+**Tipo:** internal
+
 Conteúdo totalmente novo — a skill `angular-frontend` original não cobre testes. Escrita a partir
 da leitura completa dos 6 `.spec.ts` reais do projeto e da execução real de `npm run test` nesta
 máquina (seção 4).

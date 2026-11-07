@@ -40,7 +40,7 @@ Usar o script `scripts/get-cluster-ca.sh` desta skill:
 ~/.config/ai/skills/openshift-cli/scripts/get-cluster-ca.sh api.ses-rj-hml.saude.rj.gov.br
 # CA salva em: ~/.config/openshift-ca/api-ca.crt (ou nome equivalente)
 
-oc login --token="$(pass show openshift/hml/token)" \
+oc login --token "$(pass show openshift/hml/token)" \
   --server="https://api.ses-rj-hml.saude.rj.gov.br:6443" \
   --certificate-authority="$HOME/.config/openshift-ca/hml-ca.crt"
 ```

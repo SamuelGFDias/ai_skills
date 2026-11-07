@@ -36,7 +36,7 @@ dev.TIER=nonprod|prod      (opcional; nonprod libera INSECURE_TLS em apelido for
 - Se `ctvl.sh envs` não mostra o ambiente pedido, ou falta a credencial admin, **peça ao usuário** para cadastrar. Não procure senhas em `.env*` do projeto (ex.: `.env.Development`) nem em variáveis do usuário de dados.
 - Senhas dos usuários de dados (verificação de máscara) vêm de variáveis de ambiente do shell do usuário (ex.: carregadas pela skill `vault-factory`), nomeadas por `password_ref`. O `password_ref` só aceita `env:CTVL_<NOME>_PASSWORD` (`^CTVL_[A-Z0-9_]+_PASSWORD$`); `env:CTVL_ADMIN_PASSWORD*`, `env:CTVL_LOGIN_*` e qualquer outro nome (`env:HOME`...) são recusados na carga do arquivo. O `plan` mostra sempre o **nome** da variável de cada usuário a criar (nunca o valor). Um usuário cujo nome derivaria a senha admin (ex.: `admin` → `CTVL_ADMIN_PASSWORD`) pode existir no arquivo, mas a sua CRIAÇÃO fica BLOQUEADA.
 
-## Comandos (`scripts/ctvl.sh <subcomando>`; caminho completo: `~/.claude/skills/ctvl-api/scripts/ctvl.sh`)
+## Comandos (`scripts/ctvl.sh <subcomando>`; caminho completo: `~/.config/ai/skills/ctvl-api/scripts/ctvl.sh`)
 
 | Subcomando | O que faz | Escreve? |
 |---|---|---|
@@ -184,7 +184,7 @@ ctvl-api/
     fake_ctvl_server.py  pty_setup_env.py  fixtures/
 ```
 
-Pré-requisitos: `bash`, `python3` com PyYAML (`python3-pyyaml`). Sem `curl`/`jq` em tempo de uso. Para ter `ctvl` no PATH: `ln -s ~/.claude/skills/ctvl-api/scripts/ctvl.sh ~/.local/bin/ctvl`.
+Pré-requisitos: `bash`, `python3` com PyYAML (`python3-pyyaml`). Sem `curl`/`jq` em tempo de uso. Para ter `ctvl` no PATH: `ln -s ~/.config/ai/skills/ctvl-api/scripts/ctvl.sh ~/.local/bin/ctvl`.
 Regerar o resumo de endpoints após atualizar o swagger: `python3 scripts/gen-endpoints.py` (e troque o `host` do swagger por `<host>` antes de gravar em `references/`).
 
 ## Cenários de validação do Sindras (`cenarios-sindras/`)

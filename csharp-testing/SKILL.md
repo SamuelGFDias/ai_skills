@@ -11,7 +11,7 @@ metadata:
 
 ## Quando executar
 
-Ao escrever, corrigir ou revisar testes xUnit, mocks ou testes de integração num projeto C#/.NET. Combina com a `tdd-first` quando o teste vem antes do código.
+Ao escrever, corrigir ou revisar testes xUnit, mocks ou testes de integração num projeto C#/.NET. Combina com a `tdd-first` quando o teste vem antes do código. Em projeto da SES-RJ, as skills `dotnet-unit-tests` e `dotnet-integration-tests` têm as regras do projeto (local do projeto de teste, NSubstitute, Testcontainers) e prevalecem sobre esta, que fica como referência genérica de idioma.
 
 # C# Testing Patterns
 

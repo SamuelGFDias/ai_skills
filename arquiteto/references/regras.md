@@ -78,8 +78,9 @@ Detalhe das regras numeradas do checklist em `../SKILL.md`. A numeração é est
 
      | gatilho | skill |
      |---|---|
-     | código C#/.NET | `dotnet-backend-architecture` (arquitetura), `dotnet-patterns` (idioma), `csharp-testing` (testes) |
-     | Angular | `angular-developer` |
+     | código C#/.NET | `dotnet-backend-architecture` (arquitetura), `dotnet-patterns` (idioma) |
+     | teste .NET | projeto SES-RJ: `dotnet-unit-tests` / `dotnet-integration-tests` (regras do projeto prevalecem); fora da SES: `csharp-testing` |
+     | Angular | `angular-developer`; teste Angular em projeto SES-RJ: `angular-testes` |
      | migration ou mudança de schema | `database-migrations` |
      | endpoint REST novo ou alterado | `api-design` |
      | auth, entrada do usuário, query, caminho de arquivo, API externa, criptografia ou segredo | `security-review` |

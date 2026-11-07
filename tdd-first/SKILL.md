@@ -39,7 +39,7 @@ Antes de alterar codigo de producao:
 
 Antes de escrever o teste, descubra como o projeto roda testes, em vez de supor:
 
-- .NET: projeto de teste em `tests/` ou `*.Tests.csproj`; `dotnet test <projeto>`. Com `.slnx`, `dotnet test` pode exigir `--solution`.
+- .NET: projeto de teste em `tests/` ou `*.Tests.csproj`; `dotnet test <projeto>`. Com `.slnx`, `dotnet test` pode exigir `--solution`. Em projeto da SES-RJ, siga `dotnet-unit-tests`/`dotnet-integration-tests`.
 - Angular: `package.json` (`test`, `test:ci`), `karma.conf.js`, `jest.config.*` ou `vitest.config.*`.
 - Python: `pyproject.toml`, `pytest.ini`, `tox.ini`.
 - Outros: o `AGENTS.md`/`README.md` do repo, ou o pipeline de CI.

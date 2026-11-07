@@ -5,6 +5,8 @@ description: Interage com a API GraphQL do Wiki.js da SES-RJ (https://wiki.saude
 
 # Skill: wiki-saude-rj
 
+**Tipo:** internal
+
 ## Visão geral
 
 A wiki `https://wiki.saude.rj.gov.br/` é uma instância **Wiki.js** (v2.x). Ela expõe uma **API GraphQL** no endpoint:
@@ -55,7 +57,7 @@ Formas de obter/definir o token:
 
 ## Scripts utilitários (Node.js, recomendado)
 
-Existe um conjunto de scripts prontos em `~/.config/ai/skills/wiki-saude-rj/scripts/` (symlink em `~/.claude/skills/wiki-saude-rj`) que leem o token automaticamente do arquivo de segredos (via `lib.js`). Requer **Node 18+** (usa `fetch` nativo). **Sempre prefira usar esses scripts** em vez de escrever requisições `curl` manualmente.
+Existe um conjunto de scripts prontos em `~/.config/ai/skills/wiki-saude-rj/scripts/` (ligada no Claude Code pelo `bin/sync-skills.sh`) que leem o token automaticamente do arquivo de segredos (via `lib.js`). Requer **Node 18+** (usa `fetch` nativo). **Sempre prefira usar esses scripts** em vez de escrever requisições `curl` manualmente.
 
 ```bash
 SCRIPTS="$HOME/.config/ai/skills/wiki-saude-rj/scripts"

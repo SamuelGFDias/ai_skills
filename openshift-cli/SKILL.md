@@ -52,7 +52,7 @@ cluster (Help → Command Line Tools) em vez do mirror genérico.
    ```
 3. Login:
    ```bash
-   oc login --token="$(pass show openshift/<env>/token)" \
+   oc login --token "$(pass show openshift/<env>/token)" \
      --server="https://api.ses-rj-<env>.saude.rj.gov.br:6443"
    ```
 

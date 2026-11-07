@@ -11,7 +11,7 @@ metadata:
 
 ## Quando executar
 
-Ao criar projeto, componente, serviço ou rota Angular, ou ao decidir sobre reatividade (signals), formulários, DI, SSR, acessibilidade, estilos ou testes. As referências detalhadas ficam em `references/`; leia só a do assunto em questão.
+Ao criar projeto, componente, serviço ou rota Angular, ou ao decidir sobre reatividade (signals), formulários, DI, SSR, acessibilidade, estilos ou testes. As referências detalhadas ficam em `references/`; leia só a do assunto em questão. Para teste unitário em projeto da SES-RJ, a `angular-testes` tem as regras do projeto e prevalece sobre `references/testing-fundamentals.md`.
 
 # Angular Developer Guidelines
 
