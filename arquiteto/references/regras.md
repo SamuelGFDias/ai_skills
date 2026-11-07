@@ -78,7 +78,8 @@ Detalhe das regras numeradas do checklist em `../SKILL.md`. A numeração é est
 
      | gatilho | skill |
      |---|---|
-     | código C#/.NET | `dotnet-backend-architecture` (arquitetura), `dotnet-patterns` (idioma), `csharp-testing` (testes) |
+     | código C#/.NET | `dotnet-backend-architecture` (arquitetura), `dotnet-patterns` (idioma) |
+     | teste .NET | `csharp-testing` |
      | Angular | `angular-developer` |
      | migration ou mudança de schema | `database-migrations` |
      | endpoint REST novo ou alterado | `api-design` |
