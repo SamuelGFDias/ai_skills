@@ -135,6 +135,9 @@ em `~/.config/ai/skills-global.conf` (por máquina, fora do repo). Use `--list` 
 - Cada skill é um diretório com `SKILL.md` obrigatório + opcionalmente `scripts/`, `docs/`, `agents/`.
 - `providers/` — **referência** de plataformas (host, auth, comandos concretos). **Não** é skill
   (não tem `SKILL.md`); as factories apontam para cá.
+- `backend-wiki-skills/` — **modelo** de skills de backend .NET (roteador `AGENTS.md` +
+  `.agents/skills/`) para copiar para dentro de um repositório de backend. **Não** é skill deste
+  repo e não é carregado daqui; o `validate-skills.sh` o ignora.
 - `bin/sync-skills.sh` / `bin/sync-skills.ps1` — recria o destino em `~/.claude/skills` (symlink no
   Linux/macOS/WSL via `.sh`; cópia no Windows, seja via `.sh` no Git Bash ou via `.ps1`) e garante
   a config do Kilo (`-Cli claude|kilo`, default os dois).
