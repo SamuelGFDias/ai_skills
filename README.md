@@ -76,6 +76,7 @@ ai_skills/
 ├── vault-factory/             # abstração de cofres de secrets (vault-read como interface; providers 1password, passbolt, pass-gopass, vault)
 ├── verification-loop/         # verificação em seis fases antes de PR [ECC]
 ├── webpush-vapid-factory/     # Web Push VAPID (Angular + .NET)
+├── wikijs/                    # Wiki.js (GraphQL): ler, buscar, mover, atualizar e substituir páginas
 └── windows-audio-mic/         # diagnosticar/corrigir microfone no Windows (mudo/padrão)
 ```
 
