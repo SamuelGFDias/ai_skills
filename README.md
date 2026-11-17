@@ -64,6 +64,7 @@ ai_skills/
 ├── keycloak-api/              # Admin REST API Keycloak (CLI kc)
 ├── lgpd/                      # LGPD na prática de desenvolvimento: dado de saúde, logs, retenção, incidente
 ├── nuget-factory/             # workflow genérico de pacotes NuGet (+ providers/nexus)
+├── portfolio-conteudo/       # conteúdo de site de portfolio por API: projetos, textos, imagens, com backup (CLI portfolio.sh)
 ├── ramguard/                  # operação do ramguard (encerra processo pesado com RAM alta)
 ├── replatforms/               # migração Delphi 7 → .NET + Angular (prompt em docs/)
 ├── search-first/              # pesquisar fora antes de construir: relatório com fontes (upstream shimo4228, MIT)
