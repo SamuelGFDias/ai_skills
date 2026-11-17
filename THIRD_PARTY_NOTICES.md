@@ -65,3 +65,21 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Anthropic skills — frontend-design
+
+- Fonte: https://github.com/anthropics/skills (`skills/frontend-design`, commit e4bb5d9)
+- Skill incorporada sem alterações além do frontmatter e do cabeçalho do repo: `frontend-design`.
+- Licença: Apache-2.0, texto completo em `frontend-design/LICENSE.txt`.
+
+## UI UX Pro Max
+
+- Fonte: https://github.com/nextlevelbuilder/ui-ux-pro-max-skill (`.claude/skills/ui-ux-pro-max`, commit e59ff37)
+- Skill incorporada: `ui-ux-pro-max`. Alterações: frontmatter, cabeçalho do repo, caminho dos scripts e remoção de `scripts/tests`.
+- Licença: MIT, Copyright (c) 2024 Next Level Builder, texto completo em `ui-ux-pro-max/LICENSE`.
+
+## taste-skill (tasteskill 2.5.1)
+
+- Fonte: https://github.com/Leonxlnx/taste-skill (`skills/taste-skill`, commit f6b7657)
+- Skill incorporada como `design-taste-frontend`, sem alterações além da description em uma linha e do cabeçalho do repo.
+- Licença: MIT, Copyright (c) 2026 Leonxlnx, texto completo em `design-taste-frontend/LICENSE`. As fotografias em `assets/photos` têm créditos próprios, listados pelo `scripts/photos.mjs credits`.

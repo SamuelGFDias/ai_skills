@@ -50,9 +50,11 @@ ai_skills/
 ├── database-migrations/       # migrations seguras e reversíveis, expand-contract, backfill em lotes [ECC]
 ├── decisoes-com-usuario/      # decisões do usuário via grilling + AskUserQuestion (ou equivalente do agente)
 ├── dependency-upgrade-spike/  # decidir upgrade de dependência sem confiar no changelog
+├── design-taste-frontend/     # tasteskill: kit anti-slop para sites de empresa (assets, dealers, verificador e gate em Chrome) [taste-skill]
 ├── dotnet-backend-architecture/  # padrão arquitetural .NET backend
 ├── dotnet-patterns/           # idioma C#/.NET: DI, async, nulabilidade, convenções [ECC]
 ├── dotnet-project-rename/     # renomear projeto .NET sem quebrar o build
+├── frontend-design/           # direção de design visual distinto: tipografia, layout, texto, sem cara de template [Anthropic]
 ├── grilling/                  # grill do usuário sobre plano/decisão/ideia
 ├── hangfire-setup/            # Hangfire: abstrações + implementação (código em docs/)
 ├── headroom/                  # headroom (proxy de contexto)
@@ -71,6 +73,7 @@ ai_skills/
 ├── sql-data-cleanup/          # scripts SQL de dedupe/limpeza decididos por evidência
 ├── t3-code-acesso-remoto/     # T3 Code: serviço em background, desktop em outro home, acesso mobile via Tailscale (docs/)
 ├── t3-code-orquestracao/      # T3 Code por dentro da thread: delegar a outro provider, papéis do arquiteto, threads/worktree, clonar pelo nome
+├── ui-ux-pro-max/             # base pesquisável de UI/UX: estilos, paletas, tipografia, padrões por stack (scripts Python) [UI UX Pro Max]
 ├── task-observer/             # observação de skills, sob demanda (/task-observer)
 ├── tdd-first/                 # TDD: primeiro movimento por tipo de operação, runner, evidência RED/GREEN
 ├── vault-factory/             # abstração de cofres de secrets (vault-read como interface; providers 1password, passbolt, pass-gopass, vault)
