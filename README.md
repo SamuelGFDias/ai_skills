@@ -61,6 +61,7 @@ ai_skills/
 ├── healthcare-phi-compliance/ # padrões técnicos de proteção de dado de saúde [ECC]
 ├── instalacao-appimage-linux/ # instalar AppImage (ícone, atalho, dock GNOME) + scripts/install.sh
 ├── issue-factory/             # workflow genérico de issues (+ providers/github)
+├── kde-plasma-widgets/        # widgets e itens de painel do Plasma 6 (QML): modelo, scripts e armadilhas
 ├── keycloak-api/              # Admin REST API Keycloak (CLI kc)
 ├── lgpd/                      # LGPD na prática de desenvolvimento: dado de saúde, logs, retenção, incidente
 ├── nuget-factory/             # workflow genérico de pacotes NuGet (+ providers/nexus)

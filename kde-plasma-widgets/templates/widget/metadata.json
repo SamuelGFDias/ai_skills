@@ -1,0 +1,14 @@
+{
+    "KPlugin": {
+        "Id": "__ID__",
+        "Name": "__NAME__",
+        "Description": "__NAME__",
+        "Icon": "preferences-desktop-color",
+        "Category": "Utilities",
+        "Version": "0.1",
+        "License": "MIT",
+        "Authors": [{"Name": "__AUTHOR__"}]
+    },
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API-Minimum-Version": "6.0"
+}
